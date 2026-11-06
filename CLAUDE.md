@@ -136,6 +136,7 @@ config keys, ports, domains or the build change.
 pnpm install
 pnpm dev                                  # both apps (backend :8010, frontend :3010)
 pnpm verify                               # build + typecheck + test — gate for every step
+pnpm build && pnpm start                  # run the built apps (backend dist + next start), no Bun needed
 pnpm --filter @zar-imen/backend db:push
                                           # after ANY schema change + prisma generate: restart `pnpm dev`
                                           # (bun --watch keeps the old Prisma client → "Argument X is missing")

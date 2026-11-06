@@ -183,6 +183,9 @@ pm2 status                  # both "online"
 pm2 logs zar-imen-backend --lines 50   # expect: ✔ Listening on :8010
 ```
 
+(Without PM2, `pnpm start` runs the same two built apps in the foreground, which is handy for a
+quick test. It does not restart them after a crash or reboot.)
+
 Keep **one** backend instance. The jobs that cancel abandoned Zarinpal payments every 10
 minutes run inside it.
 
