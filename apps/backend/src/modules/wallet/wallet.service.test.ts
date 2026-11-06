@@ -84,9 +84,9 @@ describe("walletService", () => {
 	let zarinpal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
 	let wallet: WalletService
 
-	function setup(balance: number, shahkarCost: number, smsCost: number) {
+	function setup(balance: number, shahkarCost: number, smsCost: number, cardMatchCost = 700) {
 		prisma = createPrisma(balance)
-		const costs = Object.assign(new ServiceCostSettingsModel(), { shahkarCost, smsCost })
+		const costs = Object.assign(new ServiceCostSettingsModel(), { shahkarCost, smsCost, cardMatchCost })
 		const settings = { getSetting: async () => costs }
 		zarinpal = {
 			requestPayment: vi.fn(async () => ({ ok: true, authority: "A0001" })),
@@ -110,6 +110,9 @@ describe("walletService", () => {
 		it("charges each service its own price", async () => {
 			await wallet.charge(BILL, "SMS", async () => {})
 			expect(prisma.wallet.balance).toBe(4800)
+			await wallet.charge(BILL, "CARD_MATCH", async () => {})
+			expect(prisma.wallet.balance).toBe(4100)
+			expect(prisma.rows.map(r => r.service)).toEqual(["SMS", "CARD_MATCH"])
 		})
 
 		it("refuses, runs nothing and records nothing when the balance does not cover the price", async () => {
@@ -136,7 +139,7 @@ describe("walletService", () => {
 		})
 
 		it("does not touch the wallet or the history when the service is free", async () => {
-			setup(0, 0, 0)
+			setup(0, 0, 0, 0)
 			expect(await wallet.charge(BILL, "SMS", async () => "ok")).toBe("ok")
 			expect(prisma.wallet.balance).toBe(0)
 			expect(prisma.rows).toHaveLength(0)

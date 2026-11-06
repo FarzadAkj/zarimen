@@ -11,13 +11,14 @@ import { Spinner } from "@/components/shad/spinner"
 import { formatAmount, toLatinDigits } from "@/lib/format"
 
 const FIELDS: { name: keyof ServiceCostSettingsModel, label: string, hint: string }[] = [
-    { name: "shahkarCost", label: "هزینه هر استعلام شاهکار", hint: "برای هر استعلام موبایل/کد ملی و هر استعلام کارت بانکی مشتری" },
+    { name: "shahkarCost", label: "هزینه هر استعلام شاهکار", hint: "برای هر استعلام تطبیق موبایل و کد ملی مشتری (ثبت‌نام)" },
+    { name: "cardMatchCost", label: "هزینه هر استعلام کارت بانکی", hint: "برای هر استعلام تطبیق کارت بانکی با کد ملی و تاریخ تولد مشتری" },
     { name: "smsCost", label: "هزینه هر پیامک", hint: "برای هر پیامک کد تأیید که برای مشتری ارسال می‌شود" },
 ]
 
 /** Prices (whole Tomans) taken from a shop's wallet for each request its customers make. */
 export function ServiceCostSettingSection({ data }: { data: ServiceCostSettingsModel }) {
-    const [values, setValues] = useState({ shahkarCost: String(data.shahkarCost), smsCost: String(data.smsCost) })
+    const [values, setValues] = useState({ shahkarCost: String(data.shahkarCost), cardMatchCost: String(data.cardMatchCost), smsCost: String(data.smsCost) })
     const [loading, setLoading] = useState(false)
 
     async function handleSubmit(e: React.FormEvent) {
@@ -29,6 +30,7 @@ export function ServiceCostSettingSection({ data }: { data: ServiceCostSettingsM
         setLoading(true)
         const { error } = await updateServiceCostSettings({
             shahkarCost: Number(values.shahkarCost),
+            cardMatchCost: Number(values.cardMatchCost),
             smsCost: Number(values.smsCost),
         })
         setLoading(false)

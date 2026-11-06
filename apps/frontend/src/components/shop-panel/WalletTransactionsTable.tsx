@@ -11,7 +11,12 @@ function describe(row: WalletTransactionModel) {
     switch (row.type) {
         case "TOP_UP": return "افزایش موجودی (زرین‌پال)"
         case "ADMIN_ADJUSTMENT": return "تنظیم موجودی توسط مدیر"
-        case "SERVICE_CHARGE": return row.service === "SMS" ? "پیامک" : "استعلام شاهکار"
+        case "SERVICE_CHARGE":
+            switch (row.service) {
+                case "SMS": return "پیامک"
+                case "CARD_MATCH": return "استعلام کارت بانکی"
+                default: return "استعلام شاهکار"
+            }
     }
 }
 

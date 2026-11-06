@@ -24,6 +24,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 7   | Subscription plans (admin) + purchases via Zarinpal (owners) | done |
 | 7b  | Admin moves a shop's end date (later only); no subscription → no customer data | done |
 | 7c  | Owner dashboard shows Shahkar / SMS prices | done |
+| 7d  | Separate price for bank card checks (CardMatch) | done |
 
 ## Step log
 
@@ -357,6 +358,16 @@ create input, which needs `shop`). The same create works in a fresh process. Fix
 setting module). Dashboard `ServiceCostsCard`: price per Shahkar check and per SMS («رایگان»
 when 0) and what each customer action costs (new signup = Shahkar + SMS; repeat signup /
 login = SMS; each card = Shahkar).
+
+### Step 7d — Card check has its own price (2026-11-07)
+
+`ServiceCostSettingsModel.cardMatchCost` (default 0) next to `shahkarCost` (now only mobile ↔
+national code) and `smsCost`. `PaidService.CARD_MATCH`; `CustomerService.verify` takes the
+service, `addCard` bills CARD_MATCH. Admin settings has a third field, the owner's prices card
+shows it, history labels it «استعلام کارت بانکی». Card checks charged before this stay recorded
+as SHAHKAR. 1 new customer test, wallet test covers the third price.
+Generating the API client from the user's running (stale-client) backend dropped CARD_MATCH;
+regenerated from a fresh temporary backend on :8011.
 
 ## Decisions
 

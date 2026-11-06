@@ -270,6 +270,12 @@ describe("customerService", () => {
 			expect(otp.send).not.toHaveBeenCalled()
 		})
 
+		it("bills a card check at the card price, not the Shahkar price", async () => {
+			await signup()
+			await service.addCard("customer-1", "shop-1", CARD)
+			expect(wallet.charge).toHaveBeenLastCalledWith({ shopId: "shop-1", customerSsn: SSN }, "CARD_MATCH", expect.any(Function))
+		})
+
 		it("reports an unpaid CardMatch as InsufficientBalance, not as the identity service being down", async () => {
 			await signup()
 			wallet.charge.mockRejectedValueOnce(insufficient())

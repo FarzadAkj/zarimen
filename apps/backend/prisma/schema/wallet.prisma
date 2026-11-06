@@ -46,6 +46,9 @@ enum WalletTransactionStatus {
 
 /// Paid services, priced on the admin's settings page.
 enum PaidService {
+  /// Shahkar: mobile ↔ national code (customer signup)
   SHAHKAR
+  /// CardMatch: bank card ↔ national code + birth date (customer adds a card)
+  CARD_MATCH
   SMS
 }

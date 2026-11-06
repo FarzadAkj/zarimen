@@ -17,6 +17,7 @@ export declare enum ImageContentType {
 }
 export declare enum PaidService {
   SHAHKAR = "SHAHKAR",
+  CARD_MATCH = "CARD_MATCH",
   SMS = "SMS",
 }
 export declare enum WalletTransactionType {
@@ -25,8 +26,10 @@ export declare enum WalletTransactionType {
   ADMIN_ADJUSTMENT = "ADMIN_ADJUSTMENT",
 }
 export interface ServiceCostSettingsModel {
-  /** Tomans per api.ir identity check (Shahkar or CardMatch). */
+  /** Tomans per Shahkar check (mobile ↔ national code). */
   shahkarCost: number;
+  /** Tomans per bank card check (CardMatch: card ↔ national code + birth date). */
+  cardMatchCost: number;
   /** Tomans per SMS sent to a customer. */
   smsCost: number;
 }

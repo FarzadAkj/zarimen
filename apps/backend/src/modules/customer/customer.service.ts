@@ -59,7 +59,7 @@ export class CustomerService {
 		else {
 			// Shahkar and the SMS are paid separately; check the wallet covers both before paying for either.
 			await this.wallet.assertCanAfford(shop.id, [PaidService.SHAHKAR, PaidService.SMS])
-			await this.verify({ shopId: shop.id, customerSsn: details.ssn }, () => this.shahkar.verifyMobileNationalCode({ mobile: details.phoneNumber, nationalCode: details.ssn }), CustomerErrors.PhoneNationalCodeMismatch)
+			await this.verify({ shopId: shop.id, customerSsn: details.ssn }, PaidService.SHAHKAR, () => this.shahkar.verifyMobileNationalCode({ mobile: details.phoneNumber, nationalCode: details.ssn }), CustomerErrors.PhoneNationalCodeMismatch)
 		}
 
 		const { expiresInSeconds } = await this.otp.send(details.phoneNumber, { shopId: shop.id, customerSsn: details.ssn })
@@ -127,7 +127,7 @@ export class CustomerService {
 		if (await this.prisma.customerCard.exists({ customerId, cardNumber }))
 			throw this.error.throwErrorToClient(CustomerErrors.CardAlreadyAdded)
 
-		await this.verify({ shopId, customerSsn: customer.ssn }, () => this.shahkar.verifyCardMatch({
+		await this.verify({ shopId, customerSsn: customer.ssn }, PaidService.CARD_MATCH, () => this.shahkar.verifyCardMatch({
 			nationalCode: customer.ssn,
 			birthDate: toCardMatchDate(customer.birthDate),
 			cardNumber,
@@ -220,13 +220,13 @@ export class CustomerService {
 	}
 
 	/**
-	 * Runs a Shahkar / CardMatch check paid by the shop's wallet: `mismatch` when it says no
+	 * Runs a Shahkar / CardMatch check paid by the shop's wallet at `service`'s price: `mismatch` when it says no
 	 * (still paid: the check was done), unavailable when it cannot answer (refunded).
 	 */
-	private async verify(bill: Bill, check: () => Promise<{ matched: boolean }>, mismatch: (typeof CustomerErrors)[keyof typeof CustomerErrors]) {
+	private async verify(bill: Bill, service: PaidService, check: () => Promise<{ matched: boolean }>, mismatch: (typeof CustomerErrors)[keyof typeof CustomerErrors]) {
 		let matched: boolean
 		try {
-			({ matched } = await this.wallet.charge(bill, PaidService.SHAHKAR, check))
+			({ matched } = await this.wallet.charge(bill, service, check))
 		}
 		catch (e) {
 			// e.g. the shop's wallet cannot pay for the check

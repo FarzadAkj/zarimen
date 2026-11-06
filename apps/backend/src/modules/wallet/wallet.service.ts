@@ -261,8 +261,8 @@ export class WalletService {
 	}
 
 	private async readCosts(): Promise<Record<PaidService, number>> {
-		const { shahkarCost, smsCost } = await this.settings.getSetting(SERVICE_COST_SETTINGS_KEY, ServiceCostSettingsModel)
-		return { SHAHKAR: shahkarCost, SMS: smsCost }
+		const { shahkarCost, cardMatchCost, smsCost } = await this.settings.getSetting(SERVICE_COST_SETTINGS_KEY, ServiceCostSettingsModel)
+		return { SHAHKAR: shahkarCost, CARD_MATCH: cardMatchCost, SMS: smsCost }
 	}
 
 	private toModel(row: WalletTransaction): WalletTransactionModel {

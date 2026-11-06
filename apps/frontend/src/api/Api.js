@@ -19,6 +19,7 @@ export var ImageContentType;
 export var PaidService;
 (function (PaidService) {
   PaidService["SHAHKAR"] = "SHAHKAR";
+  PaidService["CARD_MATCH"] = "CARD_MATCH";
   PaidService["SMS"] = "SMS";
 })(PaidService || (PaidService = {}));
 export var WalletTransactionType;
