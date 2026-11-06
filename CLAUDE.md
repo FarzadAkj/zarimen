@@ -63,8 +63,10 @@ apps/backend
 
 apps/frontend
   src/app/panel/          admin panel (zarimen.ir/panel): login/, (admin)/ guarded pages
-  src/app/tenant/[subdomain]/panel/  shop panel (<sub>.zarimen.ir/panel), reached ONLY via the
-                          proxy rewrite: login/, (owner)/ guarded pages, actions.ts
+  src/app/tenant/[subdomain]/        a shop's site, reached ONLY via the proxy rewrite:
+                            page.tsx (landing), verify/ (customer verification),
+                            panel/ (owner panel: login/, (owner)/ guarded pages, actions.ts)
+  src/lib/current-shop.ts currentSubdomain() from Host + getShopPublicInfo() for shop pages
   src/proxy.ts            routes by Host (lib/host.ts parseHost); guards /panel on both hosts
   src/api/                GENERATED swagger client — never edit by hand
   src/components/shad/    shadcn/ui primitives (components.json points `ui` here)
@@ -94,8 +96,8 @@ Anything only one app uses lives in that app, not in `packages/shared`.
 - Admin-only endpoints: `@UseGuards(IsAdmin)`; shop-owner endpoints: `@UseGuards(IsShopOwner)`
   (reads `request._shopOwner.shopId`). Both in `modules/auth/guards/`. Shop-owner
   endpoints live under the `shop-panel` controller and must only touch the token's shop.
-- Shop panel server actions get the subdomain from the Host header (`currentSubdomain()`),
-  never from a client argument.
+- Shop pages and actions get the subdomain from the Host header (`currentSubdomain()` in
+  `lib/current-shop.ts`), never from a client argument.
 - Frontend talks to the backend only from server actions (`takeApi()` reads the
   httpOnly `token` cookie), each returning `ServerResponse<T>` with a Persian
   `error.translation` from `src/lib/errors.ts` — add every new backend error code there.

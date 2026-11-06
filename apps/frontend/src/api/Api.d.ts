@@ -108,14 +108,16 @@ export interface SetWalletBalanceInput {
   /** @example "1500000" */
   balance: string;
 }
-export interface ReadShopLoginInfoInput {
+export interface ReadShopPublicInfoInput {
   /** @example "setoode" */
   subdomain: string;
 }
-export interface ShopLoginInfoModel {
+export interface ShopPublicInfoModel {
   name: string;
   brandName: string;
   logoUrl: string | null;
+  address: string | null;
+  landline: string | null;
   isActive: boolean;
 }
 export interface CreateImageUploadInput {
@@ -321,16 +323,16 @@ export declare class Api<
   };
   shopPanel: {
     /**
-     * @description Public: name and logo shown on the shop's login page.
+     * @description Public: what the shop's landing and login pages show.
      *
      * @tags ShopPanel
-     * @name ReadShopLoginInfo
-     * @request POST:/shop-panel/readShopLoginInfo
+     * @name ReadShopPublicInfo
+     * @request POST:/shop-panel/readShopPublicInfo
      */
-    readShopLoginInfo: (
-      data: ReadShopLoginInfoInput,
+    readShopPublicInfo: (
+      data: ReadShopPublicInfoInput,
       params?: RequestParams,
-    ) => Promise<HttpResponse<ShopLoginInfoModel, any>>;
+    ) => Promise<HttpResponse<ShopPublicInfoModel, any>>;
     /**
      * @description The logged-in owner's shop.
      *

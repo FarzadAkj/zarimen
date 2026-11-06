@@ -1,26 +1,12 @@
-import { notFound } from "next/navigation"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/shad/card"
+import { DisabledShopNotice } from "@/components/shop/DisabledShopNotice"
 import { OtpLoginCard } from "@/components/shared/OtpLoginCard"
-import { exchangeShopOtp, readShopLoginInfo, sendShopOtp } from "../actions"
+import { getShopPublicInfo } from "@/lib/current-shop"
+import { exchangeShopOtp, sendShopOtp } from "../actions"
 
 /** <subdomain>.zarimen.ir/panel/login (rewritten here by src/proxy.ts). */
 export default async function ShopLoginPage() {
-    const { data: shop, error } = await readShopLoginInfo()
-    if (error?.message === "NotFound") notFound()
-    if (!shop) throw new Error(error?.translation)
-
-    if (!shop.isActive) {
-        return (
-            <main className="min-h-dvh grid place-items-center p-4 bg-muted">
-                <Card className="w-full max-w-sm">
-                    <CardHeader>
-                        <CardTitle>{shop.name}</CardTitle>
-                        <CardDescription>پنل این فروشگاه غیرفعال شده است. برای فعال‌سازی با پشتیبانی زر ایمن تماس بگیرید.</CardDescription>
-                    </CardHeader>
-                </Card>
-            </main>
-        )
-    }
+    const shop = await getShopPublicInfo()
+    if (!shop.isActive) return <DisabledShopNotice shop={shop} />
 
     return (
         <OtpLoginCard

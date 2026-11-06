@@ -11,7 +11,8 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 1c  | Fix `pnpm dev` (@fastify/static)        | done   |
 | 2   | Admin SMS login + shops admin panel    | done — needs `db:push` on the user's DB |
 | 2b  | Edit wallet balance + RTL table headers | done |
-| 3   | Shop owner login at <sub>.zarimen.ir/panel | done |
+| 2c  | Shop owner login at <sub>.zarimen.ir/panel | done |
+| 3   | Shop landing page + big verification button | done (button → placeholder /verify) |
 
 ## Step log
 
@@ -89,7 +90,7 @@ could not be reached from this session.
 - When copying more shadcn components from Darik, replace physical `left/right`,
   `pl/pr`, `ml/mr` classes with logical `start/end`, `ps/pe`, `ms/me`.
 
-### Step 3 — Shop owner login (2026-11-06)
+### Step 2c — Shop owner login (2026-11-06)
 
 User first switched the wallet to **whole Tomans** (`Decimal(20, 0)`, `toFixed(0)`,
 `formatAmount` adds «تومان»). This step finished it: API + form validation now accept
@@ -122,6 +123,26 @@ Verified live: all host/redirect/404 routes, the shop login page renders the rea
 from the user's DB, guards refuse cross-panel tokens. The full OTP→token run was cut
 short because the user's own `pnpm dev` held the ports.
 
+### Step 3 — Shop landing page (2026-11-06)
+
+Asked for: <subdomain>.zarimen.ir shows the shop's logo and info and a big, unmissable
+button for customers to continue with verification.
+
+- Backend: public endpoint renamed `readShopLoginInfo` → `shop-panel/readShopPublicInfo`
+  and now also returns `address` and `landline` (still no owner details, no wallet).
+- Frontend:
+  - `tenant/[subdomain]/page.tsx`: landing page, mobile-first. Logo (or brand initial),
+    name, brand, address + tappable landline, and the big gold «احراز هویت مشتری» button
+    linking to `/verify`. Small «ورود فروشنده» link to `/panel` in the footer.
+  - `tenant/[subdomain]/verify/page.tsx`: **placeholder** until the verification flow is built.
+  - Disabled shop → `DisabledShopNotice` on landing, verify and login pages.
+  - `lib/current-shop.ts`: `currentSubdomain()` (moved out of the panel actions, so it is
+    not a callable server action) + `getShopPublicInfo()` (cached per request, 404 for
+    unknown subdomains).
+  - `proxy.ts`: shop host `/` and `/verify` are public rewrites (before: `/` redirected
+    to `/panel`); everything else except `/panel/*` is 404.
+- Verified live against the user's dev server and with a 412px headless-Firefox screenshot.
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -153,6 +174,7 @@ short because the user's own `pnpm dev` held the ports.
 - Fill real values in `apps/backend/.env`: `adminPhoneNumber`, `jwtSecret`, sms.ir
   key + template, api.ir token, Arvan bucket + keys.
 - What moves the wallet balance — user will specify.
+- Customer verification flow behind `/verify` (phone, national code, bank card) — next.
 - Shop staff logins (only the owner phone can log in now).
 - Production: the reverse proxy must forward the original `Host` header
   (nginx `proxy_set_header Host $host;`) and DNS needs a wildcard `*.zarimen.ir` record +

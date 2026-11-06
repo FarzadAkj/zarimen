@@ -1,6 +1,6 @@
 import type { SelectedShop } from "./constants/shop.select"
 import type { CreateShopInput } from "./dto/create-shop.input"
-import type { ShopLoginInfoModel } from "./model/shop-login-info.model"
+import type { ShopPublicInfoModel } from "./model/shop-public-info.model"
 import type { ShopModel } from "./model/shop.model"
 import { Injectable } from "@nestjs/common"
 import { ErrorService } from "~/libs/error/error.service"
@@ -56,11 +56,11 @@ export class ShopService {
 		return this.toModel(shop)
 	}
 
-	/** Public: name and logo for the login page on <subdomain>.zarimen.ir/panel. */
-	async readShopLoginInfo(subdomain: string): Promise<ShopLoginInfoModel> {
+	/** Public: what the landing page (<subdomain>.zarimen.ir) and the login page show. */
+	async readShopPublicInfo(subdomain: string): Promise<ShopPublicInfoModel> {
 		const shop = await this.prisma.shop.findUnique({
 			where: { subdomain },
-			select: { name: true, brandName: true, logoUrl: true, isActive: true },
+			select: { name: true, brandName: true, logoUrl: true, address: true, landline: true, isActive: true },
 		})
 		if (!shop)
 			throw this.error.throwErrorToClient(ShopErrors.NotFound)

@@ -10,9 +10,13 @@ const ROOT_DOMAIN = process.env.ROOT_DOMAIN!
 
 const LOGIN_PATH = "/panel/login"
 
+/** A shop subdomain's pages anyone may open: the landing page and the customer verification. */
+const SHOP_PUBLIC_PATHS = ["/", "/verify"]
+
 /**
  * Routes by host:
  * - zarimen.ir/panel/*           → the admin panel (src/app/panel)
+ * - <sub>.zarimen.ir, /verify    → that shop's public pages, rewritten to src/app/tenant/<sub>
  * - <sub>.zarimen.ir/panel/*     → that shop's panel, rewritten to src/app/tenant/<sub>/panel
  * Everything under /panel except the login page needs a valid token for that host.
  */
@@ -29,13 +33,14 @@ export async function proxy(request: NextRequest) {
     if (target.kind === "root")
         return isPanel ? guard(request, async () => !(await me()).error) : NextResponse.next()
 
-    // A shop subdomain serves only its panel.
-    if (pathname === "/")
-        return NextResponse.redirect(new URL("/panel", request.url))
+    const rewriteTo = new URL(`/tenant/${target.subdomain}${pathname === "/" ? "" : pathname}${request.nextUrl.search}`, request.url)
+
+    // A shop subdomain serves its public pages and its panel, nothing else.
+    if (SHOP_PUBLIC_PATHS.includes(pathname))
+        return NextResponse.rewrite(rewriteTo)
     if (!isPanel)
         return notFound()
 
-    const rewriteTo = new URL(`/tenant/${target.subdomain}${pathname}${request.nextUrl.search}`, request.url)
     return guard(
         request,
         async () => (await readMyShop()).data?.subdomain === target.subdomain,

@@ -1,35 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { OtpSentModel, ShopLoginInfoModel, ShopModel } from "@/api/Api"
+import type { OtpSentModel, ShopModel } from "@/api/Api"
 import { cache } from "react"
-import { headers } from "next/headers"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
-import { parseHost } from "@/lib/host"
+import { currentSubdomain } from "@/lib/current-shop"
 import { clearToken, hasToken, saveToken } from "@/lib/session"
-
-/**
- * The shop this request is for, from the Host header. Taken from the request rather
- * than from an argument, so a page can only ever act for the shop it is served on.
- */
-async function currentSubdomain() {
-    const target = parseHost((await headers()).get("host"), process.env.ROOT_DOMAIN!)
-    if (target.kind !== "shop")
-        throw new Error("Shop panel action called outside a shop subdomain")
-    return target.subdomain
-}
-
-export const readShopLoginInfo = cache(async (): Promise<ServerResponse<ShopLoginInfoModel>> => {
-    const api = await takeApi()
-    try {
-        const { data } = await api.shopPanel.readShopLoginInfo({ subdomain: await currentSubdomain() })
-        return { data }
-    }
-    catch (error: any) {
-        return { error: toErrorOutput(error) }
-    }
-})
 
 /** Step 1 of shop login: send a code to the shop owner's phone. */
 export async function sendShopOtp(phoneNumber: string): Promise<ServerResponse<OtpSentModel>> {

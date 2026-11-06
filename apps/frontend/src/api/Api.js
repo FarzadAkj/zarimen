@@ -362,15 +362,15 @@ export class Api extends HttpClient {
   };
   shopPanel = {
     /**
-     * @description Public: name and logo shown on the shop's login page.
+     * @description Public: what the shop's landing and login pages show.
      *
      * @tags ShopPanel
-     * @name ReadShopLoginInfo
-     * @request POST:/shop-panel/readShopLoginInfo
+     * @name ReadShopPublicInfo
+     * @request POST:/shop-panel/readShopPublicInfo
      */
-    readShopLoginInfo: (data, params = {}) =>
+    readShopPublicInfo: (data, params = {}) =>
       this.request({
-        path: `/shop-panel/readShopLoginInfo`,
+        path: `/shop-panel/readShopPublicInfo`,
         method: "POST",
         body: data,
         type: ContentType.Json,
