@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { OtpSentModel, ShopModel } from "@/api/Api"
+import type { OtpSentModel, ShopCustomerModel, ShopModel } from "@/api/Api"
 import { cache } from "react"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -47,6 +47,18 @@ export const readMyShop = cache(async (): Promise<ServerResponse<ShopModel>> => 
         return { error: toErrorOutput(error) }
     }
 })
+
+/** Customers who verified at the logged-in owner's shop. */
+export async function readMyCustomers(): Promise<ServerResponse<ShopCustomerModel[]>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readMyCustomers()
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
 
 export async function logoutShop() {
     await clearToken()

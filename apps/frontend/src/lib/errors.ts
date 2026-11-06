@@ -25,8 +25,19 @@ const ERROR_MESSAGES: Record<string, string> = {
     // ---- shop
     "ShopModule.NotFound": "فروشگاه یافت نشد.",
     SubdomainTaken: "این زیردامنه قبلاً برای فروشگاه دیگری ثبت شده است.",
-    PhoneNationalCodeMismatch: "شماره موبایل مالک به نام صاحب این کد ملی نیست (استعلام شاهکار).",
+    PhoneNationalCodeMismatch: "شماره موبایل مالک به نام صاحب این کد ملی نیست.",
     IdentityServiceUnavailable: "سرویس احراز هویت (شاهکار) در دسترس نیست. لطفاً بعداً تلاش کنید.",
+
+    // ---- customer verification
+    "CustomerModule.ShopNotFound": "فروشگاهی با این آدرس وجود ندارد.",
+    "CustomerModule.ShopDisabled": "خدمات زر ایمن برای این فروشگاه غیرفعال است.",
+    "CustomerModule.PhoneNationalCodeMismatch": "این شماره موبایل به نام صاحب این کد ملی ثبت نشده است.",
+    "CustomerModule.IdentityServiceUnavailable": "سامانه استعلام هویت در دسترس نیست. چند دقیقه دیگر دوباره تلاش کنید.",
+    CardNotOwned: "این کارت بانکی به نام صاحب این کد ملی و تاریخ تولد نیست.",
+    BirthDateMismatch: "تاریخ تولد با اطلاعات ثبت‌شده برای این کد ملی مطابقت ندارد.",
+    SignupExpired: "مهلت تکمیل ثبت‌نام تمام شده است. لطفاً دوباره اطلاعات خود را وارد کنید.",
+    NotRegistered: "با این شماره موبایل ثبت‌نامی انجام نشده است. ابتدا ثبت‌نام کنید.",
+    CardAlreadyAdded: "این کارت قبلاً ثبت شده است.",
 
     // ---- image upload
     UnsupportedImage: "تصویر باید با فرمت JPG، PNG یا webp باشد.",

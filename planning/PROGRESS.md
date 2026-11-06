@@ -12,7 +12,9 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 2   | Admin SMS login + shops admin panel    | done — needs `db:push` on the user's DB |
 | 2b  | Edit wallet balance + RTL table headers | done |
 | 2c  | Shop owner login at <sub>.zarimen.ir/panel | done |
-| 3   | Shop landing page + big verification button | done (button → placeholder /verify) |
+| 3   | Shop landing page + big verification button | done |
+| 3b  | Customer verification on /verify (3 phases) + owner's customer list | done |
+| 3c  | Several admins: `adminPhoneNumbers` list | done |
 
 ## Step log
 
@@ -143,6 +145,47 @@ button for customers to continue with verification.
     to `/panel`); everything else except `/panel/*` is 404.
 - Verified live against the user's dev server and with a 412px headless-Firefox screenshot.
 
+### Step 3b — Customer verification on /verify (2026-11-06)
+
+Asked for: a step indicator on top and three phases. (1) national code (10 digits),
+mobile ("09" pre-typed + 9 digits), Jalali birth date (Darik's PersianCalendar) → Shahkar.
+(2) SMS code → customer saved, unique by national code, linked to many shops; owners see
+their customers. (3) the customer's cards + add a 16-digit card → CardMatch (card +
+national code + birth date) → saved. Phase 1 has a login button: mobile only → SMS →
+phase 3. Signing up again with a known national code + birth date adds no row; only the
+shop links change.
+
+Backend:
+- Prisma `customer.prisma`: `Customer` (ssn unique, phoneNumber, birthDate as Jalali
+  "YYYY/MM/DD" string), `CustomerShop` (customer ↔ shop, createdAt + lastSeenAt),
+  `CustomerCard` (unique per customer + card number). `db push` applied to the user's dev DB.
+- `OtpService` extracted from AuthService (admin, shop owner and customer all use it).
+- `modules/customer`: `customer/startSignup`, `completeSignup`, `startLogin`,
+  `completeLogin`, `readMyCards`, `addCard` (IsCustomer); `shop-panel/readMyCustomers`
+  (IsShopOwner). Bank names from Darik's `bank-prefixes.ts`.
+- 15 tests in `customer.service.test.ts`.
+
+Frontend:
+- `/verify`: `VerifyFlow` (state machine) + `VerifySteps` (indicator with sliding gold
+  fill and «مرحله n از ۳» banner) + `IdentityStep` / `LoginStep` / `CodeStep` / `CardsStep`,
+  `PhoneInput` (fixed 09). A customer with a live session lands on phase 3.
+- «پایان» ends the customer session and returns to the landing page.
+- Owner panel: nav (داشبورد / مشتریان) and `/panel/customers` table (national code,
+  mobile, birth date, masked cards + bank, first/last visit in Jalali).
+- `PersianCalendar` copied from Darik with physical left/right → start/end, theme colours.
+- Shared validators: `isValidJalaliDate`, `isValidBankCardNumber` (Luhn).
+
+Verified live: /verify renders (412px screenshot), validation and NotRegistered /
+Unauthorized responses. Not run live end to end, so as not to write test customers into
+the user's DB; covered by unit tests.
+
+### Step 3c — Admin phone list (2026-11-06)
+
+`.env` `adminPhoneNumber` → `adminPhoneNumbers`, comma-separated ("0912...,0913...").
+Validated at boot (each must be 09xxxxxxxxx). `Config.isAdminPhoneNumber(phone)` is used
+by AuthService (who may get an admin code) and IsAdmin (re-checked on every request, so
+removing a number logs that admin out). User's `.env` key renamed, value kept.
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -155,9 +198,9 @@ button for customers to continue with verification.
   that the frontend could not consume, so it ended up aliasing to source anyway).
 - **Ports:** backend 8010, frontend 3010, so they do not clash with Darik (8000 / 3000).
 - Prisma 7 config uses `env("DATABASE_CONNECTION_URL")` from `prisma/config`.
-- **The admin is not a DB row.** `adminPhoneNumber` in `.env` *is* the admin; the JWT
-  carries `{ role: "admin", phoneNumber }` and `IsAdmin` re-checks it against the env,
-  so changing the env logs the old admin out.
+- **Admins are not DB rows.** `adminPhoneNumbers` in `.env` (comma-separated) *are* the
+  admins; the JWT carries `{ role: "admin", phoneNumber }` and `IsAdmin` re-checks it
+  against the list, so removing a number logs that admin out.
 - **Lean auth instead of Darik's `AuthenticatorModule`** (Google/email/password/neverthrow
   not needed). OTPs live in `AuthOtp` keyed by phone, so shop owners can reuse the flow.
 - Shared validators (`isValidPhoneNumber`, `isValidNationalCode`, `isValidSubdomain`,
@@ -165,16 +208,32 @@ button for customers to continue with verification.
 - Reserved subdomains: www, api, panel, admin, app, mail, static, cdn.
 - Wallet balance: whole **Tomans**, `Decimal(20, 0)`, sent over the API as a string.
 - Optional shop fields: logo, address, landline. Everything else is required.
+- **Phase 1 → 2 is a signed ticket**, not server state: startSignup returns a JWT
+  (`kind: "customer-signup"`, ssn, phone, birth date, shopId, 10 min) and completeSignup
+  needs it + the SMS code, so the details cannot be swapped after Shahkar passed.
+- **Customer session**: separate `customer_token` cookie (30 min), because customers use
+  the shop's device where the owner may be logged in. Token `{ role: "customer", customerId, shopId }`.
+- Known national code with a **different birth date** → `BirthDateMismatch` (no update).
+  Same birth date → no new row; phone updated to the newly verified one; shop linked.
+- **Login also links** the customer to the shop they log in at (so the owner sees them).
+- Customer phone is **not unique** (a number can move to another person); login uses the
+  most recently updated customer with that phone.
+- **Card numbers are stored in full** but only ever leave the backend masked
+  ("6037-99**-****-7893") — to customers and owners alike.
+- Shop owners see customers' full national code, mobile and birth date.
 - `ROOT_DOMAIN` (frontend env): `zarimen.ir` in production, `localhost:3010` in dev.
 
 ## Open items
 
 - Run `pnpm --filter @zar-imen/backend db:push` against the real DB, then try the
   OTP login (`sendSms=false` prints the code in the backend console) and add a shop.
-- Fill real values in `apps/backend/.env`: `adminPhoneNumber`, `jwtSecret`, sms.ir
+- Fill real values in `apps/backend/.env`: `adminPhoneNumbers`, `jwtSecret`, sms.ir
   key + template, api.ir token, Arvan bucket + keys.
 - What moves the wallet balance — user will specify.
-- Customer verification flow behind `/verify` (phone, national code, bank card) — next.
+- Rate limiting: each startSignup costs one paid Shahkar call and addCard one CardMatch
+  call; nothing limits how often a visitor can trigger them yet.
+- Customers cannot remove a card; owners cannot search / paginate customers yet.
+- Full card numbers at rest: consider encrypting the column.
 - Shop staff logins (only the owner phone can log in now).
 - Production: the reverse proxy must forward the original `Host` header
   (nginx `proxy_set_header Host $host;`) and DNS needs a wildcard `*.zarimen.ir` record +

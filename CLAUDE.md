@@ -64,7 +64,7 @@ apps/backend
 apps/frontend
   src/app/panel/          admin panel (zarimen.ir/panel): login/, (admin)/ guarded pages
   src/app/tenant/[subdomain]/        a shop's site, reached ONLY via the proxy rewrite:
-                            page.tsx (landing), verify/ (customer verification),
+                            page.tsx (landing), verify/ (customer verification, actions.ts),
                             panel/ (owner panel: login/, (owner)/ guarded pages, actions.ts)
   src/lib/current-shop.ts currentSubdomain() from Host + getShopPublicInfo() for shop pages
   src/proxy.ts            routes by Host (lib/host.ts parseHost); guards /panel on both hosts
@@ -101,6 +101,10 @@ Anything only one app uses lives in that app, not in `packages/shared`.
 - Frontend talks to the backend only from server actions (`takeApi()` reads the
   httpOnly `token` cookie), each returning `ServerResponse<T>` with a Persian
   `error.translation` from `src/lib/errors.ts` — add every new backend error code there.
+- Customer endpoints: `@UseGuards(IsCustomer)` (`modules/customer/guards`); the frontend
+  calls them with `takeApi(CUSTOMER_TOKEN_COOKIE)`.
+- SMS codes always go through `OtpService` (`modules/auth/otp.service.ts`).
+- Card numbers leave the backend only masked (`maskCardNumber`).
 - Form validation reuses the `@zar-imen/shared` checks; convert Persian digits with
   `toLatinDigits` before validating.
 

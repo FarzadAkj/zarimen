@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { isValidBankCardNumber } from "./bank-card"
+import { isValidJalaliDate } from "./jalali-date"
 import { isValidNationalCode } from "./national-code"
 import { isValidPhoneNumber } from "./phone-number"
 import { isValidSubdomain } from "./subdomain"
@@ -63,5 +65,39 @@ describe("isValidSubdomain", () => {
 	it("rejects reserved names", () => {
 		expect(isValidSubdomain("panel")).toBe(false)
 		expect(isValidSubdomain("www")).toBe(false)
+	})
+})
+
+describe("isValidJalaliDate", () => {
+	it("accepts padded YYYY/MM/DD dates", () => {
+		expect(isValidJalaliDate("1370/01/05")).toBe(true)
+		expect(isValidJalaliDate("1402/12/30")).toBe(true)
+	})
+
+	it("applies the month lengths", () => {
+		expect(isValidJalaliDate("1370/06/31")).toBe(true)
+		expect(isValidJalaliDate("1370/07/31")).toBe(false)
+		expect(isValidJalaliDate("1370/12/31")).toBe(false)
+	})
+
+	it("rejects bad format and out-of-range parts", () => {
+		expect(isValidJalaliDate("1370/1/5")).toBe(false)
+		expect(isValidJalaliDate("1370-01-05")).toBe(false)
+		expect(isValidJalaliDate("1370/13/01")).toBe(false)
+		expect(isValidJalaliDate("1370/00/10")).toBe(false)
+		expect(isValidJalaliDate("1370/01/00")).toBe(false)
+		expect(isValidJalaliDate("1299/01/01")).toBe(false)
+	})
+})
+
+describe("isValidBankCardNumber", () => {
+	it("accepts a Luhn-valid 16-digit number", () => {
+		expect(isValidBankCardNumber("6037997599999993")).toBe(true)
+	})
+
+	it("rejects a wrong check digit, wrong length and non-digits", () => {
+		expect(isValidBankCardNumber("6037997599999992")).toBe(false)
+		expect(isValidBankCardNumber("603799759999999")).toBe(false)
+		expect(isValidBankCardNumber("60379975999999a3")).toBe(false)
 	})
 })

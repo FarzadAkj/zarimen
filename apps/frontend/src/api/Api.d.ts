@@ -120,6 +120,75 @@ export interface ShopPublicInfoModel {
   landline: string | null;
   isActive: boolean;
 }
+export interface StartSignupInput {
+  /** @example "setoode" */
+  subdomain: string;
+  /** @example "0499370899" */
+  ssn: string;
+  /** @example "09120000000" */
+  phoneNumber: string;
+  /**
+   * Jalali YYYY/MM/DD
+   * @example "1370/01/05"
+   */
+  birthDate: string;
+}
+export interface SignupStartedModel {
+  ticket: string;
+  phoneNumber: string;
+  /** Seconds until the SMS code expires */
+  expiresInSeconds: number;
+}
+export interface CompleteSignupInput {
+  ticket: string;
+  /** @example "123456" */
+  code: string;
+}
+export interface CustomerTokenModel {
+  token: string;
+  expiresInSeconds: number;
+}
+export interface StartLoginInput {
+  /** @example "setoode" */
+  subdomain: string;
+  /** @example "09120000000" */
+  phoneNumber: string;
+}
+export interface CompleteLoginInput {
+  /** @example "setoode" */
+  subdomain: string;
+  /** @example "09120000000" */
+  phoneNumber: string;
+  /** @example "123456" */
+  code: string;
+}
+export interface CustomerCardModel {
+  id: string;
+  maskedNumber: string;
+  bankName: string | null;
+  /** @format date-time */
+  createdAt: string;
+}
+export interface CustomerCardsModel {
+  phoneNumber: string;
+  cards: CustomerCardModel[];
+}
+export interface AddCardInput {
+  /** @example "6037997599999993" */
+  cardNumber: string;
+}
+export interface ShopCustomerModel {
+  id: string;
+  ssn: string;
+  phoneNumber: string;
+  /** Jalali YYYY/MM/DD */
+  birthDate: string;
+  /** @format date-time */
+  firstSeenAt: string;
+  /** @format date-time */
+  lastSeenAt: string;
+  cards: CustomerCardModel[];
+}
 export interface CreateImageUploadInput {
   contentType: ImageContentType;
   size: number;
@@ -344,6 +413,86 @@ export declare class Api<
     readMyShop: (
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopModel, any>>;
+    /**
+     * @description Customers who verified at the owner's shop.
+     *
+     * @tags ShopCustomers
+     * @name ReadMyCustomers
+     * @request POST:/shop-panel/readMyCustomers
+     * @secure
+     */
+    readMyCustomers: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopCustomerModel[], any>>;
+  };
+  customer: {
+    /**
+     * @description Phase 1: Shahkar check, then an SMS code. Finish with completeSignup.
+     *
+     * @tags Customer
+     * @name StartSignup
+     * @request POST:/customer/startSignup
+     */
+    startSignup: (
+      data: StartSignupInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<SignupStartedModel, any>>;
+    /**
+     * @description Phase 2: the SMS code saves the customer and opens a session.
+     *
+     * @tags Customer
+     * @name CompleteSignup
+     * @request POST:/customer/completeSignup
+     */
+    completeSignup: (
+      data: CompleteSignupInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<CustomerTokenModel, any>>;
+    /**
+     * @description Returning customer: SMS code to a registered phone. Finish with completeLogin.
+     *
+     * @tags Customer
+     * @name StartLogin
+     * @request POST:/customer/startLogin
+     */
+    startLogin: (
+      data: StartLoginInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<OtpSentModel, any>>;
+    /**
+     * No description
+     *
+     * @tags Customer
+     * @name CompleteLogin
+     * @request POST:/customer/completeLogin
+     */
+    completeLogin: (
+      data: CompleteLoginInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<CustomerTokenModel, any>>;
+    /**
+     * @description Phase 3: the customer's verified cards.
+     *
+     * @tags Customer
+     * @name ReadMyCards
+     * @request POST:/customer/readMyCards
+     * @secure
+     */
+    readMyCards: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<CustomerCardsModel, any>>;
+    /**
+     * @description Phase 3: CardMatch check, then the card is saved.
+     *
+     * @tags Customer
+     * @name AddCard
+     * @request POST:/customer/addCard
+     * @secure
+     */
+    addCard: (
+      data: AddCardInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<CustomerCardsModel, any>>;
   };
   imageUpload: {
     /**

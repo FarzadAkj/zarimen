@@ -12,8 +12,8 @@ import { readToken } from "./read-token"
 export type AdminRequest = FastifyRequest & { _admin: Extract<AuthJwtPayload, { role: typeof ADMIN_ROLE }> }
 
 /**
- * Lets the request through only with a valid admin token in `Authorization`. The token must also name the phone that
- * is admin *now*, so changing `adminPhoneNumber` logs the old admin out.
+ * Lets the request through only with a valid admin token in `Authorization`. The token's
+ * phone must still be in `adminPhoneNumbers`, so removing a number logs that admin out.
  */
 @Injectable()
 export class IsAdmin implements CanActivate {
@@ -26,7 +26,7 @@ export class IsAdmin implements CanActivate {
 	async canActivate(context: ExecutionContext): Promise<boolean> {
 		const request = context.switchToHttp().getRequest<AdminRequest>()
 		const payload = await this.jwt.verifyAsync<AuthJwtPayload>(readToken(request)).catch(() => null)
-		if (payload?.role !== ADMIN_ROLE || payload.phoneNumber !== this.config.adminPhoneNumber)
+		if (payload?.role !== ADMIN_ROLE || !this.config.isAdminPhoneNumber(payload.phoneNumber))
 			throw this.error.throwErrorToClient(AuthErrors.Unauthorized)
 
 		request._admin = payload

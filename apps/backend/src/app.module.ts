@@ -7,6 +7,7 @@ import { PrismaModule } from "./libs/prisma/prisma.module"
 import { ShahkarModule } from "./libs/shahkar/shahkar.module"
 import { SmsIrModule } from "./libs/sms-ir/sms-ir.module"
 import { AuthModule } from "./modules/auth/auth.module"
+import { CustomerModule } from "./modules/customer/customer.module"
 import { ImageUploadModule } from "./modules/image-upload/image-upload.module"
 import { ShopModule } from "./modules/shop/shop.module"
 
@@ -30,6 +31,7 @@ import { ShopModule } from "./modules/shop/shop.module"
 
 		AuthModule,
 		ShopModule,
+		CustomerModule,
 		ImageUploadModule,
 	],
 })

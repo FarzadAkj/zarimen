@@ -1,3 +1,5 @@
+export * from "./bank-card"
+export * from "./jalali-date"
 export * from "./national-code"
 export * from "./phone-number"
 export * from "./subdomain"

@@ -19,7 +19,8 @@ model Shop {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  wallet Wallet?
+  wallet    Wallet?
+  customers CustomerShop[]
 }
 
 /// The shop owner's wallet. What moves money in and out is decided in a later step.

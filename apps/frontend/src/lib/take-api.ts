@@ -1,8 +1,10 @@
 "use server"
 import { cookies } from "next/headers"
 import { Api } from "@/api/Api"
+import { TOKEN_COOKIE } from "@/lib/session"
 
-export async function takeApi() {
+/** API client that sends the session token from `tokenCookie` (the admin / shop owner one by default). */
+export async function takeApi(tokenCookie: string = TOKEN_COOKIE) {
     const cookie = await cookies()
     const api = new Api({
         customFetch: createCustomFetch(),
@@ -11,7 +13,7 @@ export async function takeApi() {
 
     function createCustomFetch() {
         async function customFetch(input: RequestInfo | URL, init: RequestInit | undefined) {
-            const tokenValue = cookie.get("token")?.value
+            const tokenValue = cookie.get(tokenCookie)?.value
             init ??= {}
             init.headers ??= {}
 

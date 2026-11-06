@@ -6,9 +6,11 @@ import { GlobalError } from "~/libs/error/classes/global-error"
 import { ErrorService } from "~/libs/error/error.service"
 import { AuthService } from "./auth.service"
 import { OTP_MAX_ATTEMPTS } from "./constants/auth.constants"
+import { OtpService } from "./otp.service"
 import "reflect-metadata"
 
 const ADMIN = "09120000000"
+const OTHER_ADMIN = "09130000000"
 const OWNER = "09121111111"
 
 type FakeShop = { id: string, subdomain: string, isActive: boolean, ownerPhoneNumber: string }
@@ -55,14 +57,20 @@ describe("authService", () => {
 	beforeEach(() => {
 		prisma = createPrisma()
 		sms = { sendOTPMessage: vi.fn(async () => {}) }
-		const config = Object.assign(new Config(), { adminPhoneNumber: ADMIN })
+		const config = Object.assign(new Config(), { adminPhoneNumbers: `${ADMIN}, ${OTHER_ADMIN}` })
 		const jwt = new JwtService({ secret: "x".repeat(32) })
-		auth = new AuthService(prisma as never, sms as never, jwt, config, new ErrorService())
+		const error = new ErrorService()
+		auth = new AuthService(prisma as never, new OtpService(prisma as never, sms as never, error), jwt, config, error)
 	})
 
 	const sentCode = () => sms.sendOTPMessage.mock.calls.at(-1)![1] as string
 
-	it("refuses to send a code to anyone but the admin", async () => {
+	it("accepts every number in the admin list, spaces around commas included", async () => {
+		expect(await errorCode(auth.sendAdminOtp(ADMIN))).toBe("resolved")
+		expect(await errorCode(auth.sendAdminOtp(OTHER_ADMIN))).toBe("resolved")
+	})
+
+	it("refuses to send a code to anyone but an admin", async () => {
 		expect(await errorCode(auth.sendAdminOtp("09129999999"))).toBe("NotAdmin")
 		expect(sms.sendOTPMessage).not.toHaveBeenCalled()
 	})

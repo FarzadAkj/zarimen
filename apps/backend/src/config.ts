@@ -1,4 +1,4 @@
-import { IsEnum, IsIn, IsString, IsUrl, MinLength } from "class-validator"
+import { IsEnum, IsIn, IsString, IsUrl, Matches, MinLength } from "class-validator"
 
 export enum NodeEnvType {
 	Production = "production",
@@ -36,9 +36,17 @@ export class Config {
 	@IsString()
 	public jwtExpire!: string
 
-	/** The one admin. Logs in to zarimen.ir/panel with an SMS code sent to this number. */
-	@IsString()
-	public adminPhoneNumber!: string
+	/**
+	 * The admins, comma-separated: "09120000000,09130000000". Each logs in to
+	 * zarimen.ir/panel with an SMS code sent to their number.
+	 */
+	@Matches(/^\s*09\d{9}\s*(?:,\s*09\d{9}\s*)*$/, { message: "adminPhoneNumbers must be comma-separated mobile numbers in 09xxxxxxxxx format" })
+	public adminPhoneNumbers!: string
+
+	/** Whether `phoneNumber` is one of `adminPhoneNumbers`. */
+	isAdminPhoneNumber(phoneNumber: string) {
+		return this.adminPhoneNumbers.split(",").some(admin => admin.trim() === phoneNumber)
+	}
 
 	// ---- sms.ir
 

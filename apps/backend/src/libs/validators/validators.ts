@@ -1,5 +1,5 @@
 import type { ValidationOptions } from "class-validator"
-import { isValidNationalCode, isValidPhoneNumber, isValidSubdomain } from "@zar-imen/shared"
+import { isValidBankCardNumber, isValidJalaliDate, isValidNationalCode, isValidPhoneNumber, isValidSubdomain } from "@zar-imen/shared"
 import { registerDecorator } from "class-validator"
 
 /** Turns one of the shared string checks into a class-validator property decorator. */
@@ -20,3 +20,5 @@ function defineStringValidator(check: (value: string) => boolean, expected: stri
 export const IsPhoneNumber = defineStringValidator(isValidPhoneNumber, "a mobile number in 09xxxxxxxxx format")
 export const IsNationalCode = defineStringValidator(isValidNationalCode, "a valid national code")
 export const IsSubdomain = defineStringValidator(isValidSubdomain, "a valid, non-reserved subdomain")
+export const IsJalaliDate = defineStringValidator(isValidJalaliDate, "a Jalali date in YYYY/MM/DD format")
+export const IsBankCardNumber = defineStringValidator(isValidBankCardNumber, "a valid 16-digit bank card number")

@@ -393,6 +393,122 @@ export class Api extends HttpClient {
         format: "json",
         ...params,
       }),
+    /**
+     * @description Customers who verified at the owner's shop.
+     *
+     * @tags ShopCustomers
+     * @name ReadMyCustomers
+     * @request POST:/shop-panel/readMyCustomers
+     * @secure
+     */
+    readMyCustomers: (params = {}) =>
+      this.request({
+        path: `/shop-panel/readMyCustomers`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+  };
+  customer = {
+    /**
+     * @description Phase 1: Shahkar check, then an SMS code. Finish with completeSignup.
+     *
+     * @tags Customer
+     * @name StartSignup
+     * @request POST:/customer/startSignup
+     */
+    startSignup: (data, params = {}) =>
+      this.request({
+        path: `/customer/startSignup`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Phase 2: the SMS code saves the customer and opens a session.
+     *
+     * @tags Customer
+     * @name CompleteSignup
+     * @request POST:/customer/completeSignup
+     */
+    completeSignup: (data, params = {}) =>
+      this.request({
+        path: `/customer/completeSignup`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Returning customer: SMS code to a registered phone. Finish with completeLogin.
+     *
+     * @tags Customer
+     * @name StartLogin
+     * @request POST:/customer/startLogin
+     */
+    startLogin: (data, params = {}) =>
+      this.request({
+        path: `/customer/startLogin`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags Customer
+     * @name CompleteLogin
+     * @request POST:/customer/completeLogin
+     */
+    completeLogin: (data, params = {}) =>
+      this.request({
+        path: `/customer/completeLogin`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Phase 3: the customer's verified cards.
+     *
+     * @tags Customer
+     * @name ReadMyCards
+     * @request POST:/customer/readMyCards
+     * @secure
+     */
+    readMyCards: (params = {}) =>
+      this.request({
+        path: `/customer/readMyCards`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Phase 3: CardMatch check, then the card is saved.
+     *
+     * @tags Customer
+     * @name AddCard
+     * @request POST:/customer/addCard
+     * @secure
+     */
+    addCard: (data, params = {}) =>
+      this.request({
+        path: `/customer/addCard`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   imageUpload = {
     /**

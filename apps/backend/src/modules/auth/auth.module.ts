@@ -5,6 +5,7 @@ import { AuthController } from "./auth.controller"
 import { AuthService } from "./auth.service"
 import { IsAdmin } from "./guards/is-admin.guard"
 import { IsShopOwner } from "./guards/is-shop-owner.guard"
+import { OtpService } from "./otp.service"
 
 /** Global so any module can put `@UseGuards(IsAdmin)` / `@UseGuards(IsShopOwner)` on its controllers. */
 @Global()
@@ -20,7 +21,7 @@ import { IsShopOwner } from "./guards/is-shop-owner.guard"
 		}),
 	],
 	controllers: [AuthController],
-	providers: [AuthService, IsAdmin, IsShopOwner],
-	exports: [IsAdmin, IsShopOwner, JwtModule],
+	providers: [AuthService, OtpService, IsAdmin, IsShopOwner],
+	exports: [OtpService, IsAdmin, IsShopOwner, JwtModule],
 })
 export class AuthModule { }

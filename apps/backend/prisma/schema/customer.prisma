@@ -1,0 +1,43 @@
+/// A shop's customer, verified by Shahkar (phone ↔ national code) and an SMS code.
+/// One row per person: unique by national code, shared by every shop they visit.
+model Customer {
+  id          String   @id @default(uuid()) @db.Uuid
+  /// National code (کد ملی)
+  ssn         String   @unique
+  /// Last phone verified by Shahkar + SMS. Not unique: a number can move to another person.
+  phoneNumber String
+  /// Jalali, "1370/01/05" (CardMatch takes Jalali).
+  birthDate   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shops CustomerShop[]
+  cards CustomerCard[]
+
+  @@index([phoneNumber])
+}
+
+/// Which shops a customer has verified at; the shop owner sees these customers.
+model CustomerShop {
+  customerId String   @db.Uuid
+  customer   Customer @relation(fields: [customerId], references: [id])
+  shopId     String   @db.Uuid
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  createdAt  DateTime @default(now())
+  /// Last time the customer signed up / logged in at this shop.
+  lastSeenAt DateTime @default(now())
+
+  @@id([customerId, shopId])
+  @@index([shopId])
+}
+
+/// A bank card CardMatch confirmed belongs to the customer (national code + birth date).
+model CustomerCard {
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @db.Uuid
+  customer   Customer @relation(fields: [customerId], references: [id])
+  cardNumber String
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, cardNumber])
+}
