@@ -1,26 +1,29 @@
 /// A jewellery shop: a customer of the app, served on <subdomain>.zarimen.ir.
 model Shop {
-  id                String   @id @default(uuid()) @db.Uuid
+  id                 String    @id @default(uuid()) @db.Uuid
   /// Persian shop name (نام فروشگاه)
-  name              String
+  name               String
   /// Brand name (نام برند)
-  brandName         String
+  brandName          String
   /// `setoode` → setoode.zarimen.ir
-  subdomain         String   @unique
+  subdomain          String    @unique
   /// Only the admin can enable / disable a shop.
-  isActive          Boolean  @default(true)
+  isActive           Boolean   @default(true)
+  /// Customers can use the shop's pages until then. Null: never subscribed.
+  subscriptionEndsAt DateTime?
   /// Public URL of the logo in the ArvanCloud bucket (zar-imen/ folder).
-  logoUrl           String?
-  address           String?
-  landline          String?
-  ownerFullName     String
-  ownerPhoneNumber  String
-  ownerNationalCode String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  logoUrl            String?
+  address            String?
+  landline           String?
+  ownerFullName      String
+  ownerPhoneNumber   String
+  ownerNationalCode  String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  wallet    Wallet?
-  customers CustomerShop[]
+  wallet                Wallet?
+  customers             CustomerShop[]
+  subscriptionPurchases SubscriptionPurchase[]
 }
 
 /// The shop owner's wallet. What moves money in and out is decided in a later step.

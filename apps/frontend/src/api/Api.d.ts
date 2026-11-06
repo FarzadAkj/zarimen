@@ -139,6 +139,8 @@ export interface ShopModel {
   brandName: string;
   subdomain: string;
   isActive: boolean;
+  /** @format date-time */
+  subscriptionEndsAt: string | null;
   logoUrl: string | null;
   address: string | null;
   landline: string | null;
@@ -169,6 +171,7 @@ export interface ShopPublicInfoModel {
   address: string | null;
   landline: string | null;
   isActive: boolean;
+  hasActiveSubscription: boolean;
 }
 export interface StartSignupInput {
   /** @example "setoode" */
@@ -262,6 +265,58 @@ export interface ReadShopCustomerCardsInput {
   customerId: string;
   shopId: string;
 }
+export interface SubscriptionPlanModel {
+  id: string;
+  title: string;
+  price: string;
+  durationDays: number;
+  isActive: boolean;
+}
+export interface CreateSubscriptionPlanInput {
+  /** @example "اشتراک یک‌ماهه" */
+  title: string;
+  /**
+   * Whole Tomans
+   * @example 2000000
+   */
+  price: number;
+  /** @example 30 */
+  durationDays: number;
+}
+export interface SetSubscriptionPlanActiveInput {
+  id: string;
+  isActive: boolean;
+}
+export interface MySubscriptionModel {
+  isActive: boolean;
+  /** @format date-time */
+  endsAt: string | null;
+  currentPlanTitle: string | null;
+}
+export interface SubscriptionPurchaseModel {
+  id: string;
+  planTitle: string;
+  price: string;
+  durationDays: number;
+  /** @format date-time */
+  startsAt: string;
+  /** @format date-time */
+  endsAt: string;
+  refId: string | null;
+  /** @format date-time */
+  createdAt: string;
+}
+export interface ReadSubscriptionPurchasesOutput {
+  data: SubscriptionPurchaseModel[];
+  count: number;
+  pageSize: number;
+}
+export interface StartSubscriptionPurchaseInput {
+  planId: string;
+}
+export interface SubscriptionPurchaseStartedModel {
+  url: string;
+}
 export interface CreateImageUploadInput {
   contentType: ImageContentType;
   size: number;
@@ -272,6 +327,10 @@ export interface CreateImageUploadOutput {
   publicUrl: string;
 }
 export declare enum WalletTopUpCallbackParamsStatusEnum {
+  OK = "OK",
+  NOK = "NOK",
+}
+export declare enum SubscriptionPurchaseCallbackParamsStatusEnum {
   OK = "OK",
   NOK = "NOK",
 }
@@ -387,6 +446,41 @@ export declare class Api<
       data: ServiceCostSettingsModel,
       params?: RequestParams,
     ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
+    /**
+     * @description All plans, disabled included.
+     *
+     * @tags SubscriptionPlan
+     * @name ReadSubscriptionPlans
+     * @request POST:/setting/readSubscriptionPlans
+     * @secure
+     */
+    readSubscriptionPlans: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<SubscriptionPlanModel[], any>>;
+    /**
+     * No description
+     *
+     * @tags SubscriptionPlan
+     * @name CreateSubscriptionPlan
+     * @request POST:/setting/createSubscriptionPlan
+     * @secure
+     */
+    createSubscriptionPlan: (
+      data: CreateSubscriptionPlanInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<SubscriptionPlanModel, any>>;
+    /**
+     * @description Disabled plans are no longer offered; past purchases keep them.
+     *
+     * @tags SubscriptionPlan
+     * @name SetSubscriptionPlanActive
+     * @request POST:/setting/setSubscriptionPlanActive
+     * @secure
+     */
+    setSubscriptionPlanActive: (
+      data: SetSubscriptionPlanActiveInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<SubscriptionPlanModel, any>>;
   };
   wallet: {
     /**
@@ -475,6 +569,52 @@ export declare class Api<
       data: ReadMyCustomerCardsInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
+    /**
+     * @description Plans the owner can buy.
+     *
+     * @tags ShopSubscription
+     * @name ReadAvailablePlans
+     * @request POST:/shop-panel/readAvailablePlans
+     * @secure
+     */
+    readAvailablePlans: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<SubscriptionPlanModel[], any>>;
+    /**
+     * No description
+     *
+     * @tags ShopSubscription
+     * @name ReadMySubscription
+     * @request POST:/shop-panel/readMySubscription
+     * @secure
+     */
+    readMySubscription: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<MySubscriptionModel, any>>;
+    /**
+     * No description
+     *
+     * @tags ShopSubscription
+     * @name ReadMySubscriptionPurchases
+     * @request POST:/shop-panel/readMySubscriptionPurchases
+     * @secure
+     */
+    readMySubscriptionPurchases: (
+      data: ReadWalletTransactionsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadSubscriptionPurchasesOutput, any>>;
+    /**
+     * @description Returns the Zarinpal url to pay for the plan.
+     *
+     * @tags ShopSubscription
+     * @name StartSubscriptionPurchase
+     * @request POST:/shop-panel/startSubscriptionPurchase
+     * @secure
+     */
+    startSubscriptionPurchase: (
+      data: StartSubscriptionPurchaseInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<SubscriptionPurchaseStartedModel, any>>;
   };
   shop: {
     /**
@@ -696,6 +836,22 @@ export declare class Api<
       data: AddCardInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<CustomerCardsModel, any>>;
+  };
+  subscription: {
+    /**
+     * @description Verifies the payment, extends the subscription, then 302s to <shopSiteUrl>/panel/subscription?purchase=success&plan=&endsAt=&refId= or ?purchase=failed&reason=
+     *
+     * @tags SubscriptionCallback
+     * @name SubscriptionPurchaseCallback
+     * @request GET:/subscription/purchaseCallback
+     */
+    subscriptionPurchaseCallback: (
+      query: {
+        Authority: string;
+        Status?: SubscriptionPurchaseCallbackParamsStatusEnum;
+      },
+      params?: RequestParams,
+    ) => Promise<HttpResponse<any, void>>;
   };
   imageUpload: {
     /**

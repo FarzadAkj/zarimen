@@ -5,6 +5,8 @@ import { defineErrorList } from "~/libs/error/classes/global-error"
 export const CustomerErrors = defineErrorList(ModuleNames.CustomerModule, {
 	ShopNotFound: { statusCode: HttpStatus.NOT_FOUND },
 	ShopDisabled: { statusCode: HttpStatus.FORBIDDEN },
+	/** The shop has no running subscription; its customers cannot use it. */
+	SubscriptionInactive: { statusCode: HttpStatus.FORBIDDEN },
 	/** Shahkar: the phone is not registered under the national code. */
 	PhoneNationalCodeMismatch: { statusCode: HttpStatus.BAD_REQUEST },
 	/** CardMatch: the card does not belong to the national code + birth date. */

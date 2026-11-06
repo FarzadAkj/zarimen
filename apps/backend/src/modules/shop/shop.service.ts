@@ -7,6 +7,7 @@ import { Prisma, WalletTransactionType } from "@prisma/client"
 import { ErrorService } from "~/libs/error/error.service"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { ShahkarService } from "~/libs/shahkar/shahkar.service"
+import { hasActiveSubscription } from "../subscription/constants/subscription"
 import { ShopErrors } from "./constants/shop.errors"
 import { shopSelect } from "./constants/shop.select"
 
@@ -69,11 +70,12 @@ export class ShopService {
 	async readShopPublicInfo(subdomain: string): Promise<ShopPublicInfoModel> {
 		const shop = await this.prisma.shop.findUnique({
 			where: { subdomain },
-			select: { name: true, brandName: true, logoUrl: true, address: true, landline: true, isActive: true },
+			select: { name: true, brandName: true, logoUrl: true, address: true, landline: true, isActive: true, subscriptionEndsAt: true },
 		})
 		if (!shop)
 			throw this.error.throwErrorToClient(ShopErrors.NotFound)
-		return shop
+		const { subscriptionEndsAt, ...info } = shop
+		return { ...info, hasActiveSubscription: hasActiveSubscription(subscriptionEndsAt) }
 	}
 
 	async readShop(where: { id: string } | { subdomain: string }): Promise<ShopModel> {

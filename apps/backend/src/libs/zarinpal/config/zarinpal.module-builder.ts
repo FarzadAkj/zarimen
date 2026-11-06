@@ -5,7 +5,6 @@ export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, ASYNC_OPTIONS_TYPE
 
 export type ZarinpalConfig = {
 	merchantId: string
-	callbackUrl: string
 	/** Gateway base url; production by default, `https://sandbox.zarinpal.com` for testing. */
 	baseUrl?: string
 }

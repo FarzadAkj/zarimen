@@ -13,6 +13,7 @@ import { ErrorService } from "~/libs/error/error.service"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { ShahkarService } from "~/libs/shahkar/shahkar.service"
 import { OtpService } from "../auth/otp.service"
+import { hasActiveSubscription } from "../subscription/constants/subscription"
 import { WalletService } from "../wallet/wallet.service"
 import { getBankName } from "./constants/bank-prefixes"
 import { maskCardNumber, toCardMatchDate } from "./constants/card"
@@ -198,12 +199,15 @@ export class CustomerService {
 		}
 	}
 
+	/** The shop, if it is enabled and subscribed; every customer action goes through this. */
 	private async findActiveShop(where: { subdomain: string } | { id: string }) {
-		const shop = await this.prisma.shop.findUnique({ where, select: { id: true, isActive: true } })
+		const shop = await this.prisma.shop.findUnique({ where, select: { id: true, isActive: true, subscriptionEndsAt: true } })
 		if (!shop)
 			throw this.error.throwErrorToClient(CustomerErrors.ShopNotFound)
 		if (!shop.isActive)
 			throw this.error.throwErrorToClient(CustomerErrors.ShopDisabled)
+		if (!hasActiveSubscription(shop.subscriptionEndsAt))
+			throw this.error.throwErrorToClient(CustomerErrors.SubscriptionInactive)
 		return shop
 	}
 

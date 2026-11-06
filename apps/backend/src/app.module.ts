@@ -13,6 +13,7 @@ import { CustomerModule } from "./modules/customer/customer.module"
 import { ImageUploadModule } from "./modules/image-upload/image-upload.module"
 import { SettingModule } from "./modules/setting/setting.module"
 import { ShopModule } from "./modules/shop/shop.module"
+import { SubscriptionModule } from "./modules/subscription/subscription.module"
 import { WalletModule } from "./modules/wallet/wallet.module"
 
 @Module({
@@ -36,7 +37,6 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 			inject: [Config],
 			useFactory: (config: Config) => ({
 				merchantId: config.zarinPalMerchantId,
-				callbackUrl: config.zarinpalCallbackUrl,
 				baseUrl: config.zarinpalBaseUrl || undefined,
 			}),
 		}),
@@ -47,6 +47,7 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 		AuthModule,
 		ShopModule,
 		CustomerModule,
+		SubscriptionModule,
 		ImageUploadModule,
 	],
 })

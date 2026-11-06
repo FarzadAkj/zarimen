@@ -16,6 +16,10 @@ export class ShopModel {
 	@ApiProperty({ type: Boolean })
 	isActive!: boolean
 
+	/** Customers can use the shop until then; null: never subscribed. */
+	@ApiProperty({ type: String, format: "date-time", nullable: true })
+	subscriptionEndsAt!: Date | null
+
 	@ApiProperty({ type: String, nullable: true })
 	logoUrl!: string | null
 

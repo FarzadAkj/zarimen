@@ -1,0 +1,53 @@
+/// A plan the admin sells to shops (zarimen.ir/panel/settings). Disabled, never deleted:
+/// purchases point at it.
+model SubscriptionPlan {
+  id           String   @id @default(uuid()) @db.Uuid
+  /// e.g. «اشتراک یک‌ماهه»
+  title        String
+  /// Whole Tomans
+  price        Decimal  @db.Decimal(20, 0)
+  durationDays Int
+  /// Only active plans are offered to owners.
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  purchases SubscriptionPurchase[]
+}
+
+/// A shop buying a plan through Zarinpal. Title, price and duration are copied from the plan
+/// at purchase time, so later plan changes do not rewrite history.
+model SubscriptionPurchase {
+  id           String                     @id @default(uuid()) @db.Uuid
+  shopId       String                     @db.Uuid
+  shop         Shop                       @relation(fields: [shopId], references: [id])
+  planId       String                     @db.Uuid
+  plan         SubscriptionPlan           @relation(fields: [planId], references: [id])
+  planTitle    String
+  price        Decimal                    @db.Decimal(20, 0)
+  durationDays Int
+  status       SubscriptionPurchaseStatus @default(PENDING)
+
+  /// The period this purchase added, set when it is paid.
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  authority   String? @unique
+  refId       String?
+  cardPan     String?
+  gatewayCode Int?
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopId, createdAt])
+}
+
+enum SubscriptionPurchaseStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  /// Still PENDING 20 minutes after it started (owner never came back from Zarinpal).
+  CANCELED
+}

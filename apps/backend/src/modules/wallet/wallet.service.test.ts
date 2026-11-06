@@ -93,7 +93,7 @@ describe("walletService", () => {
 			verifyPayment: vi.fn(async () => ({ ok: true, code: 100, refId: "777", cardPan: "6037**1234" })),
 			gatewayUrl: (authority: string) => `https://sandbox.zarinpal.com/pg/StartPay/${authority}`,
 		}
-		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010" })
+		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010", backendUrl: "http://127.0.0.1:8010" })
 		wallet = new WalletService(prisma as never, settings as never, zarinpal as never, config, new ErrorService())
 	}
 
@@ -154,6 +154,7 @@ describe("walletService", () => {
 		it("credits the wallet once Zarinpal verifies, and sends the owner back to their shop", async () => {
 			expect(await wallet.startTopUp("shop-1", 50_000)).toEqual({ url: "https://sandbox.zarinpal.com/pg/StartPay/A0001" })
 			expect(prisma.rows[0]).toMatchObject({ type: "TOP_UP", status: "PENDING", authority: "A0001" })
+			expect(zarinpal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 50_000, callbackUrl: "http://127.0.0.1:8010/wallet/topUpCallback" }))
 			expect(prisma.wallet.balance).toBe(5000)
 
 			const url = await wallet.handleTopUpCallback("A0001", "OK")

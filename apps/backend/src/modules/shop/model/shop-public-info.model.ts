@@ -22,4 +22,8 @@ export class ShopPublicInfoModel {
 
 	@ApiProperty({ type: Boolean })
 	isActive!: boolean
+
+	/** False: customers cannot use the shop's pages (no running subscription). */
+	@ApiProperty({ type: Boolean })
+	hasActiveSubscription!: boolean
 }

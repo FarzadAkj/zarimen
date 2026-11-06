@@ -125,6 +125,7 @@ export class WalletService {
 				amount,
 				description: `${SoftwareName} - شارژ کیف پول ${shop.subdomain}`,
 				orderId: topUp.id,
+				callbackUrl: new URL("/wallet/topUpCallback", this.config.backendUrl).toString(),
 				mobile: shop.ownerPhoneNumber,
 			})
 		}

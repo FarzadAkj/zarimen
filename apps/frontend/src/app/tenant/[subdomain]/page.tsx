@@ -10,7 +10,7 @@ import { getShopPublicInfo } from "@/lib/current-shop"
  */
 export default async function ShopLandingPage() {
     const shop = await getShopPublicInfo()
-    if (!shop.isActive) return <DisabledShopNotice shop={shop} />
+    if (!shop.isActive || !shop.hasActiveSubscription) return <DisabledShopNotice shop={shop} />
 
     return (
         <div className="min-h-dvh flex flex-col bg-gradient-to-b from-primary/15 via-background to-background">

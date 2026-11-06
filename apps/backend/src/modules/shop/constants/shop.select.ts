@@ -6,6 +6,7 @@ export const shopSelect = {
 	brandName: true,
 	subdomain: true,
 	isActive: true,
+	subscriptionEndsAt: true,
 	logoUrl: true,
 	address: true,
 	landline: true,

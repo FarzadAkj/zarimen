@@ -21,6 +21,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 5   | Owner wallet top-up (Zarinpal) + transaction history | done |
 | 6   | Admin views a shop's panel at /panel/customers/<subdomain> | done |
 | 6b  | Timer: cancel top-ups pending > 20 min, every 10 min | done |
+| 7   | Subscription plans (admin) + purchases via Zarinpal (owners) | done |
 
 ## Step log
 
@@ -292,6 +293,42 @@ Zarinpal returns unverified payments to the payer. Owner wallet page shows an «
 message. 2 new tests. Enum value pushed to the dev DB (the first `db push` wrongly said
 "in sync"; confirmed with `db pull`).
 
+### Step 7 — Subscriptions (2026-11-06)
+
+Asked for: admin defines plans (price + length) on the settings page; a shop must be
+subscribed to use the service; owners buy plans; a new purchase is added to the end of the
+running subscription; owners see current plan + due date on the dashboard and their purchase
+history (amount paid); admin sees each shop's due date in the shops table; all dates Jalali.
+User chose: **pay directly via Zarinpal**; **without a subscription customers are blocked, the
+owner panel stays open**.
+
+Backend:
+- `subscription.prisma`: `SubscriptionPlan` (title, price, durationDays, isActive — disabled,
+  never deleted), `SubscriptionPurchase` (snapshot of title/price/days, status
+  PENDING/SUCCESS/FAILED/CANCELED, startsAt/endsAt, Zarinpal fields); `Shop.subscriptionEndsAt`.
+- `modules/subscription`: `extendSubscription(currentEnd, now, days)` (start = max(now,
+  current end)) and `hasActiveSubscription` (tested). Admin: `setting/readSubscriptionPlans`,
+  `createSubscriptionPlan`, `setSubscriptionPlanActive`. Owner: `shop-panel/readAvailablePlans`,
+  `readMySubscription` (isActive, endsAt, title of the purchase covering today),
+  `readMySubscriptionPurchases`, `startSubscriptionPurchase`. `GET subscription/purchaseCallback`
+  → 302 <shop>/panel/subscription?purchase=…. Completion: PENDING→SUCCESS conditional +
+  `SELECT … FOR UPDATE` on the shop row before extending. `cancelStalePurchases` cron (10 min / 20 min).
+- Config: `zarinpalCallbackUrl` → **`backendUrl`**; each payment kind builds its own callback
+  (`/wallet/topUpCallback`, `/subscription/purchaseCallback`). ZarinpalService takes `callbackUrl` per request.
+- Customers blocked: `CustomerService.findActiveShop` → `SubscriptionInactive` (403) before
+  any paid call. `ShopPublicInfoModel.hasActiveSubscription`, `ShopModel.subscriptionEndsAt`.
+- Tests: 4 for the date rules, 6 purchase-flow, 1 customer blocking.
+
+Frontend:
+- Admin `/panel/settings`: «طرح‌های اشتراک» card (list + enable switch + add form with
+  duration presets, 1 month = 30 days). Shops table «پایان اشتراک» column and admin shop page
+  header (`SubscriptionStatus`: Jalali date + days left / «منقضی» / «ندارد»).
+- Owner: nav «اشتراک» → `/panel/subscription` (current status, plans with «خرید با
+  زرین‌پال», result banner, purchase history: plan, amount paid, Jalali purchase date, period);
+  dashboard subscription card («خرید / تمدید اشتراک»).
+- Customers: landing + /verify show «موقتاً در دسترس نیست» when not subscribed.
+- `formatDate`, `daysUntil` (Jalali via fa-IR); `formatDuration`, `DURATION_PRESETS` in lib/format.
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -339,6 +376,8 @@ message. 2 new tests. Enum value pushed to the dev DB (the first `db push` wrong
   history adds up to the balance. Refunded charges are deleted, not shown.
 - **Top-ups are not restricted to a card** (Darik restricts to the payer's verified card;
   shop owners have no verified cards). Min 2,000, max 200,000,000 Tomans.
+- **Plan length is in days** (1 month = 30 days), so "1 month + 2 weeks" is exact.
+- **A purchase extends from max(now, current end)**, computed when Zarinpal verifies it.
 - `ROOT_DOMAIN` (frontend env): `zarimen.ir` in production, `localhost:3010` in dev.
 
 ## Open items
@@ -347,8 +386,10 @@ message. 2 new tests. Enum value pushed to the dev DB (the first `db push` wrong
   OTP login (`sendSms=false` prints the code in the backend console) and add a shop.
 - Fill real values in `apps/backend/.env`: `adminPhoneNumbers`, `jwtSecret`, sms.ir
   key + template, api.ir token, Arvan bucket + keys.
-- Zarinpal: production `zarinPalMerchantId`, `zarinpalCallbackUrl` (public backend url) and
+- Zarinpal: production `zarinPalMerchantId`, `backendUrl` (public backend url) and
   empty `zarinpalBaseUrl` must be set; `shopSiteUrl = https://{subdomain}.zarimen.ir`.
+- Existing shops have no subscription → their customers are blocked until they buy one.
+  There is no admin "grant subscription" / trial yet.
 - Rate limiting: each startSignup costs one paid Shahkar call and addCard one CardMatch
   call; nothing limits how often a visitor can trigger them yet.
 - Customers cannot remove a card; the owner's customer list is not paginated yet.

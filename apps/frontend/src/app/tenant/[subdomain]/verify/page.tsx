@@ -9,7 +9,7 @@ import { readMyCards } from "./actions"
 /** <subdomain>.zarimen.ir/verify — customer verification, opened from the landing page's button. */
 export default async function VerifyPage() {
     const shop = await getShopPublicInfo()
-    if (!shop.isActive) return <DisabledShopNotice shop={shop} />
+    if (!shop.isActive || !shop.hasActiveSubscription) return <DisabledShopNotice shop={shop} />
 
     // A customer still inside their 30-minute session goes straight to their cards.
     const { data: cards } = await readMyCards()

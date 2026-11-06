@@ -21,3 +21,18 @@ export function formatCardNumber(digits: string) {
 export function maskPhoneNumber(phoneNumber: string) {
     return `${phoneNumber.slice(0, 4)}***${phoneNumber.slice(7)}`
 }
+
+/** Plan lengths offered as shortcuts on the admin's settings page; a month is 30 days. */
+export const DURATION_PRESETS = [
+    { days: 30, label: "۱ ماه" },
+    { days: 60, label: "۲ ماه" },
+    { days: 90, label: "۳ ماه" },
+    { days: 180, label: "۶ ماه" },
+    { days: 365, label: "۱ سال" },
+]
+
+/** 30 → "۱ ماه (۳۰ روز)", 45 → "۴۵ روز" */
+export function formatDuration(days: number) {
+    const preset = DURATION_PRESETS.find(p => p.days === days)
+    return preset ? `${preset.label} (${days.toLocaleString("fa-IR")} روز)` : `${days.toLocaleString("fa-IR")} روز`
+}

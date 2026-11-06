@@ -36,13 +36,14 @@ export type PaymentVerification
 export class ZarinpalService {
 	constructor(@Inject(MODULE_OPTIONS_TOKEN) private config: ZarinpalConfig) { }
 
-	async requestPayment(input: { amount: number, description: string, orderId: string, mobile?: string }): Promise<PaymentRequest> {
+	/** `callbackUrl`: the backend endpoint Zarinpal sends the payer back to (one per payment kind). */
+	async requestPayment(input: { amount: number, description: string, orderId: string, callbackUrl: string, mobile?: string }): Promise<PaymentRequest> {
 		const output = await this.post<RequestOutput>("/pg/v4/payment/request.json", {
 			merchant_id: this.config.merchantId,
 			amount: input.amount,
 			currency: "IRT",
 			description: input.description,
-			callback_url: this.config.callbackUrl,
+			callback_url: input.callbackUrl,
 			metadata: { order_id: input.orderId, mobile: input.mobile },
 		})
 

@@ -35,6 +35,14 @@ export var WalletTopUpCallbackParamsStatusEnum;
   WalletTopUpCallbackParamsStatusEnum ||
     (WalletTopUpCallbackParamsStatusEnum = {}),
 );
+export var SubscriptionPurchaseCallbackParamsStatusEnum;
+(function (SubscriptionPurchaseCallbackParamsStatusEnum) {
+  SubscriptionPurchaseCallbackParamsStatusEnum["OK"] = "OK";
+  SubscriptionPurchaseCallbackParamsStatusEnum["NOK"] = "NOK";
+})(
+  SubscriptionPurchaseCallbackParamsStatusEnum ||
+    (SubscriptionPurchaseCallbackParamsStatusEnum = {}),
+);
 export var ContentType;
 (function (ContentType) {
   ContentType["Json"] = "application/json";
@@ -260,6 +268,58 @@ export class Api extends HttpClient {
         format: "json",
         ...params,
       }),
+    /**
+     * @description All plans, disabled included.
+     *
+     * @tags SubscriptionPlan
+     * @name ReadSubscriptionPlans
+     * @request POST:/setting/readSubscriptionPlans
+     * @secure
+     */
+    readSubscriptionPlans: (params = {}) =>
+      this.request({
+        path: `/setting/readSubscriptionPlans`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags SubscriptionPlan
+     * @name CreateSubscriptionPlan
+     * @request POST:/setting/createSubscriptionPlan
+     * @secure
+     */
+    createSubscriptionPlan: (data, params = {}) =>
+      this.request({
+        path: `/setting/createSubscriptionPlan`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Disabled plans are no longer offered; past purchases keep them.
+     *
+     * @tags SubscriptionPlan
+     * @name SetSubscriptionPlanActive
+     * @request POST:/setting/setSubscriptionPlanActive
+     * @secure
+     */
+    setSubscriptionPlanActive: (data, params = {}) =>
+      this.request({
+        path: `/setting/setSubscriptionPlanActive`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   wallet = {
     /**
@@ -375,6 +435,74 @@ export class Api extends HttpClient {
     readMyCustomerCards: (data, params = {}) =>
       this.request({
         path: `/shop-panel/readMyCustomerCards`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Plans the owner can buy.
+     *
+     * @tags ShopSubscription
+     * @name ReadAvailablePlans
+     * @request POST:/shop-panel/readAvailablePlans
+     * @secure
+     */
+    readAvailablePlans: (params = {}) =>
+      this.request({
+        path: `/shop-panel/readAvailablePlans`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags ShopSubscription
+     * @name ReadMySubscription
+     * @request POST:/shop-panel/readMySubscription
+     * @secure
+     */
+    readMySubscription: (params = {}) =>
+      this.request({
+        path: `/shop-panel/readMySubscription`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags ShopSubscription
+     * @name ReadMySubscriptionPurchases
+     * @request POST:/shop-panel/readMySubscriptionPurchases
+     * @secure
+     */
+    readMySubscriptionPurchases: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/readMySubscriptionPurchases`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Returns the Zarinpal url to pay for the plan.
+     *
+     * @tags ShopSubscription
+     * @name StartSubscriptionPurchase
+     * @request POST:/shop-panel/startSubscriptionPurchase
+     * @secure
+     */
+    startSubscriptionPurchase: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/startSubscriptionPurchase`,
         method: "POST",
         body: data,
         secure: true,
@@ -706,6 +834,22 @@ export class Api extends HttpClient {
         secure: true,
         type: ContentType.Json,
         format: "json",
+        ...params,
+      }),
+  };
+  subscription = {
+    /**
+     * @description Verifies the payment, extends the subscription, then 302s to <shopSiteUrl>/panel/subscription?purchase=success&plan=&endsAt=&refId= or ?purchase=failed&reason=
+     *
+     * @tags SubscriptionCallback
+     * @name SubscriptionPurchaseCallback
+     * @request GET:/subscription/purchaseCallback
+     */
+    subscriptionPurchaseCallback: (query, params = {}) =>
+      this.request({
+        path: `/subscription/purchaseCallback`,
+        method: "GET",
+        query: query,
         ...params,
       }),
   };

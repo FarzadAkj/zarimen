@@ -102,9 +102,12 @@ export class Config {
 	@IsString()
 	public zarinPalMerchantId!: string
 
-	/** BACKEND url Zarinpal sends the owner back to: <backend>/wallet/topUpCallback */
+	/**
+	 * Public base URL of this backend, e.g. https://api.zarimen.ir. Zarinpal sends payers back
+	 * to callbacks under it (/wallet/topUpCallback, /subscription/purchaseCallback).
+	 */
 	@IsUrl({ require_tld: false, protocols: ["https", "http"] })
-	public zarinpalCallbackUrl!: string
+	public backendUrl!: string
 
 	/** Leave empty for production; https://sandbox.zarinpal.com to test without real money. */
 	@IsOptional()

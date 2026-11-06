@@ -17,10 +17,13 @@ type Link = { customerId: string, shopId: string, lastSeenAt: Date }
 
 /** In-memory stand-in for the Prisma calls CustomerService makes. */
 function createPrisma() {
+	const subscribed = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 	const shops = [
-		{ id: "shop-1", subdomain: "setoode", isActive: true },
-		{ id: "shop-2", subdomain: "rahimi", isActive: true },
-		{ id: "shop-3", subdomain: "closed", isActive: false },
+		{ id: "shop-1", subdomain: "setoode", isActive: true, subscriptionEndsAt: subscribed },
+		{ id: "shop-2", subdomain: "rahimi", isActive: true, subscriptionEndsAt: subscribed },
+		{ id: "shop-3", subdomain: "closed", isActive: false, subscriptionEndsAt: subscribed },
+		{ id: "shop-4", subdomain: "expired", isActive: true, subscriptionEndsAt: new Date(Date.now() - 1000) },
+		{ id: "shop-5", subdomain: "never", isActive: true, subscriptionEndsAt: null },
 	]
 	const customers: Customer[] = []
 	const cards: Card[] = []
@@ -121,6 +124,13 @@ describe("customerService", () => {
 		it("reports an unreachable Shahkar as unavailable, not as a mismatch", async () => {
 			shahkar.verifyMobileNationalCode.mockRejectedValueOnce(new Error("api.ir down"))
 			expect(await errorCode(service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("IdentityServiceUnavailable")
+		})
+
+		it("refuses shops whose subscription ended or never started, before any paid call", async () => {
+			expect(await errorCode(service.startSignup("expired", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("SubscriptionInactive")
+			expect(await errorCode(service.startLogin("never", PHONE))).toBe("SubscriptionInactive")
+			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
+			expect(otp.send).not.toHaveBeenCalled()
 		})
 
 		it("refuses disabled and unknown shops", async () => {

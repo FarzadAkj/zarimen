@@ -41,6 +41,11 @@ The customer is identified by three things, and all three matter:
   and the customer's national code.
 - **Admin view of a shop:** zarimen.ir/panel/customers/<subdomain> — the shop, its customers
   and its wallet history.
+- **Subscriptions:** the admin defines plans (price in Tomans + length in days) on the
+  settings page. Owners buy them through Zarinpal on <sub>.zarimen.ir/panel/subscription; a
+  purchase is added to the end of a running subscription. Without a running subscription the
+  shop's customers cannot verify (owner panel stays open). Owners see current plan + due date
+  and their purchase history; the admin sees each shop's due date. All dates are Jalali.
 - **Customers ↔ shops:** many-to-many. Each shop owner sees the customers linked to their shop.
 
 ## Known building blocks

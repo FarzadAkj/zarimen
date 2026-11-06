@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { LayoutDashboard, LogOut, ReceiptText, Users, Wallet } from "lucide-react"
+import { BadgeCheck, LayoutDashboard, LogOut, ReceiptText, Users, Wallet } from "lucide-react"
 import { redirect } from "next/navigation"
 import { Button } from "@/components/shad/button"
 import { logoutShop, readMyShop } from "../actions"
@@ -32,6 +32,10 @@ export default async function ShopOwnerLayout({ children }: Readonly<{ children:
                         <Link href="/panel/customers" className="flex items-center gap-1.5 hover:text-primary">
                             <Users className="size-4" />
                             مشتریان
+                        </Link>
+                        <Link href="/panel/subscription" className="flex items-center gap-1.5 hover:text-primary">
+                            <BadgeCheck className="size-4" />
+                            اشتراک
                         </Link>
                         <Link href="/panel/wallet" className="flex items-center gap-1.5 hover:text-primary">
                             <Wallet className="size-4" />

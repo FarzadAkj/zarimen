@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { OtpSentModel, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, WalletTopUpModel } from "@/api/Api"
+import type { MySubscriptionModel, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
 import { cache } from "react"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -88,6 +88,51 @@ export async function readMyWalletTransactions(page: number): Promise<ServerResp
     const api = await takeApi()
     try {
         const { data } = await api.shopPanel.readMyWalletTransactions({ page })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readMySubscription(): Promise<ServerResponse<MySubscriptionModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readMySubscription()
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readAvailablePlans(): Promise<ServerResponse<SubscriptionPlanModel[]>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readAvailablePlans()
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readMySubscriptionPurchases(page: number): Promise<ServerResponse<ReadSubscriptionPurchasesOutput>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readMySubscriptionPurchases({ page })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** Starts the Zarinpal payment for a plan; returns the gateway url. */
+export async function startSubscriptionPurchase(planId: string): Promise<ServerResponse<SubscriptionPurchaseStartedModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.startSubscriptionPurchase({ planId })
         return { data }
     }
     catch (error: any) {

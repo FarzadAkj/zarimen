@@ -110,6 +110,11 @@ Anything only one app uses lives in that app, not in `packages/shared`.
   `WalletService.charge({ shopId, customerSsn }, PaidService.X, run)` — never call
   Shahkar/CardMatch/SMS for a customer without it.
 - Every wallet balance change writes a `WalletTransaction` in the same DB transaction.
+- Customer actions go through `CustomerService.findActiveShop` (enabled + subscribed).
+- Zarinpal payments: each kind has its own callback under `backendUrl` and redirects back to
+  `shopSiteUrl`; completion is conditional on PENDING (idempotent); a cron cancels PENDING
+  rows older than 20 minutes.
+- Dates shown to users are Jalali: `formatDate` / `formatDateTime` (`lib/format-date.ts`).
 - Owner and admin views of a shop share components; pass the data loaders as props
   (owner actions, or admin actions bound to the shopId).
 - Admin settings: Darik's format — a model class with defaults in

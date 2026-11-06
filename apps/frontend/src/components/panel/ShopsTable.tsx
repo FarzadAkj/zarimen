@@ -8,6 +8,7 @@ import { Badge } from "@/components/shad/badge"
 import { Switch } from "@/components/shad/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shad/table"
 import { formatAmount } from "@/lib/format"
+import { SubscriptionStatus } from "@/components/shared/SubscriptionStatus"
 import { WalletBalanceDialog } from "./WalletBalanceDialog"
 
 export function ShopsTable({ shops, rootDomain }: { shops: ShopModel[], rootDomain: string }) {
@@ -23,6 +24,7 @@ export function ShopsTable({ shops, rootDomain }: { shops: ShopModel[], rootDoma
                     <TableHead>مالک</TableHead>
                     <TableHead>موبایل مالک</TableHead>
                     <TableHead>موجودی کیف پول</TableHead>
+                    <TableHead>پایان اشتراک</TableHead>
                     <TableHead>وضعیت</TableHead>
                 </TableRow>
             </TableHeader>
@@ -52,6 +54,7 @@ export function ShopsTable({ shops, rootDomain }: { shops: ShopModel[], rootDoma
                                 <WalletBalanceDialog shop={shop} />
                             </div>
                         </TableCell>
+                        <TableCell><SubscriptionStatus endsAt={shop.subscriptionEndsAt} /></TableCell>
                         <TableCell><ActiveSwitch shop={shop} /></TableCell>
                     </TableRow>
                 ))}

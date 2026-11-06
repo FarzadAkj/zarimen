@@ -3,15 +3,27 @@ import { redirect } from "next/navigation"
 import { Button } from "@/components/shad/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shad/card"
 import { formatAmount } from "@/lib/format"
-import { readMyShop } from "../actions"
+import { SubscriptionSummary } from "@/components/shop-panel/SubscriptionSummary"
+import { readMyShop, readMySubscription } from "../actions"
 
 /** <subdomain>.zarimen.ir/panel — the shop's dashboard. Customer checks come in a later step. */
 export default async function ShopDashboardPage() {
-    const { data: shop } = await readMyShop()
+    const [{ data: shop }, { data: subscription }] = await Promise.all([readMyShop(), readMySubscription()])
     if (!shop) redirect("/panel/login")
 
     return (
         <div className="grid gap-4 sm:grid-cols-2">
+            <Card className="sm:col-span-2">
+                <CardHeader>
+                    <CardDescription>اشتراک</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap items-center justify-between gap-3">
+                    {subscription && <SubscriptionSummary subscription={subscription} />}
+                    <Button asChild size="sm" variant={subscription?.isActive ? "outline" : "default"}>
+                        <Link href="/panel/subscription">{subscription?.isActive ? "تمدید اشتراک" : "خرید اشتراک"}</Link>
+                    </Button>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardDescription>فروشگاه</CardDescription>
