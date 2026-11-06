@@ -68,7 +68,7 @@ export default async function ShopSubscriptionPage({ searchParams }: { searchPar
                     {!plans.data && <p className="text-destructive">{plans.error?.translation}</p>}
                     {plans.data && !plans.data.length && <p className="text-muted-foreground">در حال حاضر طرحی برای خرید وجود ندارد.</p>}
                     {plans.data && plans.data.length > 0 && (
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
                             {plans.data.map(plan => (
                                 <div key={plan.id} className="grid gap-3 rounded-xl border p-4">
                                     <div>

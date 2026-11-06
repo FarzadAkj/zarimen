@@ -5,6 +5,7 @@ import { IsAdmin } from "../auth/guards/is-admin.guard"
 import { IsShopOwner } from "../auth/guards/is-shop-owner.guard"
 import { ReadWalletTransactionsInput } from "../wallet/dto/read-wallet-transactions.input"
 import { TopUpCallbackQuery } from "../wallet/dto/top-up-callback.query"
+import { SetShopSubscriptionEndInput } from "./dto/set-subscription-end.input"
 import { CreateSubscriptionPlanInput, SetSubscriptionPlanActiveInput, StartSubscriptionPurchaseInput } from "./dto/subscription-plan.input"
 import { MySubscriptionModel, ReadSubscriptionPurchasesOutput, SubscriptionPlanModel, SubscriptionPurchaseStartedModel } from "./model/subscription.model"
 import { SubscriptionService } from "./subscription.service"
@@ -37,6 +38,22 @@ export class SubscriptionPlanController {
 	@ApiResponse({ type: SubscriptionPlanModel, status: 200 })
 	setSubscriptionPlanActive(@Body() input: SetSubscriptionPlanActiveInput): Promise<SubscriptionPlanModel> {
 		return this.subscription.setPlanActive(input.id, input.isActive)
+	}
+}
+
+/** The admin changing one shop's subscription (shops table / zarimen.ir/panel/customers/<subdomain>). */
+@UseGuards(IsAdmin)
+@ApiBearerAuth()
+@Controller("shop")
+export class AdminShopSubscriptionController {
+	constructor(private subscription: SubscriptionService) { }
+
+	@Post("setShopSubscriptionEnd")
+	@ApiOperation({ operationId: "setShopSubscriptionEnd", description: "Moves the shop's subscription end later (never earlier than the current end or now)." })
+	@ApiBody({ type: SetShopSubscriptionEndInput })
+	@ApiResponse({ type: MySubscriptionModel, status: 200 })
+	setShopSubscriptionEnd(@Body() input: SetShopSubscriptionEndInput): Promise<MySubscriptionModel> {
+		return this.subscription.setSubscriptionEnd(input.shopId, new Date(input.endsAt))
 	}
 }
 

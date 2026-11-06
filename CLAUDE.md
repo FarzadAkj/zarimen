@@ -132,6 +132,8 @@ pnpm install
 pnpm dev                                  # both apps (backend :8010, frontend :3010)
 pnpm verify                               # build + typecheck + test — gate for every step
 pnpm --filter @zar-imen/backend db:push
+                                          # after ANY schema change + prisma generate: restart `pnpm dev`
+                                          # (bun --watch keeps the old Prisma client → "Argument X is missing")
 pnpm --filter @zar-imen/backend db:migrate
 pnpm --filter @zar-imen/frontend api  # regenerate the API client (backend must be running)
 ```

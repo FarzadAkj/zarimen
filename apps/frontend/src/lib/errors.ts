@@ -43,6 +43,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     // ---- subscription
     SubscriptionInactive: "اشتراک این فروشگاه در زر ایمن فعال نیست؛ امکان احراز هویت فعلاً وجود ندارد.",
     PlanNotFound: "این طرح اشتراک دیگر در دسترس نیست.",
+    EndDateTooEarly: "تاریخ جدید باید بعد از پایان اشتراک فعلی (و بعد از امروز) باشد.",
 
     // ---- wallet
     InsufficientBalance: "اعتبار کیف پول فروشگاه برای انجام این درخواست کافی نیست. لطفاً به فروشنده اطلاع دهید.",

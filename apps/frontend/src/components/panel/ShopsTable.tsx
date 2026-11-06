@@ -9,6 +9,7 @@ import { Switch } from "@/components/shad/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shad/table"
 import { formatAmount } from "@/lib/format"
 import { SubscriptionStatus } from "@/components/shared/SubscriptionStatus"
+import { SubscriptionEndDialog } from "./SubscriptionEndDialog"
 import { WalletBalanceDialog } from "./WalletBalanceDialog"
 
 export function ShopsTable({ shops, rootDomain }: { shops: ShopModel[], rootDomain: string }) {
@@ -54,7 +55,12 @@ export function ShopsTable({ shops, rootDomain }: { shops: ShopModel[], rootDoma
                                 <WalletBalanceDialog shop={shop} />
                             </div>
                         </TableCell>
-                        <TableCell><SubscriptionStatus endsAt={shop.subscriptionEndsAt} /></TableCell>
+                        <TableCell>
+                            <div className="flex items-center gap-1">
+                                <SubscriptionStatus endsAt={shop.subscriptionEndsAt} />
+                                <SubscriptionEndDialog shopId={shop.id} shopName={shop.name} endsAt={shop.subscriptionEndsAt} />
+                            </div>
+                        </TableCell>
                         <TableCell><ActiveSwitch shop={shop} /></TableCell>
                     </TableRow>
                 ))}

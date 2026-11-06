@@ -2,13 +2,14 @@ import type { ShopOwnerRequest } from "../auth/guards/is-shop-owner.guard"
 import { Body, Controller, Post, Req, UseGuards } from "@nestjs/common"
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from "@nestjs/swagger"
 import { IsShopOwner } from "../auth/guards/is-shop-owner.guard"
+import { HasActiveSubscription } from "../subscription/guards/has-active-subscription.guard"
 import { CustomerService } from "./customer.service"
 import { ReadMyCustomerCardsInput } from "./dto/read-my-customer-cards.input"
 import { ReadMyCustomersInput } from "./dto/read-my-customers.input"
 import { ShopCustomerCardModel, ShopCustomerModel } from "./model/shop-customer.model"
 
-/** The shop owner's view of their customers (<subdomain>.zarimen.ir/panel). */
-@UseGuards(IsShopOwner)
+/** The shop owner's view of their customers (<subdomain>.zarimen.ir/panel); needs a running subscription. */
+@UseGuards(IsShopOwner, HasActiveSubscription)
 @ApiBearerAuth()
 @Controller("shop-panel")
 export class ShopCustomersController {

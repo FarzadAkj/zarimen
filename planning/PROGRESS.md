@@ -22,6 +22,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 6   | Admin views a shop's panel at /panel/customers/<subdomain> | done |
 | 6b  | Timer: cancel top-ups pending > 20 min, every 10 min | done |
 | 7   | Subscription plans (admin) + purchases via Zarinpal (owners) | done |
+| 7b  | Admin moves a shop's end date (later only); no subscription → no customer data | done |
 
 ## Step log
 
@@ -329,6 +330,26 @@ Frontend:
 - Customers: landing + /verify show «موقتاً در دسترس نیست» when not subscribed.
 - `formatDate`, `daysUntil` (Jalali via fa-IR); `formatDuration`, `DURATION_PRESETS` in lib/format.
 
+### Step 7b — Admin end date + customer data needs a subscription (2026-11-06)
+
+- `shop/setShopSubscriptionEnd { shopId, endsAt }` (IsAdmin): `adminExtension` refuses
+  `endsAt` ≤ max(current end, now) → `EndDateTooEarly`; otherwise sets the date under the same
+  `FOR UPDATE` lock as purchases and writes a SUCCESS history row «تمدید توسط مدیر», price 0,
+  startsAt = old end (or now). `SubscriptionPurchase.planId` is now optional for these rows.
+- `HasActiveSubscription` guard (after IsShopOwner) on `shop-panel/readMyCustomers` and
+  `readMyCustomerCards` → `SubscriptionInactive`. Admin endpoints unaffected.
+- Frontend: `SubscriptionEndDialog` (PersianCalendar, Jalali → end of that day in the
+  browser's Iran time) next to the end date in the shops table and the admin shop page;
+  owner customers page shows «اشتراک فعال لازم است» + «خرید اشتراک» instead of the table.
+- 6 new tests (adminExtension rules, service: records the row / refuses early dates).
+
+### Note — "Argument shop is missing" (2026-11-07)
+
+User hit it on `setShopSubscriptionEnd`. Cause: the running `bun --watch` backend still had the
+Prisma client from before `planId` became optional (so Prisma fell back to the relation-style
+create input, which needs `shop`). The same create works in a fresh process. Fix: restart
+`pnpm dev` after every `prisma generate`. Noted in CLAUDE.md.
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -389,7 +410,7 @@ Frontend:
 - Zarinpal: production `zarinPalMerchantId`, `backendUrl` (public backend url) and
   empty `zarinpalBaseUrl` must be set; `shopSiteUrl = https://{subdomain}.zarimen.ir`.
 - Existing shops have no subscription → their customers are blocked until they buy one.
-  There is no admin "grant subscription" / trial yet.
+  The admin can give one by setting an end date (shops table pencil); there is no trial.
 - Rate limiting: each startSignup costs one paid Shahkar call and addCard one CardMatch
   call; nothing limits how often a visitor can trigger them yet.
 - Customers cannot remove a card; the owner's customer list is not paginated yet.

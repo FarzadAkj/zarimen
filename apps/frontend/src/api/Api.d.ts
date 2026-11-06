@@ -317,6 +317,11 @@ export interface StartSubscriptionPurchaseInput {
 export interface SubscriptionPurchaseStartedModel {
   url: string;
 }
+export interface SetShopSubscriptionEndInput {
+  shopId: string;
+  /** @format date-time */
+  endsAt: string;
+}
 export interface CreateImageUploadInput {
   contentType: ImageContentType;
   size: number;
@@ -712,6 +717,18 @@ export declare class Api<
       data: ReadShopCustomerCardsInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
+    /**
+     * @description Moves the shop's subscription end later (never earlier than the current end or now).
+     *
+     * @tags AdminShopSubscription
+     * @name SetShopSubscriptionEnd
+     * @request POST:/shop/setShopSubscriptionEnd
+     * @secure
+     */
+    setShopSubscriptionEnd: (
+      data: SetShopSubscriptionEndInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<MySubscriptionModel, any>>;
   };
   auth: {
     /**

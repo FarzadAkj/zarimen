@@ -654,6 +654,24 @@ export class Api extends HttpClient {
         format: "json",
         ...params,
       }),
+    /**
+     * @description Moves the shop's subscription end later (never earlier than the current end or now).
+     *
+     * @tags AdminShopSubscription
+     * @name SetShopSubscriptionEnd
+     * @request POST:/shop/setShopSubscriptionEnd
+     * @secure
+     */
+    setShopSubscriptionEnd: (data, params = {}) =>
+      this.request({
+        path: `/shop/setShopSubscriptionEnd`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   auth = {
     /**

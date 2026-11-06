@@ -22,3 +22,17 @@ export function extendSubscription(currentEnd: Date | null, now: Date, durationD
 export function hasActiveSubscription(subscriptionEndsAt: Date | null, now = new Date()) {
 	return !!subscriptionEndsAt && subscriptionEndsAt > now
 }
+
+/** Title of the history row written when the admin moves a shop's end date. */
+export const ADMIN_EXTENSION_TITLE = "تمدید توسط مدیر"
+
+/**
+ * The admin may only move a shop's end date later: past the current end and past now.
+ * Returns the period the change adds, or null when `newEnd` is too early.
+ */
+export function adminExtension(currentEnd: Date | null, now: Date, newEnd: Date) {
+	const startsAt = currentEnd && currentEnd > now ? currentEnd : now
+	if (newEnd <= startsAt)
+		return null
+	return { startsAt, endsAt: newEnd, durationDays: Math.ceil((newEnd.getTime() - startsAt.getTime()) / DAY_MS) }
+}

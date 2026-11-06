@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react"
 import { Badge } from "@/components/shad/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shad/card"
 import { ShopLogo } from "@/components/shop/ShopLogo"
+import { SubscriptionEndDialog } from "@/components/panel/SubscriptionEndDialog"
 import { SubscriptionStatus } from "@/components/shared/SubscriptionStatus"
 import { CustomersBrowser } from "@/components/shop-panel/CustomersBrowser"
 import { parsePage, WalletTransactionsTable } from "@/components/shop-panel/WalletTransactionsTable"
@@ -53,9 +54,10 @@ export default async function AdminShopPage({ params, searchParams }: Props) {
                         <CardDescription>
                             مالک: {shop.ownerFullName} — <span dir="ltr">{shop.ownerPhoneNumber}</span>
                         </CardDescription>
-                        <CardDescription>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             پایان اشتراک: <SubscriptionStatus endsAt={shop.subscriptionEndsAt} />
-                        </CardDescription>
+                            <SubscriptionEndDialog shopId={shop.id} shopName={shop.name} endsAt={shop.subscriptionEndsAt} />
+                        </div>
                     </div>
                     <div className="ms-auto text-end">
                         <div className="text-sm text-muted-foreground">موجودی کیف پول</div>

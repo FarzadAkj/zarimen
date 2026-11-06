@@ -57,6 +57,7 @@ function createPrisma(subscriptionEndsAt: Date | null) {
 				return row && { ...row, shop: { subdomain: shop.subdomain } }
 			},
 			findUniqueOrThrow: async ({ where }: { where: { id: string } }) => purchases.find(p => p.id === where.id)!,
+			findFirst: async () => null,
 		},
 	}
 	Object.assign(prisma.shop, {
@@ -141,5 +142,27 @@ describe("subscriptionService purchase", () => {
 		await service.startPurchase("shop-1", "month")
 		expect(await service.handlePurchaseCallback("S0001", "OK")).toContain("purchase=failed")
 		expect(prisma.shop.subscriptionEndsAt).toBeNull()
+	})
+
+	describe("admin changes the end date", () => {
+		it("moves it later and records a free «تمدید توسط مدیر» row from the old end", async () => {
+			const twoWeeks = new Date(Date.now() + 14 * DAY)
+			const sixWeeks = new Date(Date.now() + 42 * DAY)
+			setup(twoWeeks)
+			const result = await service.setSubscriptionEnd("shop-1", sixWeeks)
+
+			expect(prisma.shop.subscriptionEndsAt).toBe(sixWeeks)
+			expect(result).toMatchObject({ isActive: true, endsAt: sixWeeks })
+			expect(prisma.purchases[0]).toMatchObject({ planTitle: "تمدید توسط مدیر", status: "SUCCESS", startsAt: twoWeeks, endsAt: sixWeeks, durationDays: 28 })
+			expect(Number(prisma.purchases[0]!.price)).toBe(0)
+		})
+
+		it("refuses a date before the current end, changing nothing", async () => {
+			const twoWeeks = new Date(Date.now() + 14 * DAY)
+			setup(twoWeeks)
+			expect(await errorCode(service.setSubscriptionEnd("shop-1", new Date(Date.now() + 7 * DAY)))).toBe("EndDateTooEarly")
+			expect(prisma.shop.subscriptionEndsAt).toBe(twoWeeks)
+			expect(prisma.purchases).toHaveLength(0)
+		})
 	})
 })

@@ -44,7 +44,9 @@ The customer is identified by three things, and all three matter:
 - **Subscriptions:** the admin defines plans (price in Tomans + length in days) on the
   settings page. Owners buy them through Zarinpal on <sub>.zarimen.ir/panel/subscription; a
   purchase is added to the end of a running subscription. Without a running subscription the
-  shop's customers cannot verify (owner panel stays open). Owners see current plan + due date
+  shop's customers cannot verify and the owner cannot see customer data (the rest of the
+  owner panel stays open). The admin can move a shop's end date later (never earlier than the
+  current end or today); the owner's history shows it as «تمدید توسط مدیر». Owners see current plan + due date
   and their purchase history; the admin sees each shop's due date. All dates are Jalali.
 - **Customers ↔ shops:** many-to-many. Each shop owner sees the customers linked to their shop.
 

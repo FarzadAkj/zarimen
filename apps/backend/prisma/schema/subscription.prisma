@@ -15,14 +15,16 @@ model SubscriptionPlan {
   purchases SubscriptionPurchase[]
 }
 
-/// A shop buying a plan through Zarinpal. Title, price and duration are copied from the plan
-/// at purchase time, so later plan changes do not rewrite history.
+/// A shop buying a plan through Zarinpal, or the admin moving its end date (`planId` null,
+/// price 0, written as SUCCESS). Title, price and duration are copied from the plan at purchase
+/// time, so later plan changes do not rewrite history.
 model SubscriptionPurchase {
   id           String                     @id @default(uuid()) @db.Uuid
   shopId       String                     @db.Uuid
   shop         Shop                       @relation(fields: [shopId], references: [id])
-  planId       String                     @db.Uuid
-  plan         SubscriptionPlan           @relation(fields: [planId], references: [id])
+  /// Null for the admin's changes.
+  planId       String?                    @db.Uuid
+  plan         SubscriptionPlan?          @relation(fields: [planId], references: [id])
   planTitle    String
   price        Decimal                    @db.Decimal(20, 0)
   durationDays Int

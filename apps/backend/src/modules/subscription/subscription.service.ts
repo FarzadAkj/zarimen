@@ -10,7 +10,7 @@ import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { ZarinpalService } from "~/libs/zarinpal/zarinpal.service"
-import { extendSubscription, hasActiveSubscription, PENDING_PURCHASE_TTL_MINUTES, SUBSCRIPTION_PURCHASES_PAGE_SIZE } from "./constants/subscription"
+import { ADMIN_EXTENSION_TITLE, adminExtension, extendSubscription, hasActiveSubscription, PENDING_PURCHASE_TTL_MINUTES, SUBSCRIPTION_PURCHASES_PAGE_SIZE } from "./constants/subscription"
 import { SubscriptionErrors } from "./constants/subscription.errors"
 
 /** Where the owner lands after Zarinpal: their shop's /panel/subscription, with the outcome in the query string. */
@@ -159,6 +159,30 @@ export class SubscriptionService {
 
 		const paid = await this.completePurchase(purchase, verification)
 		return back({ success: true, planTitle: purchase.planTitle, endsAt: paid.endsAt, refId: verification.refId })
+	}
+
+	/**
+	 * The admin moves a shop's subscription end to `endsAt`, which must be after the current
+	 * end and after now. Written to the shop's history as a free «تمدید توسط مدیر» row.
+	 * Locks the shop row like a purchase does, so a purchase verified meanwhile is not lost.
+	 */
+	async setSubscriptionEnd(shopId: string, endsAt: Date): Promise<MySubscriptionModel> {
+		await this.prisma.$transaction(async (tx) => {
+			const [shop] = await tx.$queryRaw<{ subscriptionEndsAt: Date | null }[]>`
+				SELECT "subscriptionEndsAt" FROM "Shop" WHERE "id" = ${shopId}::uuid FOR UPDATE`
+			if (!shop)
+				throw this.error.throwErrorToClient(SubscriptionErrors.PurchaseNotFound)
+
+			const period = adminExtension(shop.subscriptionEndsAt, new Date(), endsAt)
+			if (!period)
+				throw this.error.throwErrorToClient(SubscriptionErrors.EndDateTooEarly)
+
+			await tx.shop.update({ where: { id: shopId }, data: { subscriptionEndsAt: endsAt } })
+			await tx.subscriptionPurchase.create({
+				data: { shopId, planTitle: ADMIN_EXTENSION_TITLE, price: 0, status: SubscriptionPurchaseStatus.SUCCESS, ...period },
+			})
+		})
+		return this.readMySubscription(shopId)
 	}
 
 	/** Every 10 minutes: purchases still PENDING 20 minutes after they started are canceled. */
