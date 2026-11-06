@@ -1,0 +1,8 @@
+/dist
+/node_modules
+/coverage
+/swagger
+.env
+.env.test
+.swc
+*.log

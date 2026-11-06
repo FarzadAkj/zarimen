@@ -1,0 +1,10 @@
+// One .prisma file per domain lives in this folder (customer.prisma, invoice.prisma, ...).
+// Models are added step by step — see planning/PROGRESS.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}

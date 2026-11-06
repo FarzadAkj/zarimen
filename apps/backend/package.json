@@ -1,0 +1,49 @@
+{
+	"name": "@zar-imen/backend",
+	"type": "module",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"dev": "bun --env-file=.env --watch src/main.ts",
+		"build": "vite build",
+		"start": "node --enable-source-maps dist/main.js",
+		"typecheck": "tsc --project ./tsconfig.json",
+		"lint": "eslint --fix .",
+		"test": "vitest run --passWithNoTests",
+		"db:push": "prisma db push",
+		"db:migrate": "prisma migrate dev",
+		"db:studio": "prisma studio",
+		"postinstall": "prisma generate --no-hints"
+	},
+	"dependencies": {
+		"@fastify/static": "^8.2.0",
+		"@nestjs/common": "^11.1.6",
+		"@nestjs/core": "^11.1.6",
+		"@nestjs/platform-fastify": "^11.1.6",
+		"@nestjs/swagger": "^11.2.0",
+		"@prisma/adapter-pg": "^7.0.1",
+		"@prisma/client": "^7.0.1",
+		"@zar-imen/shared": "workspace:*",
+		"class-transformer": "^0.5.1",
+		"class-validator": "^0.14.2",
+		"consola": "^3.4.2",
+		"defu": "^6.1.4",
+		"dotenv": "^17.2.1",
+		"fastify": "^5.5.0",
+		"reflect-metadata": "^0.2.2",
+		"rxjs": "^7.8.2"
+	},
+	"devDependencies": {
+		"@antfu/eslint-config": "^5.2.1",
+		"@swc/core": "^1.13.5",
+		"@types/bun": "^1.2.21",
+		"@types/node": "^24.3.0",
+		"eslint": "9.34.0",
+		"prisma": "^7.0.1",
+		"typescript": "^5.9.2",
+		"unplugin-swc": "^1.5.7",
+		"vite": "^7.1.4",
+		"vite-tsconfig-paths": "^5.1.4",
+		"vitest": "^3.2.4"
+	}
+}

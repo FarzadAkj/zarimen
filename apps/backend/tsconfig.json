@@ -1,0 +1,31 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"lib": ["es2022"],
+		"moduleDetection": "force",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"baseUrl": ".",
+		"module": "preserve",
+		"moduleResolution": "Bundler",
+		"paths": {
+			"~": ["src"],
+			"~/*": ["src/*"]
+		},
+		"resolveJsonModule": true,
+		"types": ["vite/client", "node"],
+		"strict": true,
+		"noImplicitOverride": true,
+		"noUncheckedIndexedAccess": true,
+		"importHelpers": false,
+		"noEmit": true,
+		"sourceMap": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"skipLibCheck": true
+	},
+	"include": ["src/**/*", "scripts/**/*", "prisma.config.ts", "vite.config.mts", "vitest.config.mts"],
+	"exclude": ["node_modules", "dist"]
+}
