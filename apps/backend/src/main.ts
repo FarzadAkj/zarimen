@@ -1,4 +1,3 @@
-import "reflect-metadata"
 import type { NestFastifyApplication } from "@nestjs/platform-fastify"
 import { NestFactory } from "@nestjs/core"
 import { FastifyAdapter } from "@nestjs/platform-fastify"
@@ -7,6 +6,7 @@ import { AppModule } from "./app.module"
 import { SoftwareName } from "./common/constants"
 import { Config } from "./config"
 import { logger } from "./libs/logger"
+import "reflect-metadata"
 
 process.title = SoftwareName
 

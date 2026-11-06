@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client"
 
-export function PrismaFindManyAndCount(prisma: PrismaClient) {
+export function PrismaFindManyAndCount(_prisma: PrismaClient) {
 	return {
 		model: {
 			$allModels: {

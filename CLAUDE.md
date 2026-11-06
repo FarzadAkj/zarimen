@@ -55,14 +55,17 @@ apps/backend
   src/app.module.ts       registers libs + feature modules
   src/config.ts           every env var, validated at boot (class-validator)
   src/common/             constants (ModuleNames, SoftwareName), shared DTOs
-  src/libs/               infrastructure: config, error, prisma, logger, helper
-                          (third-party integrations, e.g. Shahkar / CardMatch, go here too)
+  src/libs/               infrastructure: config, error, prisma, logger, helper, validators,
+                          sms-ir (OTP SMS), shahkar (Shahkar + CardMatch), image-bucket (Arvan presign)
   src/modules/<feature>/  Darik module layout:
                             <feature>.module.ts / .controller.ts / .service.ts
                             constants/ (errors, selects)  dto/ (*.input.ts, *.output.ts)  model/
 
 apps/frontend
-  src/app/                App Router routes (route groups like (panel) as needed)
+  src/app/panel/          admin panel (zarimen.ir/panel): login/, (admin)/ guarded pages
+  src/app/tenant/[subdomain]/panel/  shop panel (<sub>.zarimen.ir/panel), reached ONLY via the
+                          proxy rewrite: login/, (owner)/ guarded pages, actions.ts
+  src/proxy.ts            routes by Host (lib/host.ts parseHost); guards /panel on both hosts
   src/api/                GENERATED swagger client — never edit by hand
   src/components/shad/    shadcn/ui primitives (components.json points `ui` here)
   src/components/shared/  app-wide reusable components
@@ -88,6 +91,16 @@ Anything only one app uses lives in that app, not in `packages/shared`.
 - Use `type`, not `interface` (lint rule `ts/consistent-type-definitions`).
 - UI language is Persian, layout is RTL (`<html lang="fa" dir="rtl">`), font Vazirmatn.
 - Sensitive data (national code, card number) must never be logged in full.
+- Admin-only endpoints: `@UseGuards(IsAdmin)`; shop-owner endpoints: `@UseGuards(IsShopOwner)`
+  (reads `request._shopOwner.shopId`). Both in `modules/auth/guards/`. Shop-owner
+  endpoints live under the `shop-panel` controller and must only touch the token's shop.
+- Shop panel server actions get the subdomain from the Host header (`currentSubdomain()`),
+  never from a client argument.
+- Frontend talks to the backend only from server actions (`takeApi()` reads the
+  httpOnly `token` cookie), each returning `ServerResponse<T>` with a Persian
+  `error.translation` from `src/lib/errors.ts` — add every new backend error code there.
+- Form validation reuses the `@zar-imen/shared` checks; convert Persian digits with
+  `toLatinDigits` before validating.
 
 ## Commands
 

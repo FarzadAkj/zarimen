@@ -1,0 +1,13 @@
+/** Persian (۰-۹) and Arabic (٠-٩) digits → Latin, so numbers typed on a Persian keyboard validate. */
+export function toLatinDigits(value: string) {
+    return value
+        .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x06F0))
+        .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660))
+}
+
+const numberFormat = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 })
+
+/** "1500000.50" → "۱٬۵۰۰٬۰۰۰٫۵" */
+export function formatAmount(value: string) {
+    return `${numberFormat.format(Number(value))} تومان`
+}

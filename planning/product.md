@@ -9,6 +9,21 @@ The customer is identified by three things, and all three matter:
 2. **SSN** — Iranian national code (کد ملی)
 3. **Bank card number** the customer is going to pay with
 
+## Decided
+
+- **Domain:** zarimen.ir. "Shop" = a jewellery shop, the app's customer segment.
+- **Multi-shop:** every shop has its own subdomain and dashboard, e.g.
+  setoode.zarimen.ir, rahimi.zarimen.ir.
+- **One admin**, the only one who can add shops and enable/disable them. Admin panel at
+  zarimen.ir/panel, login by SMS code.
+- **Shop fields:** name, brand name, subdomain, active, logo (Arvan S3, `zar-imen/`),
+  address, landline, owner full name, owner phone, owner national code. The owner's
+  phone ↔ national code is checked with Shahkar when the shop is added.
+- **Wallet:** each shop (owner) has one, holding a balance in whole Tomans; the admin may
+  set an initial amount on creation and change it later. What a wallet is used for comes later.
+- **Shop login:** the owner logs in at <subdomain>.zarimen.ir/panel with an SMS code sent
+  to the shop's owner phone. A disabled shop cannot log in.
+
 ## Known building blocks
 
 Darik (`../backend`) already integrates the api.ir identity services in
@@ -18,16 +33,18 @@ Darik (`../backend`) already integrates the api.ir identity services in
 - **CardMatch** — checks that a 16-digit card belongs to a national code + birth date
   (Jalali, `1370/1/1`).
 
-These are the likely backbone of verification. Whether we reuse them is **not decided yet**.
+Both are copied into `apps/backend/src/libs/shahkar`. Shahkar is used for the shop
+owner today; customer verification will use them too.
 
 ## Open questions (ask the user, do not guess)
 
-- Who logs in: one seller, many sellers (multi-tenant shops), staff per shop?
+- Who logs in on a shop subdomain: only the owner, or staff too? (owner phone is stored)
 - Exact verification flow and order of steps; is birth date collected (CardMatch needs it)?
 - Is OTP to the customer's phone part of the flow?
 - What is an invoice here — do we create invoices, or only produce a verification
   record the seller attaches to their own invoice?
 - What is stored, for how long, and how card numbers are stored (masked / hashed)?
 - Which identity provider(s) and credentials.
+- Wallet: what charges / credits it.
 
 Answers get recorded here as the user gives them.

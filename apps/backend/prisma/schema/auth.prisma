@@ -1,0 +1,13 @@
+/// One SMS login code. A phone has at most one usable code at a time.
+model AuthOtp {
+  id          String   @id @default(uuid()) @db.Uuid
+  phoneNumber String
+  code        String
+  expireDate  DateTime
+  /// Wrong guesses so far; the code is burnt once this reaches the limit.
+  attempts    Int      @default(0)
+  isUsed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([phoneNumber])
+}

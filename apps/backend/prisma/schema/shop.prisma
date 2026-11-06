@@ -1,0 +1,33 @@
+/// A jewellery shop: a customer of the app, served on <subdomain>.zarimen.ir.
+model Shop {
+  id                String   @id @default(uuid()) @db.Uuid
+  /// Persian shop name (نام فروشگاه)
+  name              String
+  /// Brand name (نام برند)
+  brandName         String
+  /// `setoode` → setoode.zarimen.ir
+  subdomain         String   @unique
+  /// Only the admin can enable / disable a shop.
+  isActive          Boolean  @default(true)
+  /// Public URL of the logo in the ArvanCloud bucket (zar-imen/ folder).
+  logoUrl           String?
+  address           String?
+  landline          String?
+  ownerFullName     String
+  ownerPhoneNumber  String
+  ownerNationalCode String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  wallet Wallet?
+}
+
+/// The shop owner's wallet. What moves money in and out is decided in a later step.
+model Wallet {
+  id        String   @id @default(uuid()) @db.Uuid
+  shopId    String   @unique @db.Uuid
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  balance   Decimal  @default(0) @db.Decimal(20, 0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
