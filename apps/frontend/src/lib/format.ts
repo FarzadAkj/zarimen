@@ -34,5 +34,5 @@ export const DURATION_PRESETS = [
 /** 30 → "۱ ماه (۳۰ روز)", 45 → "۴۵ روز" */
 export function formatDuration(days: number) {
     const preset = DURATION_PRESETS.find(p => p.days === days)
-    return preset ? `${preset.label} (${days.toLocaleString("fa-IR")} روز)` : `${days.toLocaleString("fa-IR")} روز`
+    return preset ? `${preset.label}` : `${days.toLocaleString("fa-IR")} روز`
 }

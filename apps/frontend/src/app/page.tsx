@@ -1,3 +1,182 @@
-export default function Home() {
-  return <main className="p-8">Zar Imen</main>;
+import type { Metadata } from "next"
+import type { SubscriptionPlanModel } from "@/api/Api"
+import Link from "next/link"
+import { BadgeCheck, CreditCard, FileSearch, Globe, MessageSquareText, Newspaper, ShieldCheck, Smartphone, Store, Users, Wallet } from "lucide-react"
+import { Button } from "@/components/shad/button"
+import { ContactLinks } from "@/components/site/ContactLinks"
+import { SiteLogo } from "@/components/site/SiteLogo"
+import { formatAmount, formatDuration } from "@/lib/format"
+import { publicApi } from "@/lib/public-api"
+
+export const metadata: Metadata = {
+    title: "زر ایمن | احراز هویت مشتریان طلافروشی پیش از صدور فاکتور",
+    description: "استعلام شاهکار، تأیید شماره موبایل و تطبیق کارت بانکی مشتری با کد ملی، در صفحه اختصاصی فروشگاه شما.",
+}
+
+/** Plans are re-read from the backend at most every 5 minutes. */
+export const revalidate = 300
+
+async function readPlans(): Promise<SubscriptionPlanModel[]> {
+    try {
+        const { data } = await publicApi().subscription.readPublicPlans()
+        return data
+    }
+    catch {
+        return []
+    }
+}
+
+const STEPS = [
+    {
+        icon: Smartphone,
+        title: "مشتری صفحه فروشگاه شما را باز می‌کند",
+        text: <>هر فروشگاه یک آدرس اختصاصی دارد؛ مثلاً <span dir="ltr" className="font-mono">darikgoldcoin.zarimen.ir</span>. مشتری روی دکمه «احراز هویت» می‌زند.</>,
+    },
+    { icon: ShieldCheck, title: "استعلام شاهکار و کد تأیید", text: "کد ملی، شماره موبایل و تاریخ تولد مشتری با سامانه شاهکار تطبیق داده می‌شود و موبایل او با کد پیامکی تأیید می‌شود." },
+    { icon: CreditCard, title: "تطبیق کارت بانکی", text: "کارتی که مشتری با آن پرداخت می‌کند با کد ملی و تاریخ تولد او استعلام می‌شود؛ فقط کارت به نام خود مشتری ثبت می‌شود." },
+]
+
+const BENEFITS = [
+    { icon: Globe, title: "صفحه اختصاصی فروشگاه", text: "آدرس، لوگو و اطلاعات فروشگاه شما روی زیردامنه خودتان؛ بدون نیاز به سایت جداگانه." },
+    { icon: ShieldCheck, title: "استعلام شاهکار", text: "اطمینان از اینکه شماره موبایل به نام صاحب کد ملی است." },
+    { icon: CreditCard, title: "تطبیق کارت بانکی", text: "کاهش ریسک پرداخت با کارت متعلق به دیگران پیش از نهایی کردن فاکتور." },
+    { icon: MessageSquareText, title: "تأیید موبایل با پیامک", text: "کد یک‌بارمصرف به همان شماره‌ای ارسال می‌شود که مشتری وارد کرده است." },
+    { icon: Users, title: "پرونده مشتریان", text: "جستجوی مشتریان با کد ملی یا موبایل و مشاهده کارت‌های تأییدشده هر مشتری در پنل فروشگاه." },
+    { icon: Wallet, title: "پرداخت به اندازه مصرف", text: "هزینه هر استعلام و پیامک از کیف پول فروشگاه کسر می‌شود؛ شارژ آنلاین با زرین‌پال." },
+    { icon: FileSearch, title: "گزارش شفاف", text: "تاریخچه کامل تراکنش‌ها: هر استعلام، برای کدام مشتری و با چه هزینه‌ای." },
+    { icon: Store, title: "مشتری مشترک بین فروشگاه‌ها", text: "مشتری‌ای که یک بار احراز هویت شده، در فروشگاه بعدی تنها با کد پیامکی وارد می‌شود." },
+]
+
+export default async function HomePage() {
+    const plans = await readPlans()
+
+    return (
+        <div className="min-h-dvh bg-background">
+            <header className="sticky top-0 z-20 border-b bg-background/90 backdrop-blur">
+                <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
+                    <Link href="/"><SiteLogo /></Link>
+                    <nav className="hidden gap-5 text-sm sm:flex">
+                        <a href="#how" className="hover:text-primary">چطور کار می‌کند</a>
+                        <a href="#benefits" className="hover:text-primary">امکانات</a>
+                        <a href="#plans" className="hover:text-primary">تعرفه‌ها</a>
+                        <Link href="/blog" className="hover:text-primary">وبلاگ</Link>
+                    </nav>
+                    <Button asChild size="sm" className="ms-auto">
+                        <a href="#contact">تماس برای خرید</a>
+                    </Button>
+                </div>
+            </header>
+
+            <main>
+                {/* hero */}
+                <section className="bg-gradient-to-b from-primary/15 via-primary/5 to-background">
+                    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-20 text-center justify-items-center">
+                        <span className="rounded-full border border-primary/30 bg-background/70 px-4 py-1 text-sm text-primary">
+                            ویژه طلافروشی‌ها، گالری‌های جواهر و نقره
+                        </span>
+                        <h1 className="max-w-3xl text-3xl font-bold leading-relaxed sm:text-5xl sm:leading-tight">
+                            پیش از صدور فاکتور، <span className="text-primary">هویت مشتری</span> را بشناسید
+                        </h1>
+                        <p className="max-w-2xl text-lg leading-8 text-muted-foreground text-justify [text-align-last:center]">
+                            زر ایمن سامانه احراز هویت مشتریان طلافروشی است. شماره موبایل، کد ملی و کارت بانکی‌ای که مشتری با آن پرداخت می‌کند،
+                            به‌صورت آنلاین استعلام و تطبیق داده می‌شود تا فاکتور را با اطمینان نهایی کنید.
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-3">
+                            <Button asChild size="lg"><a href="#plans">مشاهده تعرفه‌ها</a></Button>
+                            <Button asChild size="lg" variant="outline"><a href="#contact">تماس با ما</a></Button>
+                        </div>
+                    </div>
+                </section>
+
+                {/* what we do */}
+                <section id="how" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16">
+                    <h2 className="text-center text-2xl font-bold sm:text-3xl">چطور کار می‌کند؟</h2>
+                    <p className="mt-3 text-center text-muted-foreground">سه مرحله، روی گوشی خود مشتری یا دستگاه فروشگاه</p>
+                    <ol className="mt-10 grid gap-6 md:grid-cols-3">
+                        {STEPS.map((step, i) => (
+                            <li key={step.title} className="relative rounded-2xl border bg-background p-6 shadow-sm">
+                                <span className="absolute -top-4 start-6 grid size-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                                    {(i + 1).toLocaleString("fa-IR")}
+                                </span>
+                                <step.icon className="size-8 text-primary" strokeWidth={1.5} />
+                                <h3 className="mt-4 font-bold">{step.title}</h3>
+                                <p className="mt-2 text-sm leading-7 text-muted-foreground text-justify">{step.text}</p>
+                            </li>
+                        ))}
+                    </ol>
+                </section>
+
+                {/* what owners get */}
+                <section id="benefits" className="scroll-mt-20 bg-muted/50">
+                    <div className="mx-auto max-w-6xl px-4 py-16">
+                        <h2 className="text-center text-2xl font-bold sm:text-3xl">با زر ایمن چه به دست می‌آورید؟</h2>
+                        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            {BENEFITS.map(benefit => (
+                                <div key={benefit.title} className="rounded-2xl border bg-background p-5">
+                                    <benefit.icon className="size-7 text-primary" strokeWidth={1.5} />
+                                    <h3 className="mt-3 font-bold">{benefit.title}</h3>
+                                    <p className="mt-2 text-sm leading-7 text-muted-foreground text-justify">{benefit.text}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* plans */}
+                <section id="plans" className="scroll-mt-20 bg-muted/50">
+                    <div className="mx-auto max-w-6xl px-4 py-16">
+                        <h2 className="text-center text-2xl font-bold sm:text-3xl">تعرفه‌های اشتراک</h2>
+                        <p className="mx-auto mt-3 max-w-3xl text-center text-muted-foreground text-justify [text-align-last:center]">
+                            اشتراک، صفحه اختصاصی و پنل فروشگاه را فعال می‌کند؛ هزینه استعلام‌ها و پیامک‌ها جداگانه از کیف پول کسر می‌شود.
+                        </p>
+                        {plans.length
+                            ? (
+                                <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                                    {plans.map(plan => (
+                                        <div key={plan.id} className="grid gap-4 rounded-2xl border bg-background p-6 text-center shadow-sm">
+                                            <BadgeCheck className="mx-auto size-9 text-primary" strokeWidth={1.5} />
+                                            <div>
+                                                <h3 className="text-lg font-bold">{plan.title}</h3>
+                                                <p className="text-sm text-muted-foreground">{formatDuration(plan.durationDays)}</p>
+                                            </div>
+                                            <p className="text-2xl font-bold text-primary">{formatAmount(plan.price)}</p>
+                                            <Button asChild><a href="#contact">تماس برای خرید</a></Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                            : <p className="mt-10 text-center text-muted-foreground">برای اطلاع از تعرفه‌ها با ما تماس بگیرید.</p>}
+                    </div>
+                </section>
+
+                {/* blog */}
+                <section className="mx-auto max-w-6xl px-4 py-16">
+                    <div className="flex flex-col items-center gap-4 rounded-3xl border bg-gradient-to-l from-primary/10 to-background p-8 text-center sm:flex-row sm:text-start">
+                        <Newspaper className="size-12 shrink-0 text-primary" strokeWidth={1.5} />
+                        <div className="flex-1">
+                            <h2 className="text-xl font-bold">وبلاگ زر ایمن</h2>
+                            <p className="mt-1 text-muted-foreground text-justify">مقاله‌ها و راهنماهای امنیت فروش و احراز هویت مشتری در طلافروشی.</p>
+                        </div>
+                        <Button asChild variant="outline"><Link href="/blog">مشاهده وبلاگ</Link></Button>
+                    </div>
+                </section>
+
+                {/* contact */}
+                <section id="contact" className="mx-auto max-w-4xl scroll-mt-20 px-4 py-16">
+                    <h2 className="text-center text-2xl font-bold sm:text-3xl">تماس برای راه اندازی</h2>
+                    <p className="mx-auto mt-3 mb-8 max-w-2xl text-center text-muted-foreground text-justify [text-align-last:center]">
+                        برای راه‌اندازی صفحه فروشگاه و خرید اشتراک، از یکی از راه‌های زیر با ما در تماس باشید.
+                    </p>
+                    <ContactLinks />
+                </section>
+            </main>
+
+            <footer className="border-t">
+                <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:justify-between">
+                    <SiteLogo className="[&_svg]:size-5 [&_span]:text-base" />
+                    <span>© {new Date().getFullYear().toLocaleString("fa-IR", { useGrouping: false })} زر ایمن — zarimen.ir</span>
+                </div>
+            </footer>
+        </div>
+    )
 }

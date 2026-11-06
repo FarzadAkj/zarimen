@@ -95,10 +95,17 @@ export class ShopSubscriptionController {
 	}
 }
 
-/** Zarinpal's return url for subscription payments. The owner's browser lands here. */
+/** Zarinpal's return url for subscription payments (the owner's browser lands here), and the public plan list. */
 @Controller("subscription")
 export class SubscriptionCallbackController {
 	constructor(private subscription: SubscriptionService) { }
+
+	@Post("readPublicPlans")
+	@ApiOperation({ operationId: "readPublicPlans", description: "Public: the active plans, for the zarimen.ir landing page." })
+	@ApiResponse({ type: SubscriptionPlanModel, isArray: true, status: 200 })
+	readPublicPlans(): Promise<SubscriptionPlanModel[]> {
+		return this.subscription.readPlans(true)
+	}
 
 	@Get("purchaseCallback")
 	@Redirect()

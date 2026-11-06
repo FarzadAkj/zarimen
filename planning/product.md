@@ -48,6 +48,8 @@ The customer is identified by three things, and all three matter:
   owner panel stays open). The admin can move a shop's end date later (never earlier than the
   current end or today); the owner's history shows it as «تمدید توسط مدیر». Owners see current plan + due date
   and their purchase history; the admin sees each shop's due date. All dates are Jalali.
+- **zarimen.ir landing page:** what Zar Imen is, how it works, what owners get, a link to the
+  blog (to be specified), live plans, and direct contact links (phone / WhatsApp / Telegram).
 - **Customers ↔ shops:** many-to-many. Each shop owner sees the customers linked to their shop.
 
 ## Known building blocks

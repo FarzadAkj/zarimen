@@ -25,6 +25,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 7b  | Admin moves a shop's end date (later only); no subscription → no customer data | done |
 | 7c  | Owner dashboard shows Shahkar / SMS prices | done |
 | 7d  | Separate price for bank card checks (CardMatch) | done |
+| 8   | zarimen.ir landing page (+ /blog placeholder, contact links) | done — logo + contacts pending |
 
 ## Step log
 
@@ -369,6 +370,29 @@ as SHAHKAR. 1 new customer test, wallet test covers the third price.
 Generating the API client from the user's running (stale-client) backend dropped CARD_MATCH;
 regenerated from a fresh temporary backend on :8011.
 
+### Step 8 — zarimen.ir landing page (2026-11-07)
+
+Asked for: a landing page with the (later-provided) logo, what Zar Imen is and does, what
+shop owners get, a route to the blog, the subscription plans at the end, and a way to contact
+the user to buy. User chose: **direct contact links only** (no form).
+
+- Backend: public `subscription/readPublicPlans` (active plans, no login).
+- Frontend `src/app/page.tsx` (root host): sticky header (logo, anchors, «تماس برای خرید»),
+  hero, «چطور کار می‌کند» (3 steps), «با زر ایمن چه به دست می‌آورید» (8 benefits), blog
+  teaser → `/blog`, plans (live, `revalidate = 300`, `publicApi()` without cookies), contact.
+- `components/site/SiteLogo.tsx`: placeholder (gem icon + «زر ایمن") — swap in the real logo here.
+- `components/site/ContactLinks.tsx`: `CONTACT_PHONE` (tel:), `CONTACT_WHATSAPP` (wa.me),
+  `CONTACT_TELEGRAM` (t.me) from apps/frontend/.env; empty ones hidden.
+- `/blog`: placeholder page until the blog is specified.
+- Checked with desktop + mobile headless-Firefox screenshots.
+
+### Step 8b — Landing page polish (2026-11-07)
+
+Body paragraphs `text-justify` (centered intros keep a centered last line via
+`[text-align-last:center]`). Smooth in-page scrolling: `html { scroll-behavior: smooth }` in
+globals.css (off with prefers-reduced-motion) + `data-scroll-behavior="smooth"` on <html> (Next 16
+needs it so route changes still jump to the top instantly).
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -435,6 +459,7 @@ regenerated from a fresh temporary backend on :8011.
 - Customers cannot remove a card; the owner's customer list is not paginated yet.
 - Full card numbers at rest: consider encrypting the column.
 - Shop staff logins (only the owner phone can log in now).
+- Landing page: real logo (SiteLogo) and CONTACT_* values in apps/frontend/.env; the blog.
 - Production: the reverse proxy must forward the original `Host` header
   (nginx `proxy_set_header Host $host;`) and DNS needs a wildcard `*.zarimen.ir` record +
   wildcard TLS certificate, since routing is by Host.

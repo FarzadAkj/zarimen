@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fa" dir="rtl" className={vazirmatn.variable}>
+    <html lang="fa" dir="rtl" className={vazirmatn.variable} data-scroll-behavior="smooth">
       <body className="antialiased">
         {children}
         <Toaster position="top-center" richColors dir="rtl" />

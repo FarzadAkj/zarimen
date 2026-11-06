@@ -874,6 +874,20 @@ export class Api extends HttpClient {
   };
   subscription = {
     /**
+     * @description Public: the active plans, for the zarimen.ir landing page.
+     *
+     * @tags SubscriptionCallback
+     * @name ReadPublicPlans
+     * @request POST:/subscription/readPublicPlans
+     */
+    readPublicPlans: (params = {}) =>
+      this.request({
+        path: `/subscription/readPublicPlans`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+    /**
      * @description Verifies the payment, extends the subscription, then 302s to <shopSiteUrl>/panel/subscription?purchase=success&plan=&endsAt=&refId= or ?purchase=failed&reason=
      *
      * @tags SubscriptionCallback
