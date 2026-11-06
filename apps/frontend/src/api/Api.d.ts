@@ -15,6 +15,12 @@ export declare enum ImageContentType {
   ImagePng = "image/png",
   ImageWebp = "image/webp",
 }
+export interface ServiceCostSettingsModel {
+  /** Tomans per api.ir identity check (Shahkar or CardMatch). */
+  shahkarCost: number;
+  /** Tomans per SMS sent to a customer. */
+  smsCost: number;
+}
 export interface SendOtpInput {
   /** @example "09120000000" */
   phoneNumber: string;
@@ -286,6 +292,31 @@ export declare class HttpClient<SecurityDataType = unknown> {
 export declare class Api<
   SecurityDataType extends unknown,
 > extends HttpClient<SecurityDataType> {
+  setting: {
+    /**
+     * No description
+     *
+     * @tags Setting
+     * @name ReadServiceCostSettings
+     * @request POST:/setting/readServiceCostSettings
+     * @secure
+     */
+    readServiceCostSettings: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
+    /**
+     * No description
+     *
+     * @tags Setting
+     * @name SetServiceCostSettings
+     * @request POST:/setting/setServiceCostSettings
+     * @secure
+     */
+    setServiceCostSettings: (
+      data: ServiceCostSettingsModel,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
+  };
   auth: {
     /**
      * @description Sends a login code to the admin's phone. Finish with `exchangeAdminOtp`.

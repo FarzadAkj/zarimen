@@ -103,7 +103,14 @@ Anything only one app uses lives in that app, not in `packages/shared`.
   `error.translation` from `src/lib/errors.ts` — add every new backend error code there.
 - Customer endpoints: `@UseGuards(IsCustomer)` (`modules/customer/guards`); the frontend
   calls them with `takeApi(CUSTOMER_TOKEN_COOKIE)`.
-- SMS codes always go through `OtpService` (`modules/auth/otp.service.ts`).
+- SMS codes always go through `OtpService` (`modules/auth/otp.service.ts`); pass
+  `billToShopId` when a shop's customer triggers it.
+- Anything a shop's customers trigger that costs money goes through
+  `WalletService.charge(shopId, service, run)` — never call Shahkar/CardMatch/SMS for a
+  customer without it.
+- Admin settings: Darik's format — a model class with defaults in
+  `modules/setting/model/`, a key in `settings-constant.keys.ts`,
+  `SettingService.getSetting/setSetting`, one card per group on `/panel/settings`.
 - Card numbers leave the backend only masked (`maskCardNumber`).
 - Form validation reuses the `@zar-imen/shared` checks; convert Persian digits with
   `toLatinDigits` before validating.

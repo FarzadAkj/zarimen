@@ -39,6 +39,9 @@ const ERROR_MESSAGES: Record<string, string> = {
     NotRegistered: "با این شماره موبایل ثبت‌نامی انجام نشده است. ابتدا ثبت‌نام کنید.",
     CardAlreadyAdded: "این کارت قبلاً ثبت شده است.",
 
+    // ---- wallet
+    InsufficientBalance: "اعتبار کیف پول فروشگاه برای انجام این درخواست کافی نیست. لطفاً به فروشنده اطلاع دهید.",
+
     // ---- image upload
     UnsupportedImage: "تصویر باید با فرمت JPG، PNG یا webp باشد.",
     ImageTooLarge: "حجم تصویر حداکثر می‌تواند ۵ مگابایت باشد.",

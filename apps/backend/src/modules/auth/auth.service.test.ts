@@ -9,6 +9,9 @@ import { OTP_MAX_ATTEMPTS } from "./constants/auth.constants"
 import { OtpService } from "./otp.service"
 import "reflect-metadata"
 
+/** Admin and owner codes are not billed, so charging only has to run the send. */
+const freeWallet = { charge: (_shopId: string, _service: string, run: () => Promise<unknown>) => run() }
+
 const ADMIN = "09120000000"
 const OTHER_ADMIN = "09130000000"
 const OWNER = "09121111111"
@@ -60,7 +63,7 @@ describe("authService", () => {
 		const config = Object.assign(new Config(), { adminPhoneNumbers: `${ADMIN}, ${OTHER_ADMIN}` })
 		const jwt = new JwtService({ secret: "x".repeat(32) })
 		const error = new ErrorService()
-		auth = new AuthService(prisma as never, new OtpService(prisma as never, sms as never, error), jwt, config, error)
+		auth = new AuthService(prisma as never, new OtpService(prisma as never, sms as never, freeWallet as never, error), jwt, config, error)
 	})
 
 	const sentCode = () => sms.sendOTPMessage.mock.calls.at(-1)![1] as string
@@ -135,5 +138,15 @@ describe("authService", () => {
 			shop!.isActive = false
 			expect(await errorCode(auth.exchangeShopOtp("setoode", OWNER, sentCode()))).toBe("ShopDisabled")
 		})
+	})
+
+	it("a customer code the shop cannot pay for is not kept, and is reported as such (not as an SMS failure)", async () => {
+		const brokeWallet = { charge: async () => {
+			throw new GlobalError({ module: "WalletModule", message: "InsufficientBalance" })
+		} }
+		const otp = new OtpService(prisma as never, sms as never, brokeWallet as never, new ErrorService())
+		expect(await errorCode(otp.send("09121111111", "shop-1"))).toBe("InsufficientBalance")
+		expect(prisma.rows).toHaveLength(0)
+		expect(sms.sendOTPMessage).not.toHaveBeenCalled()
 	})
 })

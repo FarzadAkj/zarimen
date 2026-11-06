@@ -1,9 +1,11 @@
 import type { OtpSentModel } from "./model/otp-sent.model"
 import { randomInt } from "node:crypto"
 import { Injectable } from "@nestjs/common"
+import { GlobalError } from "~/libs/error/classes/global-error"
 import { ErrorService } from "~/libs/error/error.service"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { SmsIrService } from "~/libs/sms-ir/sms-ir.service"
+import { WalletService } from "../wallet/wallet.service"
 import { OTP_LENGTH, OTP_MAX_ATTEMPTS, OTP_TTL_SECONDS } from "./constants/auth.constants"
 import { AuthErrors } from "./constants/auth.errors"
 
@@ -16,10 +18,15 @@ export class OtpService {
 	constructor(
 		private prisma: PrismaService,
 		private sms: SmsIrService,
+		private wallet: WalletService,
 		private error: ErrorService,
 	) { }
 
-	async send(phoneNumber: string): Promise<OtpSentModel> {
+	/**
+	 * Sends a fresh code to `phoneNumber`. With `billToShopId` the SMS is paid from that
+	 * shop's wallet (customer codes); without it, it is free (admin / owner logins).
+	 */
+	async send(phoneNumber: string, billToShopId?: string): Promise<OtpSentModel> {
 		if (await this.findActive(phoneNumber))
 			throw this.error.throwErrorToClient(AuthErrors.OtpAlreadySent)
 
@@ -32,12 +39,16 @@ export class OtpService {
 			},
 		})
 
+		const sendSms = () => this.sms.sendOTPMessage(phoneNumber, code)
 		try {
-			await this.sms.sendOTPMessage(phoneNumber, code)
+			await (billToShopId ? this.wallet.charge(billToShopId, "sms", sendSms) : sendSms())
 		}
 		catch (e) {
 			// Nobody received this code, so it must not block a retry for OTP_TTL.
 			await this.prisma.authOtp.delete({ where: { id: otp.id } })
+			// e.g. the shop's wallet cannot pay for the SMS
+			if (e instanceof GlobalError)
+				throw e
 			throw this.error.throwErrorToClient(AuthErrors.SmsFailure, e as Error)
 		}
 

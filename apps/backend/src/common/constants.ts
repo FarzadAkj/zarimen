@@ -3,6 +3,7 @@ export const ModuleNames = {
 	AuthModule: "AuthModule",
 	ShopModule: "ShopModule",
 	CustomerModule: "CustomerModule",
+	WalletModule: "WalletModule",
 	ImageBucket: "ImageBucket",
 }
 

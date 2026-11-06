@@ -64,6 +64,6 @@ export class CustomerController {
 	@ApiBody({ type: AddCardInput })
 	@ApiResponse({ type: CustomerCardsModel, status: 200 })
 	addCard(@Req() request: CustomerRequest, @Body() input: AddCardInput): Promise<CustomerCardsModel> {
-		return this.customer.addCard(request._customer.customerId, input.cardNumber)
+		return this.customer.addCard(request._customer.customerId, request._customer.shopId, input.cardNumber)
 	}
 }

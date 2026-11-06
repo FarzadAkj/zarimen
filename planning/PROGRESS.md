@@ -15,6 +15,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 3   | Shop landing page + big verification button | done |
 | 3b  | Customer verification on /verify (3 phases) + owner's customer list | done |
 | 3c  | Several admins: `adminPhoneNumbers` list | done |
+| 4   | Admin settings: Shahkar + SMS cost, charged to shop wallets | done |
 
 ## Step log
 
@@ -186,6 +187,33 @@ Validated at boot (each must be 09xxxxxxxxx). `Config.isAdminPhoneNumber(phone)`
 by AuthService (who may get an admin code) and IsAdmin (re-checked on every request, so
 removing a number logs that admin out). User's `.env` key renamed, value kept.
 
+### Step 4 — Service costs (2026-11-06)
+
+Asked for: an admin settings page (Darik's settings format) with two Toman prices,
+Shahkar cost and SMS cost. Each Shahkar request / SMS a customer triggers on a shop's
+subdomain is paid from that shop's wallet; not enough balance → the request does not run.
+
+Backend:
+- Darik's settings format: `Setting { key @id, value }` (JSON per key, `setting.prisma`),
+  global `SettingService.getSetting(key, Model)` (defaults when unsaved) / `setSetting`.
+  `ServiceCostSettingsModel { shahkarCost = 0, smsCost = 0 }` under
+  `service-cost-settings-key`; `setting/readServiceCostSettings` + `setServiceCostSettings`
+  (IsAdmin). Darik put these endpoints in its `info` module; here they sit in `setting`.
+- `modules/wallet` `WalletService`:
+  - `charge(shopId, "shahkar" | "sms", run)`: conditional decrement
+    (`updateMany where balance >= cost`) → InsufficientBalance (402) if it matched nothing;
+    refunds if `run` throws. Cost 0 → wallet untouched.
+  - `assertCanAfford(shopId, services)`: sum check before multi-service flows.
+- Charged: Shahkar in startSignup, CardMatch in addCard (both = "shahkar" cost), and
+  customer SMS (startSignup, startLogin) via `OtpService.send(phone, billToShopId)`.
+  startSignup first checks the wallet covers Shahkar + SMS.
+- 13 new tests (wallet 7, customer billing 4, OTP 1, + updates).
+
+Frontend: `/panel/settings` (nav «تنظیمات»), `settings/actions/action.ts`,
+`ServiceCostSettingSection` card. Customer-facing InsufficientBalance message.
+
+Also: frontend `.gitignore` ignored `.env.example` (Darik's `.env*` rule) → `!.env.example`.
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -221,6 +249,12 @@ removing a number logs that admin out). User's `.env` key renamed, value kept.
 - **Card numbers are stored in full** but only ever leave the backend masked
   ("6037-99**-****-7893") — to customers and owners alike.
 - Shop owners see customers' full national code, mobile and birth date.
+- **What is billed**: only what a shop's *customers* trigger (Shahkar, CardMatch, customer
+  SMS). Not billed: the owner's own panel login SMS (an empty wallet must not lock the owner
+  out), admin login, and the admin's Shahkar check when adding a shop.
+- **Shahkar "no match" is billed** (the check ran); provider errors / timeouts are refunded.
+- Charges also apply with `identityCheck=false` / `sendSms=false` (same behaviour in dev
+  and production, so billing can be tested locally).
 - `ROOT_DOMAIN` (frontend env): `zarimen.ir` in production, `localhost:3010` in dev.
 
 ## Open items
@@ -229,7 +263,8 @@ removing a number logs that admin out). User's `.env` key renamed, value kept.
   OTP login (`sendSms=false` prints the code in the backend console) and add a shop.
 - Fill real values in `apps/backend/.env`: `adminPhoneNumbers`, `jwtSecret`, sms.ir
   key + template, api.ir token, Arvan bucket + keys.
-- What moves the wallet balance — user will specify.
+- No wallet history yet: charges are not recorded per request, so neither the admin nor
+  the owner can see what was spent on what. Likely needed next.
 - Rate limiting: each startSignup costs one paid Shahkar call and addCard one CardMatch
   call; nothing limits how often a visitor can trigger them yet.
 - Customers cannot remove a card; owners cannot search / paginate customers yet.

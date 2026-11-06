@@ -81,6 +81,7 @@ describe("customerService", () => {
 	let prisma: ReturnType<typeof createPrisma>
 	let shahkar: { verifyMobileNationalCode: ReturnType<typeof vi.fn>, verifyCardMatch: ReturnType<typeof vi.fn> }
 	let otp: { send: ReturnType<typeof vi.fn>, consume: ReturnType<typeof vi.fn> }
+	let wallet: { assertCanAfford: ReturnType<typeof vi.fn>, charge: ReturnType<typeof vi.fn> }
 	let jwt: JwtService
 	let service: CustomerService
 
@@ -91,8 +92,12 @@ describe("customerService", () => {
 			verifyCardMatch: vi.fn(async () => ({ matched: true })),
 		}
 		otp = { send: vi.fn(async () => ({ expiresInSeconds: 120 })), consume: vi.fn(async () => {}) }
+		wallet = {
+			assertCanAfford: vi.fn(async () => {}),
+			charge: vi.fn((_shopId: string, _service: string, run: () => Promise<unknown>) => run()),
+		}
 		jwt = new JwtService({ secret: "x".repeat(32) })
-		service = new CustomerService(prisma as never, shahkar as never, otp as never, jwt, new ErrorService())
+		service = new CustomerService(prisma as never, shahkar as never, otp as never, wallet as never, jwt, new ErrorService())
 	})
 
 	const signup = async (subdomain = "setoode", details = { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }) => {
@@ -175,25 +180,56 @@ describe("customerService", () => {
 		})
 
 		it("sends CardMatch the national code and the unpadded Jalali birth date", async () => {
-			await service.addCard("customer-1", CARD)
+			await service.addCard("customer-1", "shop-1", CARD)
 			expect(shahkar.verifyCardMatch).toHaveBeenCalledWith({ nationalCode: SSN, birthDate: "1370/1/5", cardNumber: CARD })
 		})
 
 		it("returns the card masked, with its bank", async () => {
-			const { cards } = await service.addCard("customer-1", CARD)
+			const { cards } = await service.addCard("customer-1", "shop-1", CARD)
 			expect(cards).toEqual([expect.objectContaining({ maskedNumber: "6037-99**-****-9993", bankName: "بانک ملی ایران" })])
 		})
 
 		it("does not save a card CardMatch rejects", async () => {
 			shahkar.verifyCardMatch.mockResolvedValueOnce({ matched: false })
-			expect(await errorCode(service.addCard("customer-1", CARD))).toBe("CardNotOwned")
+			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD))).toBe("CardNotOwned")
 			expect(prisma.cards).toHaveLength(0)
 		})
 
 		it("refuses the same card twice without asking CardMatch again", async () => {
-			await service.addCard("customer-1", CARD)
-			expect(await errorCode(service.addCard("customer-1", CARD))).toBe("CardAlreadyAdded")
+			await service.addCard("customer-1", "shop-1", CARD)
+			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD))).toBe("CardAlreadyAdded")
 			expect(shahkar.verifyCardMatch).toHaveBeenCalledTimes(1)
+		})
+	})
+
+	describe("billing", () => {
+		const insufficient = () => new GlobalError({ module: "WalletModule", message: "InsufficientBalance" })
+
+		it("checks the wallet covers Shahkar + SMS before running Shahkar, and bills both to the shop", async () => {
+			await service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH })
+			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-1", ["shahkar", "sms"])
+			expect(wallet.charge).toHaveBeenCalledWith("shop-1", "shahkar", expect.any(Function))
+			expect(otp.send).toHaveBeenCalledWith(PHONE, "shop-1")
+		})
+
+		it("runs no Shahkar check and sends no SMS when the wallet cannot pay", async () => {
+			wallet.assertCanAfford.mockRejectedValueOnce(insufficient())
+			expect(await errorCode(service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("InsufficientBalance")
+			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
+			expect(otp.send).not.toHaveBeenCalled()
+		})
+
+		it("reports an unpaid CardMatch as InsufficientBalance, not as the identity service being down", async () => {
+			await signup()
+			wallet.charge.mockRejectedValueOnce(insufficient())
+			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD))).toBe("InsufficientBalance")
+			expect(prisma.cards).toHaveLength(0)
+		})
+
+		it("bills a login SMS to the shop logged in at", async () => {
+			await signup("setoode")
+			await service.startLogin("rahimi", PHONE)
+			expect(otp.send).toHaveBeenLastCalledWith(PHONE, "shop-2")
 		})
 	})
 

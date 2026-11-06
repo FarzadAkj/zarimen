@@ -9,7 +9,9 @@ import { SmsIrModule } from "./libs/sms-ir/sms-ir.module"
 import { AuthModule } from "./modules/auth/auth.module"
 import { CustomerModule } from "./modules/customer/customer.module"
 import { ImageUploadModule } from "./modules/image-upload/image-upload.module"
+import { SettingModule } from "./modules/setting/setting.module"
 import { ShopModule } from "./modules/shop/shop.module"
+import { WalletModule } from "./modules/wallet/wallet.module"
 
 @Module({
 	imports: [
@@ -29,6 +31,8 @@ import { ShopModule } from "./modules/shop/shop.module"
 		ShahkarModule,
 		ImageBucketModule,
 
+		SettingModule,
+		WalletModule,
 		AuthModule,
 		ShopModule,
 		CustomerModule,

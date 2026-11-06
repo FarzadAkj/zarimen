@@ -20,7 +20,8 @@ The customer is identified by three things, and all three matter:
   address, landline, owner full name, owner phone, owner national code. The owner's
   phone ↔ national code is checked with Shahkar when the shop is added.
 - **Wallet:** each shop (owner) has one, holding a balance in whole Tomans; the admin may
-  set an initial amount on creation and change it later. What a wallet is used for comes later.
+  set an initial amount on creation and change it later. It pays for the shop's
+  customers' Shahkar checks and SMS.
 - **Shop login:** the owner logs in at <subdomain>.zarimen.ir/panel with an SMS code sent
   to the shop's owner phone. A disabled shop cannot log in.
 
@@ -30,6 +31,9 @@ The customer is identified by three things, and all three matter:
   2. SMS code to that mobile → customer saved (unique by national code), linked to the shop
   3. the customer's cards; adding a card → CardMatch (card ↔ national code + birth date)
   Returning customers log in with mobile + SMS code and go straight to phase 3.
+- **Service costs:** the admin sets a Toman price for Shahkar checks and for SMS on
+  zarimen.ir/panel/settings. Each one a shop's customers trigger is taken from that shop's
+  wallet; with too little balance the request does not run.
 - **Customers ↔ shops:** many-to-many. Each shop owner sees the customers linked to their shop.
 
 ## Known building blocks
@@ -52,6 +56,6 @@ owner today; customer verification will use them too.
   record the seller attaches to their own invoice?
 - What is stored, for how long, and how card numbers are stored (masked / hashed)?
 - Which identity provider(s) and credentials.
-- Wallet: what charges / credits it.
+- Wallet: how shops top it up (today only the admin sets the balance).
 
 Answers get recorded here as the user gives them.

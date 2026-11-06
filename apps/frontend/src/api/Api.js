@@ -206,6 +206,42 @@ export class HttpClient {
  * @contact
  */
 export class Api extends HttpClient {
+  setting = {
+    /**
+     * No description
+     *
+     * @tags Setting
+     * @name ReadServiceCostSettings
+     * @request POST:/setting/readServiceCostSettings
+     * @secure
+     */
+    readServiceCostSettings: (params = {}) =>
+      this.request({
+        path: `/setting/readServiceCostSettings`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags Setting
+     * @name SetServiceCostSettings
+     * @request POST:/setting/setServiceCostSettings
+     * @secure
+     */
+    setServiceCostSettings: (data, params = {}) =>
+      this.request({
+        path: `/setting/setServiceCostSettings`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
   auth = {
     /**
      * @description Sends a login code to the admin's phone. Finish with `exchangeAdminOtp`.

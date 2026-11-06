@@ -1,0 +1,6 @@
+/// App settings set by the admin, one JSON value per key (Darik's format).
+/// A missing key means "use the model's defaults" (see SettingService.getSetting).
+model Setting {
+  key   String @id
+  value String
+}
