@@ -16,3 +16,8 @@ export function formatAmount(value: string) {
 export function formatCardNumber(digits: string) {
     return digits.replace(/(\d{4})(?=\d)/g, "$1 ")
 }
+
+/** "09175194864" → "0917***4864": the 5th to 7th digits hidden. */
+export function maskPhoneNumber(phoneNumber: string) {
+    return `${phoneNumber.slice(0, 4)}***${phoneNumber.slice(7)}`
+}

@@ -17,6 +17,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 3c  | Several admins: `adminPhoneNumbers` list | done |
 | 4   | Admin settings: Shahkar + SMS cost, charged to shop wallets | done |
 | 4b  | Owner's customers: debounced search, card count + full-number dialog | done |
+| 4c  | Signup skips Shahkar for a saved exact match; masked phone in phase 2 | done |
 
 ## Step log
 
@@ -228,6 +229,15 @@ table shows a card count with an eye icon that opens a modal with the full card 
 - Frontend: `CustomersBrowser` (client: debounced search, stale responses dropped, table
   dims while loading) + `CustomerCardsDialog` (fetches on open). Page loads the first list
   on the server. `formatCardNumber` moved to `lib/format.ts`.
+
+### Step 4c — Skip Shahkar for known customers; masked phone (2026-11-06)
+
+- `startSignup`: a customer saved with the same national code + birth date + phone is not
+  sent to Shahkar again (and not charged for it); only the SMS goes out, and the wallet
+  check covers just the SMS. A different phone for a saved national code still goes to
+  Shahkar. 2 new tests.
+- Phase 2 text: «کد ۶ رقمی به شماره 0917***4864 ارسال شده است.» via `maskPhoneNumber`
+  (`lib/format.ts`, 5th–7th digits hidden; tested).
 
 ## Decisions
 

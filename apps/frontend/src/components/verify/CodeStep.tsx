@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/shad/input-otp"
 import { Spinner } from "@/components/shad/spinner"
-import { toLatinDigits } from "@/lib/format"
+import { maskPhoneNumber, toLatinDigits } from "@/lib/format"
 
 type Props = {
     phoneNumber: string
@@ -32,7 +32,7 @@ export function CodeStep({ phoneNumber, expiresInSeconds, pending, onSubmit, onR
     return (
         <div className="grid gap-5">
             <p className="text-center text-sm">
-                کد ۶ رقمی پیامک‌شده به <span dir="ltr" className="font-bold">{phoneNumber}</span> را وارد کنید.
+                کد ۶ رقمی به شماره <span dir="ltr" className="font-bold">{maskPhoneNumber(phoneNumber)}</span> ارسال شده است.
             </p>
             <div dir="ltr" className="flex justify-center">
                 <InputOTP

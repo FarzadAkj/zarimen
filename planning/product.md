@@ -27,7 +27,8 @@ The customer is identified by three things, and all three matter:
 
 - **Landing page** `<sub>.zarimen.ir`: logo, shop info, a big «احراز هویت مشتری» button.
 - **Customer verification** `<sub>.zarimen.ir/verify`, 3 phases with a step indicator:
-  1. national code + mobile + Jalali birth date → Shahkar (phone ↔ national code)
+  1. national code + mobile + Jalali birth date → Shahkar (phone ↔ national code); skipped
+     when exactly these three are already saved for one customer
   2. SMS code to that mobile → customer saved (unique by national code), linked to the shop
   3. the customer's cards; adding a card → CardMatch (card ↔ national code + birth date)
   Returning customers log in with mobile + SMS code and go straight to phase 3.

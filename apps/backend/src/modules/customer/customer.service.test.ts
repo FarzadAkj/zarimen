@@ -143,6 +143,24 @@ describe("customerService", () => {
 			expect(prisma.links.map(l => l.shopId)).toEqual(["shop-1", "shop-2"])
 		})
 
+		it("skips Shahkar for a customer already saved with the same national code, birth date and phone", async () => {
+			await signup("setoode")
+			shahkar.verifyMobileNationalCode.mockClear()
+			wallet.assertCanAfford.mockClear()
+
+			await service.startSignup("rahimi", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH })
+			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
+			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-2", ["sms"])
+			expect(otp.send).toHaveBeenLastCalledWith(PHONE, "shop-2")
+		})
+
+		it("still asks Shahkar when a saved customer signs up with a different phone", async () => {
+			await signup("setoode")
+			shahkar.verifyMobileNationalCode.mockClear()
+			await service.startSignup("setoode", { ssn: SSN, phoneNumber: "09122222222", birthDate: BIRTH })
+			expect(shahkar.verifyMobileNationalCode).toHaveBeenCalledWith({ mobile: "09122222222", nationalCode: SSN })
+		})
+
 		it("refuses a known national code with a different birth date", async () => {
 			await signup()
 			expect(await errorCode(service.startSignup("rahimi", { ssn: SSN, phoneNumber: PHONE, birthDate: "1371/01/05" }))).toBe("BirthDateMismatch")

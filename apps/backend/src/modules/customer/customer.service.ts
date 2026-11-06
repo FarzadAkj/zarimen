@@ -21,7 +21,8 @@ type SignupDetails = { ssn: string, phoneNumber: string, birthDate: string }
 
 /**
  * Customer verification on a shop's /verify page:
- * 1. startSignup: Shahkar (phone ↔ national code), then an SMS code
+ * 1. startSignup: Shahkar (phone ↔ national code), then an SMS code. Skips Shahkar when the
+ *    national code + birth date + phone are already saved together.
  * 2. completeSignup: the code → customer saved (unique by national code) + linked to the shop
  * 3. readMyCards / addCard: cards confirmed by CardMatch (card ↔ national code + birth date)
  * Returning customers skip 1-2 with startLogin / completeLogin (phone + SMS code).
@@ -41,13 +42,22 @@ export class CustomerService {
 	async startSignup(subdomain: string, details: SignupDetails): Promise<SignupStartedModel> {
 		const shop = await this.findActiveShop({ subdomain })
 
-		const existing = await this.prisma.customer.findUnique({ where: { ssn: details.ssn }, select: { birthDate: true } })
+		const existing = await this.prisma.customer.findUnique({ where: { ssn: details.ssn }, select: { birthDate: true, phoneNumber: true } })
 		if (existing && existing.birthDate !== details.birthDate)
 			throw this.error.throwErrorToClient(CustomerErrors.BirthDateMismatch)
 
-		// Shahkar and the SMS are paid separately; check the wallet covers both before paying for either.
-		await this.wallet.assertCanAfford(shop.id, ["shahkar", "sms"])
-		await this.verify(shop.id, () => this.shahkar.verifyMobileNationalCode({ mobile: details.phoneNumber, nationalCode: details.ssn }), CustomerErrors.PhoneNationalCodeMismatch)
+		// Saved with exactly this national code + birth date + phone: Shahkar already confirmed
+		// that phone, so only the SMS is needed (and paid for).
+		const alreadyVerified = existing?.phoneNumber === details.phoneNumber
+
+		if (alreadyVerified) {
+			await this.wallet.assertCanAfford(shop.id, ["sms"])
+		}
+		else {
+			// Shahkar and the SMS are paid separately; check the wallet covers both before paying for either.
+			await this.wallet.assertCanAfford(shop.id, ["shahkar", "sms"])
+			await this.verify(shop.id, () => this.shahkar.verifyMobileNationalCode({ mobile: details.phoneNumber, nationalCode: details.ssn }), CustomerErrors.PhoneNationalCodeMismatch)
+		}
 
 		const { expiresInSeconds } = await this.otp.send(details.phoneNumber, shop.id)
 
