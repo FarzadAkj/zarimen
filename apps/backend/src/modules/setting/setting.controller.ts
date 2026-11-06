@@ -43,3 +43,16 @@ export class ShopServiceCostController {
 		return this.settings.getSetting(SERVICE_COST_SETTINGS_KEY, ServiceCostSettingsModel)
 	}
 }
+
+/** Public: the service prices, shown on the zarimen.ir landing page. */
+@Controller("setting")
+export class PublicServiceCostController {
+	constructor(private settings: SettingService) { }
+
+	@Post("readPublicServiceCosts")
+	@ApiOperation({ operationId: "readPublicServiceCosts", description: "Public: what each Shahkar check, card check and SMS costs a shop." })
+	@ApiResponse({ type: ServiceCostSettingsModel, status: 200 })
+	readPublicServiceCosts(): Promise<ServiceCostSettingsModel> {
+		return this.settings.getSetting(SERVICE_COST_SETTINGS_KEY, ServiceCostSettingsModel)
+	}
+}

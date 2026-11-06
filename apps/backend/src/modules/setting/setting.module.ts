@@ -1,10 +1,10 @@
 import { Global, Module } from "@nestjs/common"
-import { SettingController, ShopServiceCostController } from "./setting.controller"
+import { PublicServiceCostController, SettingController, ShopServiceCostController } from "./setting.controller"
 import { SettingService } from "./setting.service"
 
 @Global()
 @Module({
-	controllers: [SettingController, ShopServiceCostController],
+	controllers: [SettingController, ShopServiceCostController, PublicServiceCostController],
 	providers: [SettingService],
 	exports: [SettingService],
 })

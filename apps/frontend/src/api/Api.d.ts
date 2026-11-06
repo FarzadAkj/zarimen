@@ -455,6 +455,16 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
     /**
+     * @description Public: what each Shahkar check, card check and SMS costs a shop.
+     *
+     * @tags PublicServiceCost
+     * @name ReadPublicServiceCosts
+     * @request POST:/setting/readPublicServiceCosts
+     */
+    readPublicServiceCosts: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
+    /**
      * @description All plans, disabled included.
      *
      * @tags SubscriptionPlan

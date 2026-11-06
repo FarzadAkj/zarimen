@@ -16,7 +16,7 @@ export function ServiceCostsCard({ costs }: { costs: ServiceCostSettingsModel })
                 <CardDescription>این مبالغ با هر درخواست مشتریان از موجودی کیف پول شما کسر می‌شود.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                     <div className="flex items-center gap-3 rounded-xl border p-3">
                         <ShieldCheck className="size-6 shrink-0 text-primary" />
                         <div className="grid">
@@ -31,13 +31,16 @@ export function ServiceCostsCard({ costs }: { costs: ServiceCostSettingsModel })
                             <span className="font-bold">{price(costs.cardMatchCost)}</span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 rounded-xl border p-3">
-                        <MessageSquareText className="size-6 shrink-0 text-primary" />
-                        <div className="grid">
-                            <span className="text-sm text-muted-foreground">هر پیامک</span>
-                            <span className="font-bold">{price(costs.smsCost)}</span>
+                    {costs.smsCost ?
+                        <div className="flex items-center gap-3 rounded-xl border p-3">
+                            <MessageSquareText className="size-6 shrink-0 text-primary" />
+                            <div className="grid">
+                                <span className="text-sm text-muted-foreground">هر پیامک</span>
+                                <span className="font-bold">{price(costs.smsCost)}</span>
+                            </div>
                         </div>
-                    </div>
+                        : null
+                    }
                 </div>
                 <ul className="grid gap-1 text-sm text-muted-foreground list-disc ps-5">
                     <li>ثبت‌نام مشتری جدید: یک استعلام شاهکار + یک پیامک ({price(costs.shahkarCost + costs.smsCost)})</li>

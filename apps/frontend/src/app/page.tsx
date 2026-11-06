@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
-import type { SubscriptionPlanModel } from "@/api/Api"
+import type { ServiceCostSettingsModel, SubscriptionPlanModel } from "@/api/Api"
 import Link from "next/link"
-import { BadgeCheck, CreditCard, FileSearch, Globe, MessageSquareText, Newspaper, ShieldCheck, Smartphone, Store, Users, Wallet } from "lucide-react"
+import { BadgeCheck, CreditCard, FileSearch, Gift, Globe, MessageSquareText, Newspaper, ShieldCheck, Smartphone, Store, Users, Wallet } from "lucide-react"
 import { Button } from "@/components/shad/button"
 import { ContactLinks } from "@/components/site/ContactLinks"
 import { SiteLogo } from "@/components/site/SiteLogo"
@@ -15,6 +15,17 @@ export const metadata: Metadata = {
 
 /** Plans are re-read from the backend at most every 5 minutes. */
 export const revalidate = 300
+
+/** Service prices; null when the backend cannot be reached (the section is then left out). */
+async function readServiceCosts(): Promise<ServiceCostSettingsModel | null> {
+    try {
+        const { data } = await publicApi().setting.readPublicServiceCosts()
+        return data
+    }
+    catch {
+        return null
+    }
+}
 
 async function readPlans(): Promise<SubscriptionPlanModel[]> {
     try {
@@ -48,7 +59,15 @@ const BENEFITS = [
 ]
 
 export default async function HomePage() {
-    const plans = await readPlans()
+    const [plans, costs] = await Promise.all([readPlans(), readServiceCosts()])
+    // Only services that cost something are listed; with none, the section is left out.
+    const paidServices = costs
+        ? [
+            { icon: ShieldCheck, title: "استعلام شاهکار", text: "تطبیق شماره موبایل با کد ملی، هنگام ثبت‌نام مشتری", price: costs.shahkarCost },
+            { icon: CreditCard, title: "استعلام کارت بانکی", text: "تطبیق کارت بانکی با کد ملی و تاریخ تولد، برای هر کارت", price: costs.cardMatchCost },
+            { icon: MessageSquareText, title: "پیامک کد تأیید", text: "برای هر کد تأییدی که به موبایل مشتری ارسال می‌شود", price: costs.smsCost },
+        ].filter(service => service.price > 0)
+        : []
 
     return (
         <div className="min-h-dvh bg-background">
@@ -62,7 +81,7 @@ export default async function HomePage() {
                         <Link href="/blog" className="hover:text-primary">وبلاگ</Link>
                     </nav>
                     <Button asChild size="sm" className="ms-auto">
-                        <a href="#contact">تماس برای خرید</a>
+                        <a href="#contact">تماس برای راه اندازی</a>
                     </Button>
                 </div>
             </header>
@@ -129,9 +148,28 @@ export default async function HomePage() {
                         <p className="mx-auto mt-3 max-w-3xl text-center text-muted-foreground text-justify [text-align-last:center]">
                             اشتراک، صفحه اختصاصی و پنل فروشگاه را فعال می‌کند؛ هزینه استعلام‌ها و پیامک‌ها جداگانه از کیف پول کسر می‌شود.
                         </p>
+
+                        {/* 7-day trial: granted by the admin (subscription end date), not automatic */}
+                        <div className="relative mt-10 overflow-hidden rounded-3xl border-2 border-primary bg-gradient-to-l from-primary/20 via-primary/10 to-background p-6 shadow-lg shadow-primary/10 sm:p-8">
+                            <span className="absolute top-4 end-4 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">رایگان</span>
+                            <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-start">
+                                <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md">
+                                    <Gift className="size-8" strokeWidth={1.5} />
+                                </span>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold sm:text-2xl">۷ روز آزمایش رایگان</h3>
+                                    <p className="mt-2 leading-7 text-muted-foreground text-justify">
+                                        پیش از خرید اشتراک، صفحه اختصاصی و پنل فروشگاه خود را یک هفته رایگان امتحان کنید. در این مدت فقط هزینه استعلام‌ها و پیامک‌های مشتریان از کیف پول کسر می‌شود.
+                                    </p>
+                                </div>
+                                <Button asChild size="lg" className="shrink-0">
+                                    <a href="#contact">درخواست دوره آزمایشی</a>
+                                </Button>
+                            </div>
+                        </div>
                         {plans.length
                             ? (
-                                <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                                <div className="mt-6 grid gap-4 sm:grid-cols-2">
                                     {plans.map(plan => (
                                         <div key={plan.id} className="grid gap-4 rounded-2xl border bg-background p-6 text-center shadow-sm">
                                             <BadgeCheck className="mx-auto size-9 text-primary" strokeWidth={1.5} />
@@ -140,14 +178,41 @@ export default async function HomePage() {
                                                 <p className="text-sm text-muted-foreground">{formatDuration(plan.durationDays)}</p>
                                             </div>
                                             <p className="text-2xl font-bold text-primary">{formatAmount(plan.price)}</p>
-                                            <Button asChild><a href="#contact">تماس برای خرید</a></Button>
+                                            <Button asChild><a href="#contact">تماس برای راه اندازی</a></Button>
                                         </div>
                                     ))}
                                 </div>
                             )
-                            : <p className="mt-10 text-center text-muted-foreground">برای اطلاع از تعرفه‌ها با ما تماس بگیرید.</p>}
+                            : <p className="mt-6 text-center text-muted-foreground">برای اطلاع از تعرفه‌ها با ما تماس بگیرید.</p>}
                     </div>
                 </section>
+
+                {/* per-request prices (only those above 0) */}
+                {paidServices.length > 0 && (
+                    <section id="costs" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16">
+                        <h2 className="text-center text-2xl font-bold sm:text-3xl">هزینه خدمات</h2>
+                        <p className="mx-auto mt-3 max-w-3xl text-center text-muted-foreground text-justify [text-align-last:center]">
+                            علاوه بر اشتراک، هزینه هر درخواست مشتریان شما به اندازه مصرف از کیف پول فروشگاه کسر می‌شود و همه آن‌ها در گزارش تراکنش‌ها قابل مشاهده است.
+                        </p>
+                        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                            {paidServices.map(service => (
+                                <div key={service.title} className="flex items-start gap-4 rounded-2xl border bg-background p-5">
+                                    <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                                        <service.icon className="size-6" strokeWidth={1.5} />
+                                    </span>
+                                    <div className="grid gap-1">
+                                        <h3 className="font-bold">{service.title}</h3>
+                                        <p className="text-sm leading-6 text-muted-foreground text-justify">{service.text}</p>
+                                        <p className="mt-1 text-lg font-bold text-primary">
+                                            {formatAmount(String(service.price))}
+                                            <span className="text-sm font-normal text-muted-foreground"> / هر بار</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* blog */}
                 <section className="mx-auto max-w-6xl px-4 py-16">
@@ -165,7 +230,7 @@ export default async function HomePage() {
                 <section id="contact" className="mx-auto max-w-4xl scroll-mt-20 px-4 py-16">
                     <h2 className="text-center text-2xl font-bold sm:text-3xl">تماس برای راه اندازی</h2>
                     <p className="mx-auto mt-3 mb-8 max-w-2xl text-center text-muted-foreground text-justify [text-align-last:center]">
-                        برای راه‌اندازی صفحه فروشگاه و خرید اشتراک، از یکی از راه‌های زیر با ما در تماس باشید.
+                        برای راه‌اندازی صفحه فروشگاه و راه اندازی پنل اختصاصی خود، از یکی از راه‌های زیر با ما در تماس باشید.
                     </p>
                     <ContactLinks />
                 </section>

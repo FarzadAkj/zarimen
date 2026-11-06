@@ -393,6 +393,23 @@ Body paragraphs `text-justify` (centered intros keep a centered last line via
 globals.css (off with prefers-reduced-motion) + `data-scroll-behavior="smooth"` on <html> (Next 16
 needs it so route changes still jump to the top instantly).
 
+### Step 8c — Service prices on the landing page (2026-11-07)
+
+Public `setting/readPublicServiceCosts` (own unguarded controller; the admin `setting`
+controller stays IsAdmin). Landing page section «هزینه خدمات» right after the plans: one card
+per service whose price is above 0 (Shahkar, card check, SMS), «… تومان / هر بار»; the whole
+section is left out when all are free or the backend is unreachable. (User adjusted the grid to
+`sm:grid-cols-2` themselves.)
+
+### Step 8d — 7-day trial highlight (2026-11-07)
+
+Landing page plans section: a full-width highlighted card «۷ روز آزمایش رایگان» (gift icon,
+«رایگان» badge, «درخواست دوره آزمایشی» → #contact) above the plan cards; shown even with no
+active plans. User chose **highlight only**: there is no automatic trial — the admin grants the
+7 days with the subscription end-date pencil when creating a shop. The text says Shahkar /
+card / SMS charges still come from the wallet during the trial (true: charging is independent
+of the subscription).
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -453,7 +470,8 @@ needs it so route changes still jump to the top instantly).
 - Zarinpal: production `zarinPalMerchantId`, `backendUrl` (public backend url) and
   empty `zarinpalBaseUrl` must be set; `shopSiteUrl = https://{subdomain}.zarimen.ir`.
 - Existing shops have no subscription → their customers are blocked until they buy one.
-  The admin can give one by setting an end date (shops table pencil); there is no trial.
+  The admin can give one by setting an end date (shops table pencil). The landing page
+  advertises a 7-day trial, granted the same way (manually) — nothing automatic.
 - Rate limiting: each startSignup costs one paid Shahkar call and addCard one CardMatch
   call; nothing limits how often a visitor can trigger them yet.
 - Customers cannot remove a card; the owner's customer list is not paginated yet.

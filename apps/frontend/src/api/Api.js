@@ -270,6 +270,20 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
+     * @description Public: what each Shahkar check, card check and SMS costs a shop.
+     *
+     * @tags PublicServiceCost
+     * @name ReadPublicServiceCosts
+     * @request POST:/setting/readPublicServiceCosts
+     */
+    readPublicServiceCosts: (params = {}) =>
+      this.request({
+        path: `/setting/readPublicServiceCosts`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+    /**
      * @description All plans, disabled included.
      *
      * @tags SubscriptionPlan
