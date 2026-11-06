@@ -145,7 +145,7 @@ describe("authService", () => {
 			throw new GlobalError({ module: "WalletModule", message: "InsufficientBalance" })
 		} }
 		const otp = new OtpService(prisma as never, sms as never, brokeWallet as never, new ErrorService())
-		expect(await errorCode(otp.send("09121111111", "shop-1"))).toBe("InsufficientBalance")
+		expect(await errorCode(otp.send("09121111111", { shopId: "shop-1", customerSsn: "0499370899" }))).toBe("InsufficientBalance")
 		expect(prisma.rows).toHaveLength(0)
 		expect(sms.sendOTPMessage).not.toHaveBeenCalled()
 	})

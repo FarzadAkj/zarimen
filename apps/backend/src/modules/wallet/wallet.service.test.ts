@@ -1,27 +1,73 @@
+import { Prisma } from "@prisma/client"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { Config } from "~/config"
 import { GlobalError } from "~/libs/error/classes/global-error"
 import { ErrorService } from "~/libs/error/error.service"
 import { ServiceCostSettingsModel } from "../setting/model/service-cost-settings.model"
 import { WalletService } from "./wallet.service"
 import "reflect-metadata"
 
-/** One wallet, with the conditional decrement Postgres does for `updateMany`. */
+type Row = {
+	id: string
+	walletId: string
+	type: string
+	status: string
+	amount: Prisma.Decimal
+	service?: string
+	customerSsn?: string
+	authority?: string
+	refId?: string
+	createdAt: Date
+}
+
+const BILL = { shopId: "shop-1", customerSsn: "0499370899" }
+
+/** One shop wallet and its history, with the conditional updates Postgres does. */
 function createPrisma(balance: number) {
-	const wallet = { shopId: "shop-1", balance }
-	return {
-		wallet: Object.assign(wallet, {
-			exists: async ({ balance: { gte } }: { balance: { gte: number } }) => wallet.balance >= gte,
-			updateMany: async ({ where, data }: { where: { balance: { gte: number } }, data: { balance: { decrement: number } } }) => {
-				if (wallet.balance < where.balance.gte)
-					return { count: 0 }
-				wallet.balance -= data.balance.decrement
-				return { count: 1 }
+	const wallet = { id: "wallet-1", shopId: "shop-1", balance }
+	const rows: Row[] = []
+
+	const prisma = {
+		wallet,
+		rows,
+		shop: {
+			findUniqueOrThrow: async () => ({ ownerPhoneNumber: "09121111111", subdomain: "setoode", wallet: { id: wallet.id } }),
+		},
+		$transaction: async (work: unknown) => Array.isArray(work) ? Promise.all(work) : (work as (tx: unknown) => unknown)(prisma),
+		walletTransaction: {
+			create: async ({ data }: { data: Omit<Row, "id" | "createdAt" | "status" | "amount"> & { amount: number, status?: string } }) => {
+				const row: Row = { id: `tx-${rows.length + 1}`, createdAt: new Date(), status: "SUCCESS", ...data, amount: new Prisma.Decimal(data.amount) }
+				rows.push(row)
+				return row
 			},
-			update: async ({ data }: { data: { balance: { increment: number } } }) => {
-				wallet.balance += data.balance.increment
+			update: async ({ where, data }: { where: { id: string }, data: Partial<Row> }) => Object.assign(rows.find(r => r.id === where.id)!, data),
+			updateMany: async ({ where, data }: { where: { id: string, status: string }, data: Partial<Row> }) => {
+				const row = rows.find(r => r.id === where.id && r.status === where.status)
+				if (row)
+					Object.assign(row, data)
+				return { count: row ? 1 : 0 }
 			},
-		}),
+			delete: async ({ where }: { where: { id: string } }) => rows.splice(rows.findIndex(r => r.id === where.id), 1)[0],
+			findUnique: async ({ where }: { where: { authority: string } }) => {
+				const row = rows.find(r => r.authority === where.authority)
+				return row && { ...row, wallet: { shop: { subdomain: "setoode" } } }
+			},
+		},
 	}
+	Object.assign(prisma.wallet, {
+		exists: async ({ balance: { gte } }: { balance: { gte: number } }) => wallet.balance >= gte,
+		findUniqueOrThrow: async () => ({ id: wallet.id }),
+		updateMany: async ({ where, data }: { where: { balance: { gte: number } }, data: { balance: { decrement: number } } }) => {
+			if (wallet.balance < where.balance.gte)
+				return { count: 0 }
+			wallet.balance -= data.balance.decrement
+			return { count: 1 }
+		},
+		update: async ({ data }: { data: { balance: { increment: number | Prisma.Decimal } } }) => {
+			wallet.balance += Number(data.balance.increment)
+		},
+	})
+	return prisma
 }
 
 function errorCode(promise: Promise<unknown>) {
@@ -33,61 +79,127 @@ function errorCode(promise: Promise<unknown>) {
 
 describe("walletService", () => {
 	let prisma: ReturnType<typeof createPrisma>
-	let costs: ServiceCostSettingsModel
+	let zarinpal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
 	let wallet: WalletService
 
 	function setup(balance: number, shahkarCost: number, smsCost: number) {
 		prisma = createPrisma(balance)
-		costs = Object.assign(new ServiceCostSettingsModel(), { shahkarCost, smsCost })
+		const costs = Object.assign(new ServiceCostSettingsModel(), { shahkarCost, smsCost })
 		const settings = { getSetting: async () => costs }
-		wallet = new WalletService(prisma as never, settings as never, new ErrorService())
+		zarinpal = {
+			requestPayment: vi.fn(async () => ({ ok: true, authority: "A0001" })),
+			verifyPayment: vi.fn(async () => ({ ok: true, code: 100, refId: "777", cardPan: "6037**1234" })),
+			gatewayUrl: (authority: string) => `https://sandbox.zarinpal.com/pg/StartPay/${authority}`,
+		}
+		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010" })
+		wallet = new WalletService(prisma as never, settings as never, zarinpal as never, config, new ErrorService())
 	}
 
 	beforeEach(() => setup(5000, 1000, 200))
 
-	it("takes the price and runs the service", async () => {
-		const run = vi.fn(async () => "matched")
-		expect(await wallet.charge("shop-1", "shahkar", run)).toBe("matched")
-		expect(prisma.wallet.balance).toBe(4000)
+	describe("charge", () => {
+		it("takes the price, records it for the customer, and runs the service", async () => {
+			expect(await wallet.charge(BILL, "SHAHKAR", async () => "matched")).toBe("matched")
+			expect(prisma.wallet.balance).toBe(4000)
+			expect(prisma.rows).toEqual([expect.objectContaining({ type: "SERVICE_CHARGE", service: "SHAHKAR", customerSsn: BILL.customerSsn })])
+			expect(prisma.rows[0]!.amount.toNumber()).toBe(-1000)
+		})
+
+		it("charges each service its own price", async () => {
+			await wallet.charge(BILL, "SMS", async () => {})
+			expect(prisma.wallet.balance).toBe(4800)
+		})
+
+		it("refuses, runs nothing and records nothing when the balance does not cover the price", async () => {
+			setup(999, 1000, 200)
+			const run = vi.fn(async () => {})
+			expect(await errorCode(wallet.charge(BILL, "SHAHKAR", run))).toBe("InsufficientBalance")
+			expect(run).not.toHaveBeenCalled()
+			expect(prisma.wallet.balance).toBe(999)
+			expect(prisma.rows).toHaveLength(0)
+		})
+
+		it("allows spending the balance down to exactly zero", async () => {
+			setup(1000, 1000, 200)
+			await wallet.charge(BILL, "SHAHKAR", async () => {})
+			expect(prisma.wallet.balance).toBe(0)
+		})
+
+		it("refunds and removes the history row when the service fails", async () => {
+			expect(await errorCode(wallet.charge(BILL, "SHAHKAR", async () => {
+				throw new Error("api.ir down")
+			}))).toBe("Error: api.ir down")
+			expect(prisma.wallet.balance).toBe(5000)
+			expect(prisma.rows).toHaveLength(0)
+		})
+
+		it("does not touch the wallet or the history when the service is free", async () => {
+			setup(0, 0, 0)
+			expect(await wallet.charge(BILL, "SMS", async () => "ok")).toBe("ok")
+			expect(prisma.wallet.balance).toBe(0)
+			expect(prisma.rows).toHaveLength(0)
+		})
+
+		it("assertCanAfford checks the sum of the services", async () => {
+			setup(1199, 1000, 200)
+			expect(await errorCode(wallet.assertCanAfford("shop-1", ["SHAHKAR", "SMS"]))).toBe("InsufficientBalance")
+			setup(1200, 1000, 200)
+			expect(await errorCode(wallet.assertCanAfford("shop-1", ["SHAHKAR", "SMS"]))).toBe("resolved")
+		})
 	})
 
-	it("charges each service its own price", async () => {
-		await wallet.charge("shop-1", "sms", async () => {})
-		expect(prisma.wallet.balance).toBe(4800)
-	})
+	describe("top-up", () => {
+		it("credits the wallet once Zarinpal verifies, and sends the owner back to their shop", async () => {
+			expect(await wallet.startTopUp("shop-1", 50_000)).toEqual({ url: "https://sandbox.zarinpal.com/pg/StartPay/A0001" })
+			expect(prisma.rows[0]).toMatchObject({ type: "TOP_UP", status: "PENDING", authority: "A0001" })
+			expect(prisma.wallet.balance).toBe(5000)
 
-	it("refuses and runs nothing when the balance does not cover the price", async () => {
-		setup(999, 1000, 200)
-		const run = vi.fn(async () => {})
-		expect(await errorCode(wallet.charge("shop-1", "shahkar", run))).toBe("InsufficientBalance")
-		expect(run).not.toHaveBeenCalled()
-		expect(prisma.wallet.balance).toBe(999)
-	})
+			const url = await wallet.handleTopUpCallback("A0001", "OK")
+			expect(url).toBe("http://setoode.localhost:3010/panel/wallet?topUp=success&amount=50000&refId=777")
+			expect(zarinpal.verifyPayment).toHaveBeenCalledWith({ amount: 50_000, authority: "A0001" })
+			expect(prisma.wallet.balance).toBe(55_000)
+			expect(prisma.rows[0]).toMatchObject({ status: "SUCCESS", refId: "777" })
+		})
 
-	it("allows spending the balance down to exactly zero", async () => {
-		setup(1000, 1000, 200)
-		await wallet.charge("shop-1", "shahkar", async () => {})
-		expect(prisma.wallet.balance).toBe(0)
-	})
+		it("credits only once when the callback comes twice", async () => {
+			await wallet.startTopUp("shop-1", 50_000)
+			await wallet.handleTopUpCallback("A0001", "OK")
+			expect(await wallet.handleTopUpCallback("A0001", "OK")).toContain("topUp=success")
+			expect(prisma.wallet.balance).toBe(55_000)
+			expect(zarinpal.verifyPayment).toHaveBeenCalledTimes(1)
+		})
 
-	it("refunds when the service fails", async () => {
-		expect(await errorCode(wallet.charge("shop-1", "shahkar", async () => {
-			throw new Error("api.ir down")
-		}))).toBe("Error: api.ir down")
-		expect(prisma.wallet.balance).toBe(5000)
-	})
+		it("credits nothing when the owner cancels at the gateway", async () => {
+			await wallet.startTopUp("shop-1", 50_000)
+			expect(await wallet.handleTopUpCallback("A0001", "NOK")).toBe("http://setoode.localhost:3010/panel/wallet?topUp=failed&reason=Canceled")
+			expect(zarinpal.verifyPayment).not.toHaveBeenCalled()
+			expect(prisma.wallet.balance).toBe(5000)
+			expect(prisma.rows[0]!.status).toBe("FAILED")
+		})
 
-	it("does not touch the wallet when the service is free", async () => {
-		setup(0, 0, 0)
-		const run = vi.fn(async () => "ok")
-		expect(await wallet.charge("shop-1", "sms", run)).toBe("ok")
-		expect(prisma.wallet.balance).toBe(0)
-	})
+		it("credits nothing when Zarinpal does not verify the payment", async () => {
+			zarinpal.verifyPayment.mockResolvedValueOnce({ ok: false, code: -51, message: "Zarinpal -51: unpaid" })
+			await wallet.startTopUp("shop-1", 50_000)
+			expect(await wallet.handleTopUpCallback("A0001", "OK")).toContain("topUp=failed")
+			expect(prisma.wallet.balance).toBe(5000)
+		})
 
-	it("assertCanAfford checks the sum of the services", async () => {
-		setup(1199, 1000, 200)
-		expect(await errorCode(wallet.assertCanAfford("shop-1", ["shahkar", "sms"]))).toBe("InsufficientBalance")
-		setup(1200, 1000, 200)
-		expect(await errorCode(wallet.assertCanAfford("shop-1", ["shahkar", "sms"]))).toBe("resolved")
+		it("leaves the top-up pending (nothing credited) when verification cannot reach Zarinpal", async () => {
+			zarinpal.verifyPayment.mockRejectedValueOnce(new Error("timeout"))
+			await wallet.startTopUp("shop-1", 50_000)
+			expect(await wallet.handleTopUpCallback("A0001", "OK")).toContain("reason=GatewayUnavailable")
+			expect(prisma.rows[0]!.status).toBe("PENDING")
+			expect(prisma.wallet.balance).toBe(5000)
+		})
+
+		it("marks the top-up failed when Zarinpal refuses the payment request", async () => {
+			zarinpal.requestPayment.mockResolvedValueOnce({ ok: false, code: -9, message: "Zarinpal -9: validation" })
+			expect(await errorCode(wallet.startTopUp("shop-1", 50_000))).toBe("GatewayError")
+			expect(prisma.rows[0]!.status).toBe("FAILED")
+		})
+
+		it("refuses a callback for an unknown authority", async () => {
+			expect(await errorCode(wallet.handleTopUpCallback("nope", "OK"))).toBe("TopUpNotFound")
+		})
 	})
 })

@@ -1,4 +1,4 @@
-import { IsEnum, IsIn, IsString, IsUrl, Matches, MinLength } from "class-validator"
+import { IsEnum, IsIn, IsOptional, IsString, IsUrl, Matches, MinLength } from "class-validator"
 
 export enum NodeEnvType {
 	Production = "production",
@@ -86,4 +86,28 @@ export class Config {
 
 	@IsString()
 	public arvanSecretKey!: string
+
+	// ---- shop sites
+
+	/**
+	 * A shop's site, with `{subdomain}` where its subdomain goes:
+	 * "https://{subdomain}.zarimen.ir" (production), "http://{subdomain}.localhost:3010" (dev).
+	 * The backend sends owners back here after a Zarinpal payment.
+	 */
+	@Matches(/^https?:\/\/.*\{subdomain\}/, { message: "shopSiteUrl must be a URL containing {subdomain}" })
+	public shopSiteUrl!: string
+
+	// ---- Zarinpal (shop wallet top-ups)
+
+	@IsString()
+	public zarinPalMerchantId!: string
+
+	/** BACKEND url Zarinpal sends the owner back to: <backend>/wallet/topUpCallback */
+	@IsUrl({ require_tld: false, protocols: ["https", "http"] })
+	public zarinpalCallbackUrl!: string
+
+	/** Leave empty for production; https://sandbox.zarinpal.com to test without real money. */
+	@IsOptional()
+	@IsString()
+	public zarinpalBaseUrl?: string
 }

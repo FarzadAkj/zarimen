@@ -43,6 +43,9 @@ const ERROR_MESSAGES: Record<string, string> = {
     // ---- wallet
     InsufficientBalance: "اعتبار کیف پول فروشگاه برای انجام این درخواست کافی نیست. لطفاً به فروشنده اطلاع دهید.",
 
+    GatewayError: "درگاه پرداخت درخواست را نپذیرفت. دوباره تلاش کنید.",
+    GatewayUnavailable: "درگاه پرداخت در دسترس نیست. لطفاً بعداً تلاش کنید.",
+
     // ---- image upload
     UnsupportedImage: "تصویر باید با فرمت JPG، PNG یا webp باشد.",
     ImageTooLarge: "حجم تصویر حداکثر می‌تواند ۵ مگابایت باشد.",

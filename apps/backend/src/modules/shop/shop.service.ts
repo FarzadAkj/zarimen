@@ -3,6 +3,7 @@ import type { CreateShopInput } from "./dto/create-shop.input"
 import type { ShopPublicInfoModel } from "./model/shop-public-info.model"
 import type { ShopModel } from "./model/shop.model"
 import { Injectable } from "@nestjs/common"
+import { Prisma, WalletTransactionType } from "@prisma/client"
 import { ErrorService } from "~/libs/error/error.service"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { ShahkarService } from "~/libs/shahkar/shahkar.service"
@@ -28,7 +29,15 @@ export class ShopService {
 		const created = await this.prisma.shop.create({
 			data: {
 				...shop,
-				wallet: { create: { balance: initialWalletBalance ?? "0" } },
+				wallet: {
+					create: {
+						balance: initialWalletBalance ?? "0",
+						// the initial balance is the wallet's first history row
+						...(initialWalletBalance && Number(initialWalletBalance) > 0 && {
+							transactions: { create: { type: WalletTransactionType.ADMIN_ADJUSTMENT, amount: initialWalletBalance } },
+						}),
+					},
+				},
 			},
 			select: shopSelect,
 		})
@@ -67,19 +76,30 @@ export class ShopService {
 		return shop
 	}
 
-	async readShop(id: string): Promise<ShopModel> {
-		const shop = await this.prisma.shop.findUnique({ where: { id }, select: shopSelect })
+	async readShop(where: { id: string } | { subdomain: string }): Promise<ShopModel> {
+		const shop = await this.prisma.shop.findUnique({ where, select: shopSelect })
 		if (!shop)
 			throw this.error.throwErrorToClient(ShopErrors.NotFound)
 		return this.toModel(shop)
 	}
 
-	/** Admin sets the shop's wallet balance to `balance` (an absolute value, not a change). */
+	/**
+	 * Admin sets the shop's wallet balance to `balance` (an absolute value, not a change).
+	 * The difference goes into the shop's history as an admin adjustment.
+	 */
 	async setWalletBalance(shopId: string, balance: string): Promise<ShopModel> {
 		if (!await this.prisma.shop.exists({ id: shopId }))
 			throw this.error.throwErrorToClient(ShopErrors.NotFound)
 
-		await this.prisma.wallet.update({ where: { shopId }, data: { balance } })
+		// Serializable: a customer charge landing in between would make the recorded difference wrong.
+		await this.prisma.$transaction(async (tx) => {
+			const wallet = await tx.wallet.findUniqueOrThrow({ where: { shopId } })
+			const change = new Prisma.Decimal(balance).minus(wallet.balance)
+			if (change.isZero())
+				return
+			await tx.wallet.update({ where: { id: wallet.id }, data: { balance } })
+			await tx.walletTransaction.create({ data: { walletId: wallet.id, type: WalletTransactionType.ADMIN_ADJUSTMENT, amount: change } })
+		}, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
 		const shop = await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId }, select: shopSelect })
 		return this.toModel(shop)
 	}

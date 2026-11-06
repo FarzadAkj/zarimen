@@ -1,9 +1,9 @@
 "use client"
-import type { ShopCustomerModel } from "@/api/Api"
+import type { ShopCustomerCardModel, ShopCustomerModel } from "@/api/Api"
+import type { ServerResponse } from "@/app/types"
 import { useEffect, useRef, useState } from "react"
 import { Search } from "lucide-react"
 import { toast } from "sonner"
-import { readMyCustomers } from "@/app/tenant/[subdomain]/panel/actions"
 import { Input } from "@/components/shad/input"
 import { Spinner } from "@/components/shad/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shad/table"
@@ -17,9 +17,14 @@ const SEARCH_DELAY_MS = 1000
 
 /**
  * Search box + customers table. Typing filters by any part of the national code or the
- * mobile number; only the table reloads.
+ * mobile number; only the table reloads. Used by the shop owner and by the admin viewing a
+ * shop: each passes server actions that load *that* shop's customers and cards.
  */
-export function CustomersBrowser({ initial }: { initial: ShopCustomerModel[] }) {
+export function CustomersBrowser({ initial, loadCustomers, loadCards }: {
+    initial: ShopCustomerModel[]
+    loadCustomers: (search: string) => Promise<ServerResponse<ShopCustomerModel[]>>
+    loadCards: (customerId: string) => Promise<ServerResponse<ShopCustomerCardModel[]>>
+}) {
     const [query, setQuery] = useState("")
     const [customers, setCustomers] = useState(initial)
     const [loading, setLoading] = useState(false)
@@ -37,7 +42,7 @@ export function CustomersBrowser({ initial }: { initial: ShopCustomerModel[] }) 
             searched.current = search
             const id = ++latest.current
             setLoading(true)
-            const { data, error } = await readMyCustomers(search)
+            const { data, error } = await loadCustomers(search)
             if (id !== latest.current) return
             setLoading(false)
             if (data) {
@@ -48,7 +53,7 @@ export function CustomersBrowser({ initial }: { initial: ShopCustomerModel[] }) 
                 toast.error(error?.translation)
         }, SEARCH_DELAY_MS)
         return () => clearTimeout(timer)
-    }, [query])
+    }, [query, loadCustomers])
 
     return (
         <div className="grid gap-4">
@@ -89,7 +94,7 @@ export function CustomersBrowser({ initial }: { initial: ShopCustomerModel[] }) 
                                     <TableCell dir="ltr" className="text-end font-mono">{customer.phoneNumber}</TableCell>
                                     <TableCell dir="ltr" className="text-end">{customer.birthDate}</TableCell>
                                     <TableCell>
-                                        <CustomerCardsDialog customerId={customer.id} ssn={customer.ssn} cardCount={customer.cardCount} />
+                                        <CustomerCardsDialog customerId={customer.id} ssn={customer.ssn} cardCount={customer.cardCount} loadCards={loadCards} />
                                     </TableCell>
                                     <TableCell>{formatDateTime(customer.firstSeenAt)}</TableCell>
                                     <TableCell>{formatDateTime(customer.lastSeenAt)}</TableCell>

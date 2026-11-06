@@ -1,4 +1,6 @@
+import Link from "next/link"
 import { redirect } from "next/navigation"
+import { Button } from "@/components/shad/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shad/card"
 import { formatAmount } from "@/lib/format"
 import { readMyShop } from "../actions"
@@ -24,6 +26,11 @@ export default async function ShopDashboardPage() {
                     <CardDescription>موجودی کیف پول</CardDescription>
                     <CardTitle>{formatAmount(shop.walletBalance)}</CardTitle>
                 </CardHeader>
+                <CardContent>
+                    <Button asChild size="sm">
+                        <Link href="/panel/wallet">افزایش موجودی</Link>
+                    </Button>
+                </CardContent>
             </Card>
         </div>
     )

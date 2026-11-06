@@ -2,6 +2,7 @@ import { Body, Controller, Post, UseGuards } from "@nestjs/common"
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from "@nestjs/swagger"
 import { IsAdmin } from "../auth/guards/is-admin.guard"
 import { CreateShopInput } from "./dto/create-shop.input"
+import { ReadShopPublicInfoInput } from "./dto/read-shop-public-info.input"
 import { SetShopActiveInput } from "./dto/set-shop-active.input"
 import { SetWalletBalanceInput } from "./dto/set-wallet-balance.input"
 import { ShopModel } from "./model/shop.model"
@@ -43,5 +44,13 @@ export class ShopController {
 	@ApiResponse({ type: ShopModel, status: 200 })
 	setWalletBalance(@Body() input: SetWalletBalanceInput): Promise<ShopModel> {
 		return this.shop.setWalletBalance(input.shopId, input.balance)
+	}
+
+	@Post("readShopBySubdomain")
+	@ApiOperation({ operationId: "readShopBySubdomain", description: "One shop, for the admin's view of its panel." })
+	@ApiBody({ type: ReadShopPublicInfoInput })
+	@ApiResponse({ type: ShopModel, status: 200 })
+	readShopBySubdomain(@Body() input: ReadShopPublicInfoInput): Promise<ShopModel> {
+		return this.shop.readShop({ subdomain: input.subdomain })
 	}
 }

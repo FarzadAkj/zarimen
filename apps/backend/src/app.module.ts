@@ -6,6 +6,7 @@ import { ImageBucketModule } from "./libs/image-bucket/image-bucket.module"
 import { PrismaModule } from "./libs/prisma/prisma.module"
 import { ShahkarModule } from "./libs/shahkar/shahkar.module"
 import { SmsIrModule } from "./libs/sms-ir/sms-ir.module"
+import { ZarinpalModule } from "./libs/zarinpal/zarinpal.module"
 import { AuthModule } from "./modules/auth/auth.module"
 import { CustomerModule } from "./modules/customer/customer.module"
 import { ImageUploadModule } from "./modules/image-upload/image-upload.module"
@@ -29,6 +30,14 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 			}),
 		}),
 		ShahkarModule,
+		ZarinpalModule.registerAsync({
+			inject: [Config],
+			useFactory: (config: Config) => ({
+				merchantId: config.zarinPalMerchantId,
+				callbackUrl: config.zarinpalCallbackUrl,
+				baseUrl: config.zarinpalBaseUrl || undefined,
+			}),
+		}),
 		ImageBucketModule,
 
 		SettingModule,

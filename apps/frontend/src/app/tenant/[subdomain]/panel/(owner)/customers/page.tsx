@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shad/card"
 import { CustomersBrowser } from "@/components/shop-panel/CustomersBrowser"
-import { readMyCustomers } from "../../actions"
+import { readMyCustomerCards, readMyCustomers } from "../../actions"
 
 /** <subdomain>.zarimen.ir/panel/customers — customers who verified at this shop. */
 export default async function ShopCustomersPage() {
@@ -14,7 +14,7 @@ export default async function ShopCustomersPage() {
             </CardHeader>
             <CardContent>
                 {customers
-                    ? <CustomersBrowser initial={customers} />
+                    ? <CustomersBrowser initial={customers} loadCustomers={readMyCustomers} loadCards={readMyCustomerCards} />
                     : <p className="text-destructive">{error?.translation}</p>}
             </CardContent>
         </Card>

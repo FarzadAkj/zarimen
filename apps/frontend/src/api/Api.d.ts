@@ -15,11 +15,55 @@ export declare enum ImageContentType {
   ImagePng = "image/png",
   ImageWebp = "image/webp",
 }
+export declare enum PaidService {
+  SHAHKAR = "SHAHKAR",
+  SMS = "SMS",
+}
+export declare enum WalletTransactionType {
+  TOP_UP = "TOP_UP",
+  SERVICE_CHARGE = "SERVICE_CHARGE",
+  ADMIN_ADJUSTMENT = "ADMIN_ADJUSTMENT",
+}
 export interface ServiceCostSettingsModel {
   /** Tomans per api.ir identity check (Shahkar or CardMatch). */
   shahkarCost: number;
   /** Tomans per SMS sent to a customer. */
   smsCost: number;
+}
+export interface StartWalletTopUpInput {
+  /**
+   * Tomans to add to the wallet
+   * @min 2000
+   * @max 200000000
+   */
+  amount: number;
+}
+export interface WalletTopUpModel {
+  url: string;
+}
+export interface ReadWalletTransactionsInput {
+  /** @default 1 */
+  page?: number;
+}
+export interface WalletTransactionModel {
+  id: string;
+  type: WalletTransactionType;
+  amount: string;
+  service: PaidService | null;
+  customerSsn: string | null;
+  refId: string | null;
+  /** @format date-time */
+  createdAt: string;
+}
+export interface ReadWalletTransactionsOutput {
+  data: WalletTransactionModel[];
+  count: number;
+  pageSize: number;
+}
+export interface ReadShopWalletTransactionsInput {
+  /** @default 1 */
+  page?: number;
+  shopId: string;
 }
 export interface SendOtpInput {
   /** @example "09120000000" */
@@ -209,6 +253,15 @@ export interface ShopCustomerCardModel {
   /** @format date-time */
   createdAt: string;
 }
+export interface ReadShopCustomersInput {
+  /** @example "0912" */
+  search?: string;
+  shopId: string;
+}
+export interface ReadShopCustomerCardsInput {
+  customerId: string;
+  shopId: string;
+}
 export interface CreateImageUploadInput {
   contentType: ImageContentType;
   size: number;
@@ -217,6 +270,10 @@ export interface CreateImageUploadOutput {
   uploadUrl: string;
   headers: Record<string, string>;
   publicUrl: string;
+}
+export declare enum WalletTopUpCallbackParamsStatusEnum {
+  OK = "OK",
+  NOK = "NOK",
 }
 export type QueryParamsType = Record<string | number, any>;
 export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
@@ -331,6 +388,191 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
   };
+  wallet: {
+    /**
+     * @description Verifies the top-up, credits the wallet, then 302s to <shopSiteUrl>/panel/wallet?topUp=success&amount=&refId= or ?topUp=failed&reason=
+     *
+     * @tags WalletCallback
+     * @name WalletTopUpCallback
+     * @request GET:/wallet/topUpCallback
+     */
+    walletTopUpCallback: (
+      query: {
+        Authority: string;
+        Status?: WalletTopUpCallbackParamsStatusEnum;
+      },
+      params?: RequestParams,
+    ) => Promise<HttpResponse<any, void>>;
+  };
+  shopPanel: {
+    /**
+     * @description Returns the Zarinpal url to add `amount` Tomans to the owner's wallet.
+     *
+     * @tags ShopWallet
+     * @name StartWalletTopUp
+     * @request POST:/shop-panel/startWalletTopUp
+     * @secure
+     */
+    startWalletTopUp: (
+      data: StartWalletTopUpInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<WalletTopUpModel, any>>;
+    /**
+     * No description
+     *
+     * @tags ShopWallet
+     * @name ReadMyWalletTransactions
+     * @request POST:/shop-panel/readMyWalletTransactions
+     * @secure
+     */
+    readMyWalletTransactions: (
+      data: ReadWalletTransactionsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadWalletTransactionsOutput, any>>;
+    /**
+     * @description Public: what the shop's landing and login pages show.
+     *
+     * @tags ShopPanel
+     * @name ReadShopPublicInfo
+     * @request POST:/shop-panel/readShopPublicInfo
+     */
+    readShopPublicInfo: (
+      data: ReadShopPublicInfoInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopPublicInfoModel, any>>;
+    /**
+     * @description The logged-in owner's shop.
+     *
+     * @tags ShopPanel
+     * @name ReadMyShop
+     * @request POST:/shop-panel/readMyShop
+     * @secure
+     */
+    readMyShop: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopModel, any>>;
+    /**
+     * @description Customers who verified at the owner's shop, optionally filtered by national code / mobile digits.
+     *
+     * @tags ShopCustomers
+     * @name ReadMyCustomers
+     * @request POST:/shop-panel/readMyCustomers
+     * @secure
+     */
+    readMyCustomers: (
+      data: ReadMyCustomersInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopCustomerModel[], any>>;
+    /**
+     * @description Full card numbers of one of the owner's customers.
+     *
+     * @tags ShopCustomers
+     * @name ReadMyCustomerCards
+     * @request POST:/shop-panel/readMyCustomerCards
+     * @secure
+     */
+    readMyCustomerCards: (
+      data: ReadMyCustomerCardsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
+  };
+  shop: {
+    /**
+     * No description
+     *
+     * @tags AdminShopWallet
+     * @name ReadShopWalletTransactions
+     * @request POST:/shop/readShopWalletTransactions
+     * @secure
+     */
+    readShopWalletTransactions: (
+      data: ReadShopWalletTransactionsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadWalletTransactionsOutput, any>>;
+    /**
+     * No description
+     *
+     * @tags Shop
+     * @name CreateShop
+     * @request POST:/shop/createShop
+     * @secure
+     */
+    createShop: (
+      data: CreateShopInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopModel, any>>;
+    /**
+     * No description
+     *
+     * @tags Shop
+     * @name ReadShops
+     * @request POST:/shop/readShops
+     * @secure
+     */
+    readShops: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopModel[], any>>;
+    /**
+     * No description
+     *
+     * @tags Shop
+     * @name SetShopActive
+     * @request POST:/shop/setShopActive
+     * @secure
+     */
+    setShopActive: (
+      data: SetShopActiveInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopModel, any>>;
+    /**
+     * @description Sets the shop's wallet balance to the given amount.
+     *
+     * @tags Shop
+     * @name SetWalletBalance
+     * @request POST:/shop/setWalletBalance
+     * @secure
+     */
+    setWalletBalance: (
+      data: SetWalletBalanceInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopModel, any>>;
+    /**
+     * @description One shop, for the admin's view of its panel.
+     *
+     * @tags Shop
+     * @name ReadShopBySubdomain
+     * @request POST:/shop/readShopBySubdomain
+     * @secure
+     */
+    readShopBySubdomain: (
+      data: ReadShopPublicInfoInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopModel, any>>;
+    /**
+     * No description
+     *
+     * @tags AdminShopCustomers
+     * @name ReadShopCustomers
+     * @request POST:/shop/readShopCustomers
+     * @secure
+     */
+    readShopCustomers: (
+      data: ReadShopCustomersInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopCustomerModel[], any>>;
+    /**
+     * No description
+     *
+     * @tags AdminShopCustomers
+     * @name ReadShopCustomerCards
+     * @request POST:/shop/readShopCustomerCards
+     * @secure
+     */
+    readShopCustomerCards: (
+      data: ReadShopCustomerCardsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
+  };
   auth: {
     /**
      * @description Sends a login code to the admin's phone. Finish with `exchangeAdminOtp`.
@@ -385,103 +627,6 @@ export declare class Api<
       data: ExchangeShopOtpInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<TokenModel, any>>;
-  };
-  shop: {
-    /**
-     * No description
-     *
-     * @tags Shop
-     * @name CreateShop
-     * @request POST:/shop/createShop
-     * @secure
-     */
-    createShop: (
-      data: CreateShopInput,
-      params?: RequestParams,
-    ) => Promise<HttpResponse<ShopModel, any>>;
-    /**
-     * No description
-     *
-     * @tags Shop
-     * @name ReadShops
-     * @request POST:/shop/readShops
-     * @secure
-     */
-    readShops: (
-      params?: RequestParams,
-    ) => Promise<HttpResponse<ShopModel[], any>>;
-    /**
-     * No description
-     *
-     * @tags Shop
-     * @name SetShopActive
-     * @request POST:/shop/setShopActive
-     * @secure
-     */
-    setShopActive: (
-      data: SetShopActiveInput,
-      params?: RequestParams,
-    ) => Promise<HttpResponse<ShopModel, any>>;
-    /**
-     * @description Sets the shop's wallet balance to the given amount.
-     *
-     * @tags Shop
-     * @name SetWalletBalance
-     * @request POST:/shop/setWalletBalance
-     * @secure
-     */
-    setWalletBalance: (
-      data: SetWalletBalanceInput,
-      params?: RequestParams,
-    ) => Promise<HttpResponse<ShopModel, any>>;
-  };
-  shopPanel: {
-    /**
-     * @description Public: what the shop's landing and login pages show.
-     *
-     * @tags ShopPanel
-     * @name ReadShopPublicInfo
-     * @request POST:/shop-panel/readShopPublicInfo
-     */
-    readShopPublicInfo: (
-      data: ReadShopPublicInfoInput,
-      params?: RequestParams,
-    ) => Promise<HttpResponse<ShopPublicInfoModel, any>>;
-    /**
-     * @description The logged-in owner's shop.
-     *
-     * @tags ShopPanel
-     * @name ReadMyShop
-     * @request POST:/shop-panel/readMyShop
-     * @secure
-     */
-    readMyShop: (
-      params?: RequestParams,
-    ) => Promise<HttpResponse<ShopModel, any>>;
-    /**
-     * @description Customers who verified at the owner's shop, optionally filtered by national code / mobile digits.
-     *
-     * @tags ShopCustomers
-     * @name ReadMyCustomers
-     * @request POST:/shop-panel/readMyCustomers
-     * @secure
-     */
-    readMyCustomers: (
-      data: ReadMyCustomersInput,
-      params?: RequestParams,
-    ) => Promise<HttpResponse<ShopCustomerModel[], any>>;
-    /**
-     * @description Full card numbers of one of the owner's customers.
-     *
-     * @tags ShopCustomers
-     * @name ReadMyCustomerCards
-     * @request POST:/shop-panel/readMyCustomerCards
-     * @secure
-     */
-    readMyCustomerCards: (
-      data: ReadMyCustomerCardsInput,
-      params?: RequestParams,
-    ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
   };
   customer: {
     /**

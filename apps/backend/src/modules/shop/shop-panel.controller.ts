@@ -26,6 +26,6 @@ export class ShopPanelController {
 	@ApiOperation({ operationId: "readMyShop", description: "The logged-in owner's shop." })
 	@ApiResponse({ type: ShopModel, status: 200 })
 	readMyShop(@Req() request: ShopOwnerRequest): Promise<ShopModel> {
-		return this.shop.readShop(request._shopOwner.shopId)
+		return this.shop.readShop({ id: request._shopOwner.shopId })
 	}
 }

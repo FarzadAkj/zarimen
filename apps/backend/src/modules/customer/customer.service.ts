@@ -1,4 +1,5 @@
 import type { OtpSentModel } from "../auth/model/otp-sent.model"
+import type { Bill } from "../wallet/wallet.service"
 import type { CustomerJwtPayload, SignupTicketPayload } from "./constants/customer.constants"
 import type { CustomerCardModel, CustomerCardsModel } from "./model/customer-card.model"
 import type { CustomerTokenModel } from "./model/customer-token.model"
@@ -6,6 +7,7 @@ import type { ShopCustomerCardModel, ShopCustomerModel } from "./model/shop-cust
 import type { SignupStartedModel } from "./model/signup-started.model"
 import { Injectable } from "@nestjs/common"
 import { JwtService } from "@nestjs/jwt"
+import { PaidService } from "@prisma/client"
 import { GlobalError } from "~/libs/error/classes/global-error"
 import { ErrorService } from "~/libs/error/error.service"
 import { PrismaService } from "~/libs/prisma/prisma.service"
@@ -51,15 +53,15 @@ export class CustomerService {
 		const alreadyVerified = existing?.phoneNumber === details.phoneNumber
 
 		if (alreadyVerified) {
-			await this.wallet.assertCanAfford(shop.id, ["sms"])
+			await this.wallet.assertCanAfford(shop.id, [PaidService.SMS])
 		}
 		else {
 			// Shahkar and the SMS are paid separately; check the wallet covers both before paying for either.
-			await this.wallet.assertCanAfford(shop.id, ["shahkar", "sms"])
-			await this.verify(shop.id, () => this.shahkar.verifyMobileNationalCode({ mobile: details.phoneNumber, nationalCode: details.ssn }), CustomerErrors.PhoneNationalCodeMismatch)
+			await this.wallet.assertCanAfford(shop.id, [PaidService.SHAHKAR, PaidService.SMS])
+			await this.verify({ shopId: shop.id, customerSsn: details.ssn }, () => this.shahkar.verifyMobileNationalCode({ mobile: details.phoneNumber, nationalCode: details.ssn }), CustomerErrors.PhoneNationalCodeMismatch)
 		}
 
-		const { expiresInSeconds } = await this.otp.send(details.phoneNumber, shop.id)
+		const { expiresInSeconds } = await this.otp.send(details.phoneNumber, { shopId: shop.id, customerSsn: details.ssn })
 
 		const ticket: SignupTicketPayload = { kind: "customer-signup", ...details, shopId: shop.id }
 		return {
@@ -94,8 +96,8 @@ export class CustomerService {
 
 	async startLogin(subdomain: string, phoneNumber: string): Promise<OtpSentModel> {
 		const shop = await this.findActiveShop({ subdomain })
-		await this.findCustomerByPhone(phoneNumber)
-		return this.otp.send(phoneNumber, shop.id)
+		const customer = await this.findCustomerByPhone(phoneNumber)
+		return this.otp.send(phoneNumber, { shopId: shop.id, customerSsn: customer.ssn })
 	}
 
 	async completeLogin(subdomain: string, phoneNumber: string, code: string): Promise<CustomerTokenModel> {
@@ -124,7 +126,7 @@ export class CustomerService {
 		if (await this.prisma.customerCard.exists({ customerId, cardNumber }))
 			throw this.error.throwErrorToClient(CustomerErrors.CardAlreadyAdded)
 
-		await this.verify(shopId, () => this.shahkar.verifyCardMatch({
+		await this.verify({ shopId, customerSsn: customer.ssn }, () => this.shahkar.verifyCardMatch({
 			nationalCode: customer.ssn,
 			birthDate: toCardMatchDate(customer.birthDate),
 			cardNumber,
@@ -217,10 +219,10 @@ export class CustomerService {
 	 * Runs a Shahkar / CardMatch check paid by the shop's wallet: `mismatch` when it says no
 	 * (still paid: the check was done), unavailable when it cannot answer (refunded).
 	 */
-	private async verify(shopId: string, check: () => Promise<{ matched: boolean }>, mismatch: (typeof CustomerErrors)[keyof typeof CustomerErrors]) {
+	private async verify(bill: Bill, check: () => Promise<{ matched: boolean }>, mismatch: (typeof CustomerErrors)[keyof typeof CustomerErrors]) {
 		let matched: boolean
 		try {
-			({ matched } = await this.wallet.charge(shopId, "shahkar", check))
+			({ matched } = await this.wallet.charge(bill, PaidService.SHAHKAR, check))
 		}
 		catch (e) {
 			// e.g. the shop's wallet cannot pay for the check

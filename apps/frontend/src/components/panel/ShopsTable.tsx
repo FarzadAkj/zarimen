@@ -1,6 +1,7 @@
 "use client"
 import type { ShopModel } from "@/api/Api"
 import { useState } from "react"
+import Link from "next/link"
 import { toast } from "sonner"
 import { setShopActive } from "@/app/panel/(admin)/shops/actions"
 import { Badge } from "@/components/shad/badge"
@@ -35,7 +36,7 @@ export function ShopsTable({ shops, rootDomain }: { shops: ShopModel[], rootDoma
                                     ? <img src={shop.logoUrl} alt="" className="size-9 rounded-md object-cover border" />
                                     : <div className="size-9 rounded-md bg-muted border" />}
                                 <div>
-                                    <div className="font-medium">{shop.name}</div>
+                                    <Link href={`/panel/customers/${shop.subdomain}`} className="font-medium hover:text-primary hover:underline">{shop.name}</Link>
                                     <div className="text-xs text-muted-foreground">{shop.brandName}</div>
                                 </div>
                             </div>

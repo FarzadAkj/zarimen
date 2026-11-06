@@ -56,7 +56,8 @@ apps/backend
   src/config.ts           every env var, validated at boot (class-validator)
   src/common/             constants (ModuleNames, SoftwareName), shared DTOs
   src/libs/               infrastructure: config, error, prisma, logger, helper, validators,
-                          sms-ir (OTP SMS), shahkar (Shahkar + CardMatch), image-bucket (Arvan presign)
+                          sms-ir (OTP SMS), shahkar (Shahkar + CardMatch), image-bucket (Arvan presign),
+                          zarinpal (wallet top-ups)
   src/modules/<feature>/  Darik module layout:
                             <feature>.module.ts / .controller.ts / .service.ts
                             constants/ (errors, selects)  dto/ (*.input.ts, *.output.ts)  model/
@@ -106,8 +107,11 @@ Anything only one app uses lives in that app, not in `packages/shared`.
 - SMS codes always go through `OtpService` (`modules/auth/otp.service.ts`); pass
   `billToShopId` when a shop's customer triggers it.
 - Anything a shop's customers trigger that costs money goes through
-  `WalletService.charge(shopId, service, run)` — never call Shahkar/CardMatch/SMS for a
-  customer without it.
+  `WalletService.charge({ shopId, customerSsn }, PaidService.X, run)` — never call
+  Shahkar/CardMatch/SMS for a customer without it.
+- Every wallet balance change writes a `WalletTransaction` in the same DB transaction.
+- Owner and admin views of a shop share components; pass the data loaders as props
+  (owner actions, or admin actions bound to the shopId).
 - Admin settings: Darik's format — a model class with defaults in
   `modules/setting/model/`, a key in `settings-constant.keys.ts`,
   `SettingService.getSetting/setSetting`, one card per group on `/panel/settings`.

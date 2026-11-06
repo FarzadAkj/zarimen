@@ -18,6 +18,8 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 4   | Admin settings: Shahkar + SMS cost, charged to shop wallets | done |
 | 4b  | Owner's customers: debounced search, card count + full-number dialog | done |
 | 4c  | Signup skips Shahkar for a saved exact match; masked phone in phase 2 | done |
+| 5   | Owner wallet top-up (Zarinpal) + transaction history | done |
+| 6   | Admin views a shop's panel at /panel/customers/<subdomain> | done |
 
 ## Step log
 
@@ -239,6 +241,46 @@ table shows a card count with an eye icon that opens a modal with the full card 
 - Phase 2 text: «کد ۶ رقمی به شماره 0917***4864 ارسال شده است.» via `maskPhoneNumber`
   (`lib/format.ts`, 5th–7th digits hidden; tested).
 
+### Step 5 — Wallet top-up + history (2026-11-06)
+
+Asked for: owners top up their wallet through Zarinpal (like Darik); a transaction history
+page: increases with Jalali date/time + amount, decreases also with SMS/Shahkar + customer ssn.
+
+Backend:
+- `wallet.prisma`: `WalletTransaction` ledger (signed `amount`, type TOP_UP /
+  SERVICE_CHARGE / ADMIN_ADJUSTMENT, status, service, customerSsn, Zarinpal authority /
+  refId / cardPan), enums `WalletTransactionType`, `WalletTransactionStatus`, `PaidService`.
+- `libs/zarinpal`: Darik's v4 client trimmed to request / verify / gateway url (no
+  neverthrow/cleana/defu). Config: `zarinPalMerchantId`, `zarinpalCallbackUrl`,
+  `zarinpalBaseUrl`, and `shopSiteUrl` ("http(s)://{subdomain}.…") for the redirect back.
+- `WalletService`: `charge(bill {shopId, customerSsn}, service, run)` now writes the history
+  row with the deduction (one DB transaction) and deletes it on refund; `startTopUp`
+  (PENDING row → Zarinpal → authority), `handleTopUpCallback` (NOK → FAILED; verify 100/101 →
+  PENDING→SUCCESS + credit in one transaction, conditional on still PENDING, so a repeated
+  callback credits once; Zarinpal unreachable → stays PENDING), `readTransactions` (SUCCESS
+  rows, newest first, 20 per page).
+- Endpoints: `GET wallet/topUpCallback` (302 → <shop>/panel/wallet?topUp=…),
+  `shop-panel/startWalletTopUp`, `shop-panel/readMyWalletTransactions`.
+- ShopService records admin changes as ADMIN_ADJUSTMENT (initial balance; setWalletBalance
+  diff, Serializable).
+- Sandbox request verified live (authority returned). 7 new top-up tests, charge tests updated.
+
+Frontend: owner nav «کیف پول» (`/panel/wallet`: balance, top-up form with quick amounts,
+success / failure banner from the callback) and «تراکنش‌ها» (`/panel/transactions`,
+`WalletTransactionsTable` with ?page= paging); dashboard «افزایش موجودی» button.
+
+### Step 6 — Admin views a shop (2026-11-06)
+
+Asked for: the admin enters a shop and sees its panel at zarimen.ir/panel/customers/<subdomain>.
+
+- Backend (IsAdmin): `shop/readShopBySubdomain`, `shop/readShopCustomers`,
+  `shop/readShopCustomerCards`, `shop/readShopWalletTransactions` — the owner endpoints'
+  logic with the shopId given by the admin.
+- Frontend: `/panel/customers/[subdomain]` — shop header (logo, status, owner, balance),
+  the same `CustomersBrowser` (search + full-card dialog) and `WalletTransactionsTable`.
+  CustomersBrowser / CustomerCardsDialog now take their loaders as props (owner actions or
+  admin actions `.bind(null, shopId)`). Shop names in the admin's shops table link here.
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -281,6 +323,11 @@ table shows a card count with an eye icon that opens a modal with the full card 
 - **Shahkar "no match" is billed** (the check ran); provider errors / timeouts are refunded.
 - Charges also apply with `identityCheck=false` / `sendSms=false` (same behaviour in dev
   and production, so billing can be tested locally).
+- **The wallet history is a ledger**: every balance change writes a WalletTransaction in the
+  same DB transaction (charges, top-ups, admin changes incl. the initial balance), so the
+  history adds up to the balance. Refunded charges are deleted, not shown.
+- **Top-ups are not restricted to a card** (Darik restricts to the payer's verified card;
+  shop owners have no verified cards). Min 2,000, max 200,000,000 Tomans.
 - `ROOT_DOMAIN` (frontend env): `zarimen.ir` in production, `localhost:3010` in dev.
 
 ## Open items
@@ -289,8 +336,10 @@ table shows a card count with an eye icon that opens a modal with the full card 
   OTP login (`sendSms=false` prints the code in the backend console) and add a shop.
 - Fill real values in `apps/backend/.env`: `adminPhoneNumbers`, `jwtSecret`, sms.ir
   key + template, api.ir token, Arvan bucket + keys.
-- No wallet history yet: charges are not recorded per request, so neither the admin nor
-  the owner can see what was spent on what. Likely needed next.
+- Top-ups left PENDING (owner closed the tab at the gateway, or verify could not reach
+  Zarinpal) are never retried / expired; harmless (nothing credited) but they pile up.
+- Zarinpal: production `zarinPalMerchantId`, `zarinpalCallbackUrl` (public backend url) and
+  empty `zarinpalBaseUrl` must be set; `shopSiteUrl = https://{subdomain}.zarimen.ir`.
 - Rate limiting: each startSignup costs one paid Shahkar call and addCard one CardMatch
   call; nothing limits how often a visitor can trigger them yet.
 - Customers cannot remove a card; the owner's customer list is not paginated yet.

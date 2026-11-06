@@ -100,7 +100,7 @@ describe("customerService", () => {
 		otp = { send: vi.fn(async () => ({ expiresInSeconds: 120 })), consume: vi.fn(async () => {}) }
 		wallet = {
 			assertCanAfford: vi.fn(async () => {}),
-			charge: vi.fn((_shopId: string, _service: string, run: () => Promise<unknown>) => run()),
+			charge: vi.fn((_bill: unknown, _service: string, run: () => Promise<unknown>) => run()),
 		}
 		jwt = new JwtService({ secret: "x".repeat(32) })
 		service = new CustomerService(prisma as never, shahkar as never, otp as never, wallet as never, jwt, new ErrorService())
@@ -150,8 +150,8 @@ describe("customerService", () => {
 
 			await service.startSignup("rahimi", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH })
 			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
-			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-2", ["sms"])
-			expect(otp.send).toHaveBeenLastCalledWith(PHONE, "shop-2")
+			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-2", ["SMS"])
+			expect(otp.send).toHaveBeenLastCalledWith(PHONE, { shopId: "shop-2", customerSsn: SSN })
 		})
 
 		it("still asks Shahkar when a saved customer signs up with a different phone", async () => {
@@ -248,9 +248,9 @@ describe("customerService", () => {
 
 		it("checks the wallet covers Shahkar + SMS before running Shahkar, and bills both to the shop", async () => {
 			await service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH })
-			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-1", ["shahkar", "sms"])
-			expect(wallet.charge).toHaveBeenCalledWith("shop-1", "shahkar", expect.any(Function))
-			expect(otp.send).toHaveBeenCalledWith(PHONE, "shop-1")
+			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-1", ["SHAHKAR", "SMS"])
+			expect(wallet.charge).toHaveBeenCalledWith({ shopId: "shop-1", customerSsn: SSN }, "SHAHKAR", expect.any(Function))
+			expect(otp.send).toHaveBeenCalledWith(PHONE, { shopId: "shop-1", customerSsn: SSN })
 		})
 
 		it("runs no Shahkar check and sends no SMS when the wallet cannot pay", async () => {
@@ -270,7 +270,7 @@ describe("customerService", () => {
 		it("bills a login SMS to the shop logged in at", async () => {
 			await signup("setoode")
 			await service.startLogin("rahimi", PHONE)
-			expect(otp.send).toHaveBeenLastCalledWith(PHONE, "shop-2")
+			expect(otp.send).toHaveBeenLastCalledWith(PHONE, { shopId: "shop-2", customerSsn: SSN })
 		})
 	})
 

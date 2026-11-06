@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { CreateImageUploadInput, CreateImageUploadOutput, CreateShopInput, ShopModel } from "@/api/Api"
+import type { CreateImageUploadInput, CreateImageUploadOutput, CreateShopInput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel } from "@/api/Api"
 import { revalidatePath } from "next/cache"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -59,6 +59,52 @@ export async function createImageUpload(input: CreateImageUploadInput): Promise<
     const api = await takeApi()
     try {
         const { data } = await api.imageUpload.createImageUpload(input)
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+// ---- one shop, as the admin sees it (zarimen.ir/panel/customers/<subdomain>)
+
+export async function readShopBySubdomain(subdomain: string): Promise<ServerResponse<ShopModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shop.readShopBySubdomain({ subdomain })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readShopCustomers(shopId: string, search: string): Promise<ServerResponse<ShopCustomerModel[]>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shop.readShopCustomers({ shopId, search: search || undefined })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readShopCustomerCards(shopId: string, customerId: string): Promise<ServerResponse<ShopCustomerCardModel[]>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shop.readShopCustomerCards({ shopId, customerId })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readShopWalletTransactions(shopId: string, page: number): Promise<ServerResponse<ReadWalletTransactionsOutput>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shop.readShopWalletTransactions({ shopId, page })
         return { data }
     }
     catch (error: any) {

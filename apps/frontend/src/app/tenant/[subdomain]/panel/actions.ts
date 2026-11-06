@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { OtpSentModel, ShopCustomerCardModel, ShopCustomerModel, ShopModel } from "@/api/Api"
+import type { OtpSentModel, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, WalletTopUpModel } from "@/api/Api"
 import { cache } from "react"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -65,6 +65,29 @@ export async function readMyCustomerCards(customerId: string): Promise<ServerRes
     const api = await takeApi()
     try {
         const { data } = await api.shopPanel.readMyCustomerCards({ customerId })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** Starts a Zarinpal payment that adds `amount` Tomans to the wallet; returns the gateway url. */
+export async function startWalletTopUp(amount: number): Promise<ServerResponse<WalletTopUpModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.startWalletTopUp({ amount })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readMyWalletTransactions(page: number): Promise<ServerResponse<ReadWalletTransactionsOutput>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readMyWalletTransactions({ page })
         return { data }
     }
     catch (error: any) {

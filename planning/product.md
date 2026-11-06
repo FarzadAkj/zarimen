@@ -35,6 +35,12 @@ The customer is identified by three things, and all three matter:
 - **Service costs:** the admin sets a Toman price for Shahkar checks and for SMS on
   zarimen.ir/panel/settings. Each one a shop's customers trigger is taken from that shop's
   wallet; with too little balance the request does not run.
+- **Wallet top-up:** owners pay through Zarinpal on <sub>.zarimen.ir/panel/wallet.
+- **Wallet history:** <sub>.zarimen.ir/panel/transactions — increases (top-ups, admin
+  changes) with Jalali date/time and amount; decreases also with the service (SMS / Shahkar)
+  and the customer's national code.
+- **Admin view of a shop:** zarimen.ir/panel/customers/<subdomain> — the shop, its customers
+  and its wallet history.
 - **Customers ↔ shops:** many-to-many. Each shop owner sees the customers linked to their shop.
 
 ## Known building blocks
@@ -57,6 +63,5 @@ owner today; customer verification will use them too.
   record the seller attaches to their own invoice?
 - What is stored, for how long, and how card numbers are stored (masked / hashed)?
 - Which identity provider(s) and credentials.
-- Wallet: how shops top it up (today only the admin sets the balance).
 
 Answers get recorded here as the user gives them.

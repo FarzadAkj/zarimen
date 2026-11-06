@@ -1,8 +1,8 @@
 "use client"
 import type { ShopCustomerCardModel } from "@/api/Api"
+import type { ServerResponse } from "@/app/types"
 import { useState } from "react"
 import { CreditCard, Eye } from "lucide-react"
-import { readMyCustomerCards } from "@/app/tenant/[subdomain]/panel/actions"
 import { Button } from "@/components/shad/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/shad/dialog"
 import { Spinner } from "@/components/shad/spinner"
@@ -12,7 +12,12 @@ import { formatCardNumber } from "@/lib/format"
  * The card count in the customers table, with an eye button that opens the customer's
  * cards with their full numbers. The numbers are fetched only when the dialog opens.
  */
-export function CustomerCardsDialog({ customerId, ssn, cardCount }: { customerId: string, ssn: string, cardCount: number }) {
+export function CustomerCardsDialog({ customerId, ssn, cardCount, loadCards }: {
+    customerId: string
+    ssn: string
+    cardCount: number
+    loadCards: (customerId: string) => Promise<ServerResponse<ShopCustomerCardModel[]>>
+}) {
     const [cards, setCards] = useState<ShopCustomerCardModel[]>()
     const [error, setError] = useState<string>()
 
@@ -20,7 +25,7 @@ export function CustomerCardsDialog({ customerId, ssn, cardCount }: { customerId
         if (!open) return
         setCards(undefined)
         setError(undefined)
-        const result = await readMyCustomerCards(customerId)
+        const result = await loadCards(customerId)
         if (result.data)
             setCards(result.data)
         else

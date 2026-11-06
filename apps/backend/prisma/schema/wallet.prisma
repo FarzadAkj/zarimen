@@ -1,0 +1,49 @@
+/// Every change to a shop's wallet balance: the owner's transaction history.
+/// `amount` is signed in whole Tomans: + adds to the balance, - takes from it.
+model WalletTransaction {
+  id       String                  @id @default(uuid()) @db.Uuid
+  walletId String                  @db.Uuid
+  wallet   Wallet                  @relation(fields: [walletId], references: [id])
+  type     WalletTransactionType
+  /// Only top-ups are ever PENDING / FAILED; charges and adjustments are written as SUCCESS.
+  status   WalletTransactionStatus @default(SUCCESS)
+  amount   Decimal                 @db.Decimal(20, 0)
+
+  /// SERVICE_CHARGE: what was paid for, and for which customer.
+  service     PaidService?
+  customerSsn String?
+
+  /// TOP_UP: Zarinpal authority of the payment request, and what verification returned.
+  authority   String? @unique
+  refId       String?
+  /// Masked card the owner paid with, as reported by Zarinpal.
+  cardPan     String?
+  gatewayCode Int?
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([walletId, createdAt])
+}
+
+enum WalletTransactionType {
+  /// Owner paid through Zarinpal (+).
+  TOP_UP
+  /// A customer's Shahkar check or SMS (-).
+  SERVICE_CHARGE
+  /// Admin set the balance on the shops page, or the initial balance (+ or -).
+  ADMIN_ADJUSTMENT
+}
+
+enum WalletTransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+/// Paid services, priced on the admin's settings page.
+enum PaidService {
+  SHAHKAR
+  SMS
+}
