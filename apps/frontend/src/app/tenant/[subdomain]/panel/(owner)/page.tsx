@@ -3,12 +3,13 @@ import { redirect } from "next/navigation"
 import { Button } from "@/components/shad/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shad/card"
 import { formatAmount } from "@/lib/format"
+import { ServiceCostsCard } from "@/components/shop-panel/ServiceCostsCard"
 import { SubscriptionSummary } from "@/components/shop-panel/SubscriptionSummary"
-import { readMyShop, readMySubscription } from "../actions"
+import { readMyShop, readMySubscription, readServiceCosts } from "../actions"
 
 /** <subdomain>.zarimen.ir/panel — the shop's dashboard. Customer checks come in a later step. */
 export default async function ShopDashboardPage() {
-    const [{ data: shop }, { data: subscription }] = await Promise.all([readMyShop(), readMySubscription()])
+    const [{ data: shop }, { data: subscription }, { data: costs }] = await Promise.all([readMyShop(), readMySubscription(), readServiceCosts()])
     if (!shop) redirect("/panel/login")
 
     return (
@@ -44,6 +45,11 @@ export default async function ShopDashboardPage() {
                     </Button>
                 </CardContent>
             </Card>
+            {costs && (
+                <div className="sm:col-span-2">
+                    <ServiceCostsCard costs={costs} />
+                </div>
+            )}
         </div>
     )
 }

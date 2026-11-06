@@ -487,23 +487,18 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<SubscriptionPlanModel, any>>;
   };
-  wallet: {
-    /**
-     * @description Verifies the top-up, credits the wallet, then 302s to <shopSiteUrl>/panel/wallet?topUp=success&amount=&refId= or ?topUp=failed&reason=
-     *
-     * @tags WalletCallback
-     * @name WalletTopUpCallback
-     * @request GET:/wallet/topUpCallback
-     */
-    walletTopUpCallback: (
-      query: {
-        Authority: string;
-        Status?: WalletTopUpCallbackParamsStatusEnum;
-      },
-      params?: RequestParams,
-    ) => Promise<HttpResponse<any, void>>;
-  };
   shopPanel: {
+    /**
+     * @description What each Shahkar check and SMS costs the owner's wallet.
+     *
+     * @tags ShopServiceCost
+     * @name ReadServiceCosts
+     * @request POST:/shop-panel/readServiceCosts
+     * @secure
+     */
+    readServiceCosts: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
     /**
      * @description Returns the Zarinpal url to add `amount` Tomans to the owner's wallet.
      *
@@ -620,6 +615,22 @@ export declare class Api<
       data: StartSubscriptionPurchaseInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<SubscriptionPurchaseStartedModel, any>>;
+  };
+  wallet: {
+    /**
+     * @description Verifies the top-up, credits the wallet, then 302s to <shopSiteUrl>/panel/wallet?topUp=success&amount=&refId= or ?topUp=failed&reason=
+     *
+     * @tags WalletCallback
+     * @name WalletTopUpCallback
+     * @request GET:/wallet/topUpCallback
+     */
+    walletTopUpCallback: (
+      query: {
+        Authority: string;
+        Status?: WalletTopUpCallbackParamsStatusEnum;
+      },
+      params?: RequestParams,
+    ) => Promise<HttpResponse<any, void>>;
   };
   shop: {
     /**

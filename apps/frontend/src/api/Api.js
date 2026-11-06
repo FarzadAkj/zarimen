@@ -321,23 +321,23 @@ export class Api extends HttpClient {
         ...params,
       }),
   };
-  wallet = {
+  shopPanel = {
     /**
-     * @description Verifies the top-up, credits the wallet, then 302s to <shopSiteUrl>/panel/wallet?topUp=success&amount=&refId= or ?topUp=failed&reason=
+     * @description What each Shahkar check and SMS costs the owner's wallet.
      *
-     * @tags WalletCallback
-     * @name WalletTopUpCallback
-     * @request GET:/wallet/topUpCallback
+     * @tags ShopServiceCost
+     * @name ReadServiceCosts
+     * @request POST:/shop-panel/readServiceCosts
+     * @secure
      */
-    walletTopUpCallback: (query, params = {}) =>
+    readServiceCosts: (params = {}) =>
       this.request({
-        path: `/wallet/topUpCallback`,
-        method: "GET",
-        query: query,
+        path: `/shop-panel/readServiceCosts`,
+        method: "POST",
+        secure: true,
+        format: "json",
         ...params,
       }),
-  };
-  shopPanel = {
     /**
      * @description Returns the Zarinpal url to add `amount` Tomans to the owner's wallet.
      *
@@ -508,6 +508,22 @@ export class Api extends HttpClient {
         secure: true,
         type: ContentType.Json,
         format: "json",
+        ...params,
+      }),
+  };
+  wallet = {
+    /**
+     * @description Verifies the top-up, credits the wallet, then 302s to <shopSiteUrl>/panel/wallet?topUp=success&amount=&refId= or ?topUp=failed&reason=
+     *
+     * @tags WalletCallback
+     * @name WalletTopUpCallback
+     * @request GET:/wallet/topUpCallback
+     */
+    walletTopUpCallback: (query, params = {}) =>
+      this.request({
+        path: `/wallet/topUpCallback`,
+        method: "GET",
+        query: query,
         ...params,
       }),
   };

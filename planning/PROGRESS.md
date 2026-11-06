@@ -23,6 +23,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 6b  | Timer: cancel top-ups pending > 20 min, every 10 min | done |
 | 7   | Subscription plans (admin) + purchases via Zarinpal (owners) | done |
 | 7b  | Admin moves a shop's end date (later only); no subscription → no customer data | done |
+| 7c  | Owner dashboard shows Shahkar / SMS prices | done |
 
 ## Step log
 
@@ -349,6 +350,13 @@ User hit it on `setShopSubscriptionEnd`. Cause: the running `bun --watch` backen
 Prisma client from before `planId` became optional (so Prisma fell back to the relation-style
 create input, which needs `shop`). The same create works in a fresh process. Fix: restart
 `pnpm dev` after every `prisma generate`. Noted in CLAUDE.md.
+
+### Step 7c — Service prices on the owner dashboard (2026-11-07)
+
+`shop-panel/readServiceCosts` (IsShopOwner, read only; `ShopServiceCostController` in the
+setting module). Dashboard `ServiceCostsCard`: price per Shahkar check and per SMS («رایگان»
+when 0) and what each customer action costs (new signup = Shahkar + SMS; repeat signup /
+login = SMS; each card = Shahkar).
 
 ## Decisions
 

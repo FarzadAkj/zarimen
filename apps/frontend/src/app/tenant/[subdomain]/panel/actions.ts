@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { MySubscriptionModel, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
+import type { ServiceCostSettingsModel, MySubscriptionModel, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
 import { cache } from "react"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -133,6 +133,18 @@ export async function startSubscriptionPurchase(planId: string): Promise<ServerR
     const api = await takeApi()
     try {
         const { data } = await api.shopPanel.startSubscriptionPurchase({ planId })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** What each Shahkar check / SMS costs the wallet (set by the admin). */
+export async function readServiceCosts(): Promise<ServerResponse<ServiceCostSettingsModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readServiceCosts()
         return { data }
     }
     catch (error: any) {
