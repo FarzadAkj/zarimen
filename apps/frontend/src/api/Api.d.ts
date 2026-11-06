@@ -183,6 +183,10 @@ export interface AddCardInput {
   /** @example "6037997599999993" */
   cardNumber: string;
 }
+export interface ReadMyCustomersInput {
+  /** @example "0912" */
+  search?: string;
+}
 export interface ShopCustomerModel {
   id: string;
   ssn: string;
@@ -193,7 +197,17 @@ export interface ShopCustomerModel {
   firstSeenAt: string;
   /** @format date-time */
   lastSeenAt: string;
-  cards: CustomerCardModel[];
+  cardCount: number;
+}
+export interface ReadMyCustomerCardsInput {
+  customerId: string;
+}
+export interface ShopCustomerCardModel {
+  id: string;
+  cardNumber: string;
+  bankName: string | null;
+  /** @format date-time */
+  createdAt: string;
 }
 export interface CreateImageUploadInput {
   contentType: ImageContentType;
@@ -445,7 +459,7 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopModel, any>>;
     /**
-     * @description Customers who verified at the owner's shop.
+     * @description Customers who verified at the owner's shop, optionally filtered by national code / mobile digits.
      *
      * @tags ShopCustomers
      * @name ReadMyCustomers
@@ -453,8 +467,21 @@ export declare class Api<
      * @secure
      */
     readMyCustomers: (
+      data: ReadMyCustomersInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopCustomerModel[], any>>;
+    /**
+     * @description Full card numbers of one of the owner's customers.
+     *
+     * @tags ShopCustomers
+     * @name ReadMyCustomerCards
+     * @request POST:/shop-panel/readMyCustomerCards
+     * @secure
+     */
+    readMyCustomerCards: (
+      data: ReadMyCustomerCardsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
   };
   customer: {
     /**

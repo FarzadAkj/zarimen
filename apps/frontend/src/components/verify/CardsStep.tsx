@@ -7,18 +7,13 @@ import { Button } from "@/components/shad/button"
 import { Input } from "@/components/shad/input"
 import { Label } from "@/components/shad/label"
 import { Spinner } from "@/components/shad/spinner"
-import { toLatinDigits } from "@/lib/format"
+import { formatCardNumber, toLatinDigits } from "@/lib/format"
 
 type Props = {
     data: CustomerCardsModel
     pending: boolean
     onAdd: (cardNumber: string) => Promise<boolean>
     onFinish: () => void
-}
-
-/** "6037997599999993" → "6037 9975 9999 9993" while typing. */
-function groupDigits(digits: string) {
-    return digits.replace(/(\d{4})(?=\d)/g, "$1 ")
 }
 
 /** Phase 3: the customer's verified cards, and adding another (checked by CardMatch). */
@@ -68,7 +63,7 @@ export function CardsStep({ data, pending, onAdd, onFinish }: Props) {
                         autoComplete="cc-number"
                         placeholder="0000 0000 0000 0000"
                         className="font-mono tracking-wider"
-                        value={groupDigits(cardNumber)}
+                        value={formatCardNumber(cardNumber)}
                         onChange={e => setCardNumber(toLatinDigits(e.target.value).replace(/\D/g, "").slice(0, 16))}
                     />
                     <Button type="submit" disabled={pending}>

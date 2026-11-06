@@ -111,7 +111,8 @@ Anything only one app uses lives in that app, not in `packages/shared`.
 - Admin settings: Darik's format — a model class with defaults in
   `modules/setting/model/`, a key in `settings-constant.keys.ts`,
   `SettingService.getSetting/setSetting`, one card per group on `/panel/settings`.
-- Card numbers leave the backend only masked (`maskCardNumber`).
+- Card numbers: masked (`maskCardNumber`) everywhere, except `readMyCustomerCards`, which
+  gives a shop owner the full numbers of their own customers on request.
 - Form validation reuses the `@zar-imen/shared` checks; convert Persian digits with
   `toLatinDigits` before validating.
 

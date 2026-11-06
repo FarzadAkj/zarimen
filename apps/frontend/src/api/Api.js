@@ -430,18 +430,38 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
-     * @description Customers who verified at the owner's shop.
+     * @description Customers who verified at the owner's shop, optionally filtered by national code / mobile digits.
      *
      * @tags ShopCustomers
      * @name ReadMyCustomers
      * @request POST:/shop-panel/readMyCustomers
      * @secure
      */
-    readMyCustomers: (params = {}) =>
+    readMyCustomers: (data, params = {}) =>
       this.request({
         path: `/shop-panel/readMyCustomers`,
         method: "POST",
+        body: data,
         secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Full card numbers of one of the owner's customers.
+     *
+     * @tags ShopCustomers
+     * @name ReadMyCustomerCards
+     * @request POST:/shop-panel/readMyCustomerCards
+     * @secure
+     */
+    readMyCustomerCards: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/readMyCustomerCards`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

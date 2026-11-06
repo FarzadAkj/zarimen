@@ -16,6 +16,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 3b  | Customer verification on /verify (3 phases) + owner's customer list | done |
 | 3c  | Several admins: `adminPhoneNumbers` list | done |
 | 4   | Admin settings: Shahkar + SMS cost, charged to shop wallets | done |
+| 4b  | Owner's customers: debounced search, card count + full-number dialog | done |
 
 ## Step log
 
@@ -214,6 +215,20 @@ Frontend: `/panel/settings` (nav «تنظیمات»), `settings/actions/action.t
 
 Also: frontend `.gitignore` ignored `.env.example` (Darik's `.env*` rule) → `!.env.example`.
 
+### Step 4b — Owner's customers page: search + cards dialog (2026-11-06)
+
+Asked for: a search box on <sub>.zarimen.ir/panel/customers matching any part of the
+national code or mobile, run 1000 ms after typing stops, reloading only the table; the
+table shows a card count with an eye icon that opens a modal with the full card numbers.
+
+- Backend: `shop-panel/readMyCustomers { search? }` (digits, `contains` on ssn OR phone)
+  now returns `cardCount` instead of cards; new `shop-panel/readMyCustomerCards { customerId }`
+  returns full numbers + bank, only if the customer is linked to the owner's shop
+  (`CustomerNotFound` otherwise). 2 new tests.
+- Frontend: `CustomersBrowser` (client: debounced search, stale responses dropped, table
+  dims while loading) + `CustomerCardsDialog` (fetches on open). Page loads the first list
+  on the server. `formatCardNumber` moved to `lib/format.ts`.
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -246,8 +261,9 @@ Also: frontend `.gitignore` ignored `.env.example` (Darik's `.env*` rule) → `!
 - **Login also links** the customer to the shop they log in at (so the owner sees them).
 - Customer phone is **not unique** (a number can move to another person); login uses the
   most recently updated customer with that phone.
-- **Card numbers are stored in full** but only ever leave the backend masked
-  ("6037-99**-****-7893") — to customers and owners alike.
+- **Card numbers are stored in full.** Customers see their own cards masked
+  ("6037-99**-****-7893"). Shop owners see a count in lists and the full numbers only on
+  request (eye icon → `readMyCustomerCards`), for their own customers only.
 - Shop owners see customers' full national code, mobile and birth date.
 - **What is billed**: only what a shop's *customers* trigger (Shahkar, CardMatch, customer
   SMS). Not billed: the owner's own panel login SMS (an empty wallet must not lock the owner
@@ -267,7 +283,7 @@ Also: frontend `.gitignore` ignored `.env.example` (Darik's `.env*` rule) → `!
   the owner can see what was spent on what. Likely needed next.
 - Rate limiting: each startSignup costs one paid Shahkar call and addCard one CardMatch
   call; nothing limits how often a visitor can trigger them yet.
-- Customers cannot remove a card; owners cannot search / paginate customers yet.
+- Customers cannot remove a card; the owner's customer list is not paginated yet.
 - Full card numbers at rest: consider encrypting the column.
 - Shop staff logins (only the owner phone can log in now).
 - Production: the reverse proxy must forward the original `Host` header

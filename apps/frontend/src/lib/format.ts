@@ -11,3 +11,8 @@ const numberFormat = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }
 export function formatAmount(value: string) {
     return `${numberFormat.format(Number(value))} تومان`
 }
+
+/** "6037997599999993" → "6037 9975 9999 9993" (also for partly typed numbers). */
+export function formatCardNumber(digits: string) {
+    return digits.replace(/(\d{4})(?=\d)/g, "$1 ")
+}

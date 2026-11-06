@@ -2,7 +2,7 @@ import type { OtpSentModel } from "../auth/model/otp-sent.model"
 import type { CustomerJwtPayload, SignupTicketPayload } from "./constants/customer.constants"
 import type { CustomerCardModel, CustomerCardsModel } from "./model/customer-card.model"
 import type { CustomerTokenModel } from "./model/customer-token.model"
-import type { ShopCustomerModel } from "./model/shop-customer.model"
+import type { ShopCustomerCardModel, ShopCustomerModel } from "./model/shop-customer.model"
 import type { SignupStartedModel } from "./model/signup-started.model"
 import { Injectable } from "@nestjs/common"
 import { JwtService } from "@nestjs/jwt"
@@ -124,24 +124,50 @@ export class CustomerService {
 		return this.readMyCards(customerId)
 	}
 
-	/** The shop owner's customers, most recently seen first. */
-	async readShopCustomers(shopId: string): Promise<ShopCustomerModel[]> {
+	/**
+	 * The shop owner's customers, most recently seen first. `search` (digits) matches
+	 * anywhere in the national code or the mobile number. Cards are only counted here.
+	 */
+	async readShopCustomers(shopId: string, search?: string): Promise<ShopCustomerModel[]> {
 		const links = await this.prisma.customerShop.findMany({
-			where: { shopId },
+			where: {
+				shopId,
+				...(search && { customer: { OR: [{ ssn: { contains: search, mode: "insensitive" } }, { phoneNumber: { contains: search, mode: "insensitive" } }] } }),
+			},
 			orderBy: { lastSeenAt: "desc" },
 			select: {
 				createdAt: true,
 				lastSeenAt: true,
 				customer: {
-					select: { id: true, ssn: true, phoneNumber: true, birthDate: true, cards: { orderBy: { createdAt: "asc" } } },
+					select: { id: true, ssn: true, phoneNumber: true, birthDate: true, _count: { select: { cards: true } } },
 				},
 			},
 		})
-		return links.map(({ customer, createdAt, lastSeenAt }) => ({
+		return links.map(({ customer: { _count, ...customer }, createdAt, lastSeenAt }) => ({
 			...customer,
 			firstSeenAt: createdAt,
 			lastSeenAt,
-			cards: customer.cards.map(card => this.toCardModel(card)),
+			cardCount: _count.cards,
+		}))
+	}
+
+	/**
+	 * Full card numbers of one of the shop's customers, for the owner who asks to see them.
+	 * Only customers linked to `shopId`: an owner can never read another shop's customer.
+	 */
+	async readShopCustomerCards(shopId: string, customerId: string): Promise<ShopCustomerCardModel[]> {
+		const link = await this.prisma.customerShop.findUnique({
+			where: { customerId_shopId: { customerId, shopId } },
+			select: { customer: { select: { cards: { orderBy: { createdAt: "asc" } } } } },
+		})
+		if (!link)
+			throw this.error.throwErrorToClient(CustomerErrors.CustomerNotFound)
+
+		return link.customer.cards.map(card => ({
+			id: card.id,
+			cardNumber: card.cardNumber,
+			bankName: getBankName(card.cardNumber),
+			createdAt: card.createdAt,
 		}))
 	}
 

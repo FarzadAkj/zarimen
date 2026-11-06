@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { OtpSentModel, ShopCustomerModel, ShopModel } from "@/api/Api"
+import type { OtpSentModel, ShopCustomerCardModel, ShopCustomerModel, ShopModel } from "@/api/Api"
 import { cache } from "react"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -48,11 +48,23 @@ export const readMyShop = cache(async (): Promise<ServerResponse<ShopModel>> => 
     }
 })
 
-/** Customers who verified at the logged-in owner's shop. */
-export async function readMyCustomers(): Promise<ServerResponse<ShopCustomerModel[]>> {
+/** Customers who verified at the logged-in owner's shop; `search` = digits of a national code / mobile. */
+export async function readMyCustomers(search?: string): Promise<ServerResponse<ShopCustomerModel[]>> {
     const api = await takeApi()
     try {
-        const { data } = await api.shopPanel.readMyCustomers()
+        const { data } = await api.shopPanel.readMyCustomers({ search: search || undefined })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** Full card numbers of one of the owner's customers (opened from the eye icon). */
+export async function readMyCustomerCards(customerId: string): Promise<ServerResponse<ShopCustomerCardModel[]>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readMyCustomerCards({ customerId })
         return { data }
     }
     catch (error: any) {

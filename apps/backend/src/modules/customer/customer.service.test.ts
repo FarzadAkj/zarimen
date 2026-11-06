@@ -52,6 +52,12 @@ function createPrisma() {
 				Object.assign(customers.find(c => c.id === where.id)!, data, { updatedAt: new Date() }),
 		},
 		customerShop: {
+			findUnique: async ({ where }: { where: { customerId_shopId: { customerId: string, shopId: string } } }) => {
+				const key = where.customerId_shopId
+				if (!links.some(l => match(l, key)))
+					return null
+				return { customer: { cards: cards.filter(c => c.customerId === key.customerId) } }
+			},
 			upsert: async ({ where }: { where: { customerId_shopId: { customerId: string, shopId: string } } }) => {
 				const key = where.customerId_shopId
 				const link = links.find(l => match(l, key))
@@ -199,6 +205,23 @@ describe("customerService", () => {
 			await service.addCard("customer-1", "shop-1", CARD)
 			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD))).toBe("CardAlreadyAdded")
 			expect(shahkar.verifyCardMatch).toHaveBeenCalledTimes(1)
+		})
+	})
+
+	describe("shop owner's view of cards", () => {
+		beforeEach(async () => {
+			await signup("setoode")
+			await service.addCard("customer-1", "shop-1", CARD)
+		})
+
+		it("gives the owner the full card numbers of their own customer", async () => {
+			expect(await service.readShopCustomerCards("shop-1", "customer-1")).toEqual([
+				expect.objectContaining({ cardNumber: CARD, bankName: "بانک ملی ایران" }),
+			])
+		})
+
+		it("refuses another shop's customer", async () => {
+			expect(await errorCode(service.readShopCustomerCards("shop-2", "customer-1"))).toBe("CustomerNotFound")
 		})
 	})
 
