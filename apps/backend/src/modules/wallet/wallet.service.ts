@@ -2,6 +2,7 @@ import type { PaidService, WalletTransaction } from "@prisma/client"
 import type { WalletTopUpModel } from "./model/wallet-top-up.model"
 import type { ReadWalletTransactionsOutput, WalletTransactionModel } from "./model/wallet-transaction.model"
 import { Injectable } from "@nestjs/common"
+import { Cron, CronExpression } from "@nestjs/schedule"
 import { WalletTransactionStatus, WalletTransactionType } from "@prisma/client"
 import { SoftwareName } from "~/common/constants"
 import { Config } from "~/config"
@@ -12,7 +13,7 @@ import { ZarinpalService } from "~/libs/zarinpal/zarinpal.service"
 import { SERVICE_COST_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
 import { ServiceCostSettingsModel } from "../setting/model/service-cost-settings.model"
 import { SettingService } from "../setting/setting.service"
-import { WALLET_TRANSACTIONS_PAGE_SIZE } from "./constants/wallet.constants"
+import { PENDING_TOP_UP_TTL_MINUTES, WALLET_TRANSACTIONS_PAGE_SIZE } from "./constants/wallet.constants"
 import { WalletErrors } from "./constants/wallet.errors"
 
 /** Who pays for a customer's request: the shop, on behalf of the customer (shown in its history). */
@@ -162,6 +163,9 @@ export class WalletService {
 			return back({ success: true, amount, refId: topUp.refId ?? "" })
 		if (topUp.status === WalletTransactionStatus.FAILED)
 			return back({ success: false, reason: "Failed" })
+		// Too late: cancelStaleTopUps gave up on it. Unverified, so Zarinpal returns the money to the payer.
+		if (topUp.status === WalletTransactionStatus.CANCELED)
+			return back({ success: false, reason: "Expired" })
 
 		if (status === "NOK") {
 			await this.failTopUp(topUp.id, null, "Canceled by the payer")
@@ -185,6 +189,26 @@ export class WalletService {
 
 		await this.creditTopUp(topUp, verification)
 		return back({ success: true, amount, refId: verification.refId })
+	}
+
+	/**
+	 * Every 10 minutes: top-ups still PENDING more than PENDING_TOP_UP_TTL_MINUTES after they
+	 * started (the owner never came back from Zarinpal) are canceled. Nothing was credited for
+	 * them, and a late callback can no longer credit one (crediting needs PENDING).
+	 */
+	@Cron(CronExpression.EVERY_10_MINUTES)
+	async cancelStaleTopUps() {
+		const { count } = await this.prisma.walletTransaction.updateMany({
+			where: {
+				type: WalletTransactionType.TOP_UP,
+				status: WalletTransactionStatus.PENDING,
+				createdAt: { lt: new Date(Date.now() - PENDING_TOP_UP_TTL_MINUTES * 60 * 1000) },
+			},
+			data: { status: WalletTransactionStatus.CANCELED, description: `Still pending after ${PENDING_TOP_UP_TTL_MINUTES} minutes` },
+		})
+		if (count)
+			logger.info(`[wallet] canceled ${count} stale pending top-up(s)`)
+		return count
 	}
 
 	/** The shop's history, newest first; only completed rows (no pending / failed top-ups). */

@@ -36,6 +36,9 @@ importers:
       '@nestjs/platform-fastify':
         specifier: ^11.1.6
         version: 11.2.8(@fastify/static@8.3.0)(@nestjs/common@11.2.8)(@nestjs/core@11.2.8)
+      '@nestjs/schedule':
+        specifier: ^6.0.1
+        version: 6.1.3(@nestjs/common@11.2.8)(@nestjs/core@11.2.8)
       '@nestjs/swagger':
         specifier: ^11.2.0
         version: 11.4.8(@fastify/static@8.3.0)(@nestjs/common@11.2.8)(@nestjs/core@11.2.8)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
@@ -1419,6 +1422,17 @@ packages:
       light-my-request: 6.6.0
       path-to-regexp: 8.4.2
       tslib: 2.8.1
+    dev: false
+
+  /@nestjs/schedule@6.1.3(@nestjs/common@11.2.8)(@nestjs/core@11.2.8):
+    resolution: {integrity: sha512-RflMFOpR16Dwd1jAUbeB4mfGTCh65fvEdL4mSjQPJChpkRGRjIXjb+6YQcK2faQrVT60c9DmLmoVR7/ONCtuYQ==}
+    peerDependencies:
+      '@nestjs/common': ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^10.0.0 || ^11.0.0
+    dependencies:
+      '@nestjs/common': 11.2.8(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 11.2.8(@nestjs/common@11.2.8)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      cron: 4.4.0
     dev: false
 
   /@nestjs/swagger@11.4.8(@fastify/static@8.3.0)(@nestjs/common@11.2.8)(@nestjs/core@11.2.8)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2):
@@ -2805,6 +2819,10 @@ packages:
   /@types/lodash@4.17.27:
     resolution: {integrity: sha512-VenMRv/eKNrspX9v3H4dbmjsrnCOYdYBG3kxXKk3dG6X+urBGcj2Prww3xw1U5K4FV/mE4h5GbWd0szEKf+9ew==}
 
+  /@types/luxon@3.7.6:
+    resolution: {integrity: sha512-6KSjliQAXK8ZLgFQO4B7iE4Rpf/B3rItzCFuXezBY/XIAGxOdLd7vRNK9/StRPwiS/yJsVbB7HKpW46B8tcEuQ==}
+    dev: false
+
   /@types/mdast@4.0.4:
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
     dependencies:
@@ -3907,6 +3925,14 @@ packages:
     dependencies:
       browserslist: 4.29.5
     dev: true
+
+  /cron@4.4.0:
+    resolution: {integrity: sha512-fkdfq+b+AHI4cKdhZlppHveI/mgz2qpiYxcm+t5E5TsxX7QrLS1VE0+7GENEk9z0EeGPcpSciGv6ez24duWhwQ==}
+    engines: {node: '>=18.x'}
+    dependencies:
+      '@types/luxon': 3.7.6
+      luxon: 3.7.2
+    dev: false
 
   /cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -6293,6 +6319,11 @@ packages:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
     dependencies:
       react: 19.2.3
+    dev: false
+
+  /luxon@3.7.2:
+    resolution: {integrity: sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==}
+    engines: {node: '>=12'}
     dev: false
 
   /magic-string@0.30.21:

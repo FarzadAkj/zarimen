@@ -10,6 +10,7 @@ type Params = { topUp?: string, amount?: string, refId?: string, reason?: string
 
 const FAILURE_REASONS: Record<string, string> = {
     Canceled: "پرداخت لغو شد و مبلغی از حساب شما کسر نشد.",
+    Expired: "مهلت این پرداخت (۲۰ دقیقه) تمام شده بود و به کیف پول اضافه نشد. اگر مبلغی کسر شده باشد، ظرف ۷۲ ساعت به حساب شما بازمی‌گردد.",
     GatewayUnavailable: "تأیید پرداخت با درگاه ممکن نشد. اگر مبلغی کسر شده باشد، ظرف ۷۲ ساعت به حساب شما بازمی‌گردد.",
 }
 

@@ -41,11 +41,13 @@ function createPrisma(balance: number) {
 				return row
 			},
 			update: async ({ where, data }: { where: { id: string }, data: Partial<Row> }) => Object.assign(rows.find(r => r.id === where.id)!, data),
-			updateMany: async ({ where, data }: { where: { id: string, status: string }, data: Partial<Row> }) => {
-				const row = rows.find(r => r.id === where.id && r.status === where.status)
-				if (row)
-					Object.assign(row, data)
-				return { count: row ? 1 : 0 }
+			updateMany: async ({ where, data }: { where: { id?: string, type?: string, status: string, createdAt?: { lt: Date } }, data: Partial<Row> }) => {
+				const matched = rows.filter(r => (!where.id || r.id === where.id)
+					&& (!where.type || r.type === where.type)
+					&& r.status === where.status
+					&& (!where.createdAt || r.createdAt < where.createdAt.lt))
+				matched.forEach(r => Object.assign(r, data))
+				return { count: matched.length }
 			},
 			delete: async ({ where }: { where: { id: string } }) => rows.splice(rows.findIndex(r => r.id === where.id), 1)[0],
 			findUnique: async ({ where }: { where: { authority: string } }) => {
@@ -200,6 +202,35 @@ describe("walletService", () => {
 
 		it("refuses a callback for an unknown authority", async () => {
 			expect(await errorCode(wallet.handleTopUpCallback("nope", "OK"))).toBe("TopUpNotFound")
+		})
+	})
+
+	describe("cancelStaleTopUps", () => {
+		const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60 * 1000)
+
+		it("cancels only top-ups still pending after 20 minutes", async () => {
+			await wallet.startTopUp("shop-1", 10_000) // tx-1: pending, 21 min old
+			zarinpal.requestPayment.mockResolvedValueOnce({ ok: true, authority: "A0002" })
+			await wallet.startTopUp("shop-1", 20_000) // tx-2: pending, 5 min old
+			zarinpal.requestPayment.mockResolvedValueOnce({ ok: true, authority: "A0003" })
+			await wallet.startTopUp("shop-1", 30_000) // tx-3: paid, 30 min old
+			await wallet.handleTopUpCallback("A0003", "OK")
+			prisma.rows[0]!.createdAt = minutesAgo(21)
+			prisma.rows[1]!.createdAt = minutesAgo(5)
+			prisma.rows[2]!.createdAt = minutesAgo(30)
+
+			expect(await wallet.cancelStaleTopUps()).toBe(1)
+			expect(prisma.rows.map(r => r.status)).toEqual(["CANCELED", "PENDING", "SUCCESS"])
+		})
+
+		it("a late callback for a canceled top-up credits nothing", async () => {
+			await wallet.startTopUp("shop-1", 50_000)
+			prisma.rows[0]!.createdAt = minutesAgo(25)
+			await wallet.cancelStaleTopUps()
+
+			expect(await wallet.handleTopUpCallback("A0001", "OK")).toBe("http://setoode.localhost:3010/panel/wallet?topUp=failed&reason=Expired")
+			expect(zarinpal.verifyPayment).not.toHaveBeenCalled()
+			expect(prisma.wallet.balance).toBe(5000)
 		})
 	})
 })

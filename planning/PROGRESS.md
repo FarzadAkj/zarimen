@@ -20,6 +20,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 4c  | Signup skips Shahkar for a saved exact match; masked phone in phase 2 | done |
 | 5   | Owner wallet top-up (Zarinpal) + transaction history | done |
 | 6   | Admin views a shop's panel at /panel/customers/<subdomain> | done |
+| 6b  | Timer: cancel top-ups pending > 20 min, every 10 min | done |
 
 ## Step log
 
@@ -281,6 +282,16 @@ Asked for: the admin enters a shop and sees its panel at zarimen.ir/panel/custom
   CustomersBrowser / CustomerCardsDialog now take their loaders as props (owner actions or
   admin actions `.bind(null, shopId)`). Shop names in the admin's shops table link here.
 
+### Step 6b — Cancel stale top-ups (2026-11-06)
+
+`@nestjs/schedule` (as in Darik) + `ScheduleModule.forRoot()`. `WalletService.cancelStaleTopUps`
+runs `@Cron(EVERY_10_MINUTES)`: TOP_UP rows still PENDING more than
+`PENDING_TOP_UP_TTL_MINUTES` (20) after creation → new status `CANCELED`. A later callback
+for one redirects with `reason=Expired` and credits nothing (crediting requires PENDING);
+Zarinpal returns unverified payments to the payer. Owner wallet page shows an «Expired»
+message. 2 new tests. Enum value pushed to the dev DB (the first `db push` wrongly said
+"in sync"; confirmed with `db pull`).
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
@@ -336,8 +347,6 @@ Asked for: the admin enters a shop and sees its panel at zarimen.ir/panel/custom
   OTP login (`sendSms=false` prints the code in the backend console) and add a shop.
 - Fill real values in `apps/backend/.env`: `adminPhoneNumbers`, `jwtSecret`, sms.ir
   key + template, api.ir token, Arvan bucket + keys.
-- Top-ups left PENDING (owner closed the tab at the gateway, or verify could not reach
-  Zarinpal) are never retried / expired; harmless (nothing credited) but they pile up.
 - Zarinpal: production `zarinPalMerchantId`, `zarinpalCallbackUrl` (public backend url) and
   empty `zarinpalBaseUrl` must be set; `shopSiteUrl = https://{subdomain}.zarimen.ir`.
 - Rate limiting: each startSignup costs one paid Shahkar call and addCard one CardMatch

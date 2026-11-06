@@ -5,7 +5,7 @@ model WalletTransaction {
   walletId String                  @db.Uuid
   wallet   Wallet                  @relation(fields: [walletId], references: [id])
   type     WalletTransactionType
-  /// Only top-ups are ever PENDING / FAILED; charges and adjustments are written as SUCCESS.
+  /// Only top-ups are ever PENDING / FAILED / CANCELED; charges and adjustments are written as SUCCESS.
   status   WalletTransactionStatus @default(SUCCESS)
   amount   Decimal                 @db.Decimal(20, 0)
 
@@ -40,6 +40,8 @@ enum WalletTransactionStatus {
   PENDING
   SUCCESS
   FAILED
+  /// A top-up left PENDING too long (owner never came back from Zarinpal); see WalletService.cancelStaleTopUps.
+  CANCELED
 }
 
 /// Paid services, priced on the admin's settings page.

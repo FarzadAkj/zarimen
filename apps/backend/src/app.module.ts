@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ScheduleModule } from "@nestjs/schedule"
 import { Config } from "./config"
 import { ConfigModule } from "./libs/config/config.module"
 import { ErrorModule } from "./libs/error/error.module"
@@ -19,6 +20,7 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 		ConfigModule.forRootAsync(Config, {
 			useFactory: () => process.env,
 		}),
+		ScheduleModule.forRoot(),
 		PrismaModule,
 		ErrorModule,
 		SmsIrModule.registerAsync({
