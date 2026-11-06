@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "bun --env-file=.env --watch src/main.ts",
 		"build": "vite build",
-		"start": "node --enable-source-maps dist/main.js",
+		"start": "node --env-file=.env --enable-source-maps dist/main.js",
 		"typecheck": "tsc --project ./tsconfig.json",
 		"lint": "eslint --fix .",
 		"test": "vitest run --passWithNoTests",

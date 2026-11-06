@@ -125,6 +125,11 @@ Anything only one app uses lives in that app, not in `packages/shared`.
 - Form validation reuses the `@zar-imen/shared` checks; convert Persian digits with
   `toLatinDigits` before validating.
 
+## Deployment
+
+`docs/DEPLOY.md` (PM2 via `ecosystem.config.cjs`, nginx, wildcard TLS). Keep it true when
+config keys, ports, domains or the build change.
+
 ## Commands
 
 ```

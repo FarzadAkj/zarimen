@@ -410,6 +410,19 @@ active plans. User chose **highlight only**: there is no automatic trial — the
 card / SMS charges still come from the wallet during the trial (true: charging is independent
 of the subscription).
 
+### Deployment guide (2026-11-07)
+
+`docs/DEPLOY.md`: Ubuntu + Node 22 + pnpm 8.4 (corepack) + PostgreSQL + PM2 + nginx; DNS
+(A for @, www, api, *), production .env values, `db:push`, `pnpm build`, PM2, wildcard TLS via
+DNS-01 (acme.sh dns_arvan or certbot manual), nginx (api → :8010; root, www, *.zarimen.ir →
+:3010 with `Host` passed), Zarinpal / sms.ir / api.ir / Arvan bucket CORS, smoke test,
+updating, pg_dump backups, troubleshooting. Build happens on the server (the backend bundle
+needs node_modules), unlike Darik's scp-the-dist script.
+- Backend `start` now `node --env-file=.env …` — it did not load .env before (production would
+  have started with no config). Verified: Node 22 parses our `key = value` .env, and the built
+  `dist/main.js` runs under plain Node (Bun only for dev).
+- `ecosystem.config.cjs` (PM2): one backend instance (the @Cron jobs live in it) + frontend.
+
 ## Decisions
 
 - **Name** `zar-imen`, packages `@zar-imen/*`. Folder: `darik/zar-imen`.
