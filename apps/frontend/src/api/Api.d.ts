@@ -173,6 +173,8 @@ export interface ShopPublicInfoModel {
   logoUrl: string | null;
   address: string | null;
   landline: string | null;
+  ownerFullName: string;
+  ownerPhoneNumber: string;
   isActive: boolean;
   hasActiveSubscription: boolean;
 }

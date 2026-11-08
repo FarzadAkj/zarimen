@@ -17,7 +17,7 @@ function validate(details: SignupDetails): Errors {
     if (!isValidNationalCode(details.ssn))
         errors.ssn = details.ssn.length === 10 ? "کد ملی معتبر نیست." : "کد ملی ۱۰ رقم است."
     if (!isValidPhoneNumber(details.phoneNumber))
-        errors.phoneNumber = "۹ رقم بعد از ۰۹ را وارد کنید."
+        errors.phoneNumber = "شماره موبایل ۱۱ رقم و با ۰۹ شروع می‌شود."
     if (!isValidJalaliDate(details.birthDate))
         errors.birthDate = "تاریخ تولد را انتخاب کنید."
     return errors

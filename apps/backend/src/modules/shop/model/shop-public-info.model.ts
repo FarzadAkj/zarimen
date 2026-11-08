@@ -2,7 +2,7 @@ import { ApiProperty } from "@nestjs/swagger"
 
 /**
  * What anyone may see about a shop: its landing page and login page.
- * No owner details, no wallet.
+ * Owner's name and mobile are public by the user's choice; never the national code or wallet.
  */
 export class ShopPublicInfoModel {
 	@ApiProperty({ type: String })
@@ -19,6 +19,12 @@ export class ShopPublicInfoModel {
 
 	@ApiProperty({ type: String, nullable: true })
 	landline!: string | null
+
+	@ApiProperty({ type: String })
+	ownerFullName!: string
+
+	@ApiProperty({ type: String })
+	ownerPhoneNumber!: string
 
 	@ApiProperty({ type: Boolean })
 	isActive!: boolean

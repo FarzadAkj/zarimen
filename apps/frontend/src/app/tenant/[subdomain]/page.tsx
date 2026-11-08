@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ChevronLeft, MapPin, Phone, ShieldCheck } from "lucide-react"
+import { ChevronLeft, MapPin, Phone, ShieldCheck, Smartphone, UserRound } from "lucide-react"
 import { DisabledShopNotice } from "@/components/shop/DisabledShopNotice"
 import { ShopLogo } from "@/components/shop/ShopLogo"
 import { getShopPublicInfo } from "@/lib/current-shop"
@@ -38,22 +38,28 @@ export default async function ShopLandingPage() {
                     </p>
                 </section>
 
-                {(shop.address || shop.landline) && (
-                    <section className="mt-8 grid gap-3 rounded-2xl border bg-background/80 p-4 text-sm">
-                        {shop.address && (
-                            <div className="flex items-start gap-3">
-                                <MapPin className="size-5 shrink-0 text-primary" />
-                                <span>{shop.address}</span>
-                            </div>
-                        )}
-                        {shop.landline && (
-                            <a href={`tel:${shop.landline}`} className="flex items-center gap-3 hover:text-primary">
-                                <Phone className="size-5 shrink-0 text-primary" />
-                                <span dir="ltr">{shop.landline}</span>
-                            </a>
-                        )}
-                    </section>
-                )}
+                <section className="mt-8 grid gap-3 rounded-2xl border bg-background/80 p-4 text-sm">
+                    <div className="flex items-center gap-3">
+                        <UserRound className="size-5 shrink-0 text-primary" />
+                        <span>مدیر فروشگاه: {shop.ownerFullName}</span>
+                    </div>
+                    <a href={`tel:${shop.ownerPhoneNumber}`} className="flex items-center gap-3 hover:text-primary">
+                        <Smartphone className="size-5 shrink-0 text-primary" />
+                        <span dir="ltr">{shop.ownerPhoneNumber}</span>
+                    </a>
+                    {shop.landline && (
+                        <a href={`tel:${shop.landline}`} className="flex items-center gap-3 hover:text-primary">
+                            <Phone className="size-5 shrink-0 text-primary" />
+                            <span dir="ltr">{shop.landline}</span>
+                        </a>
+                    )}
+                    {shop.address && (
+                        <div className="flex items-start gap-3">
+                            <MapPin className="size-5 shrink-0 text-primary" />
+                            <span>{shop.address}</span>
+                        </div>
+                    )}
+                </section>
             </main>
 
             <footer className="py-4 text-center text-xs text-muted-foreground flex justify-center gap-4">

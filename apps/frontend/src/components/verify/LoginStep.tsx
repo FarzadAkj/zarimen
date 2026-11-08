@@ -14,7 +14,7 @@ export function LoginStep({ initial, pending, onSubmit }: { initial: string, pen
     function submit(e: React.FormEvent) {
         e.preventDefault()
         if (!isValidPhoneNumber(phoneNumber)) {
-            setError("۹ رقم بعد از ۰۹ را وارد کنید.")
+            setError("شماره موبایل ۱۱ رقم و با ۰۹ شروع می‌شود.")
             return
         }
         setError(undefined)

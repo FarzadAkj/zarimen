@@ -179,7 +179,7 @@ Backend:
 Frontend:
 - `/verify`: `VerifyFlow` (state machine) + `VerifySteps` (indicator with sliding gold
   fill and «مرحله n از ۳» banner) + `IdentityStep` / `LoginStep` / `CodeStep` / `CardsStep`,
-  `PhoneInput` (fixed 09). A customer with a live session lands on phase 3.
+  `PhoneInput` (customer types the full 09… number; was a fixed 09 prefix until 2026-11-08). A customer with a live session lands on phase 3.
 - «پایان» ends the customer session and returns to the landing page.
 - Owner panel: nav (داشبورد / مشتریان) and `/panel/customers` table (national code,
   mobile, birth date, masked cards + bank, first/last visit in Jalali).
@@ -520,3 +520,13 @@ needs node_modules), unlike Darik's scp-the-dist script.
   Darik's footer. Plain `<img>` on purpose (enamad checks the referrer).
 - Site-ownership file `zarimen.ir/75213451.txt` is served by nginx from `/var/www/zarimen-verify`
   (server-only, not in the repo).
+
+## Owner details on the shop landing page (2026-11-08)
+
+- The user chose to show the owner's **full name** and **mobile number** (full, tappable `tel:`)
+  on <subdomain>.zarimen.ir. The national code stays private.
+- `ShopPublicInfoModel` / `readShopPublicInfo` now also return `ownerFullName` and
+  `ownerPhoneNumber`. They are public, so the login page and `/verify` receive them too.
+  `Api.d.ts` was edited by hand. Run `pnpm api` against a running backend to regenerate it.
+- Landing info card: «مدیر فروشگاه: …», mobile, landline, address (always shown now, since
+  the owner fields are required).

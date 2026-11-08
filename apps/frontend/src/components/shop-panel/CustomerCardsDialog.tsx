@@ -49,7 +49,10 @@ export function CustomerCardsDialog({ customerId, ssn, cardCount, loadCards }: {
                 <DialogHeader>
                     <DialogTitle>کارت‌های بانکی مشتری</DialogTitle>
                     <DialogDescription>
-                        کد ملی <span dir="ltr" className="font-mono">{ssn}</span> — همه کارت‌ها با استعلام بانکی به نام این مشتری تأیید شده‌اند.
+                        کد ملی {ssn}
+                    </DialogDescription>
+                    <DialogDescription>
+                        تمامی کارت‌های زیر با استعلام بانکی، به نام این مشتری تأیید شده‌اند.
                     </DialogDescription>
                 </DialogHeader>
                 {error && <p className="text-destructive text-sm">{error}</p>}

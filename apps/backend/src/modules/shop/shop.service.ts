@@ -70,7 +70,10 @@ export class ShopService {
 	async readShopPublicInfo(subdomain: string): Promise<ShopPublicInfoModel> {
 		const shop = await this.prisma.shop.findUnique({
 			where: { subdomain },
-			select: { name: true, brandName: true, logoUrl: true, address: true, landline: true, isActive: true, subscriptionEndsAt: true },
+			select: {
+				name: true, brandName: true, logoUrl: true, address: true, landline: true,
+				ownerFullName: true, ownerPhoneNumber: true, isActive: true, subscriptionEndsAt: true,
+			},
 		})
 		if (!shop)
 			throw this.error.throwErrorToClient(ShopErrors.NotFound)

@@ -26,7 +26,7 @@ export function VerifyFlow({ initialCards }: { initialCards: CustomerCardsModel 
     const [phase, setPhase] = useState<1 | 2 | 3>(initialCards ? 3 : 1)
     const [pending, setPending] = useState(false)
 
-    const [details, setDetails] = useState<SignupDetails>({ ssn: "", phoneNumber: "09", birthDate: "" })
+    const [details, setDetails] = useState<SignupDetails>({ ssn: "", phoneNumber: "", birthDate: "" })
     const [ticket, setTicket] = useState("")
     const [expiresInSeconds, setExpiresInSeconds] = useState(0)
     /** Bumped on every code sent, so CodeStep remounts and its countdown restarts. */
