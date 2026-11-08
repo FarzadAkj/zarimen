@@ -22,6 +22,7 @@ export async function updateServiceCostSettings(input: ServiceCostSettingsModel)
     try {
         const { data } = await api.setting.setServiceCostSettings(input)
         revalidatePath("/panel/settings")
+        revalidatePath("/") // the home page lists plans and service prices
         return { data }
     }
     catch (error: any) {
@@ -45,6 +46,7 @@ export async function createSubscriptionPlan(input: CreateSubscriptionPlanInput)
     try {
         const { data } = await api.setting.createSubscriptionPlan(input)
         revalidatePath("/panel/settings")
+        revalidatePath("/") // the home page lists plans and service prices
         return { data }
     }
     catch (error: any) {
@@ -57,6 +59,7 @@ export async function setSubscriptionPlanActive(id: string, isActive: boolean): 
     try {
         const { data } = await api.setting.setSubscriptionPlanActive({ id, isActive })
         revalidatePath("/panel/settings")
+        revalidatePath("/") // the home page lists plans and service prices
         return { data }
     }
     catch (error: any) {
