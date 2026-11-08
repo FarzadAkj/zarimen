@@ -51,6 +51,16 @@ const ERROR_MESSAGES: Record<string, string> = {
     GatewayError: "درگاه پرداخت درخواست را نپذیرفت. دوباره تلاش کنید.",
     GatewayUnavailable: "درگاه پرداخت در دسترس نیست. لطفاً بعداً تلاش کنید.",
 
+    // ---- shop requests (zarimen.ir/signup)
+    NationalCodeTaken: "این کد ملی قبلاً برای فروشگاه دیگری ثبت شده است.",
+    PhoneNumberTaken: "این شماره موبایل قبلاً برای فروشگاه دیگری ثبت شده است.",
+    TooManyRequests: "تعداد درخواست‌ها زیاد است؛ لطفاً یک ساعت دیگر دوباره تلاش کنید.",
+    InvalidLogo: "لوگو معتبر نیست. دوباره آن را بارگذاری کنید.",
+    TobeShopNotFound: "درخواست پیدا نشد.",
+    TobeShopWrongStatus: "وضعیت این درخواست تغییر کرده است. صفحه را دوباره باز کنید.",
+    TobeShopBusy: "این درخواست در حال بررسی است.",
+    SmsAlreadySent: "پیامک این درخواست قبلاً ارسال شده است.",
+
     // ---- tickets
     TicketNotFound: "تیکت پیدا نشد.",
     TicketClosed: "این تیکت بسته شده است و پیام جدیدی نمی‌پذیرد.",

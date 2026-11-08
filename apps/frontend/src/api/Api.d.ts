@@ -10,6 +10,11 @@
  * ---------------------------------------------------------------
  */
 
+export declare enum TobeShopStatus {
+  PENDING = "PENDING",
+  REGISTERED = "REGISTERED",
+  CANCELED = "CANCELED",
+}
 export declare enum ImageContentType {
   ImageJpeg = "image/jpeg",
   ImagePng = "image/png",
@@ -387,6 +392,33 @@ export interface CreateTicketInput {
   /** @example "مشکل در شارژ کیف پول" */
   title: string;
 }
+export interface SubmitTobeShopInput {
+  /** نام فروشگاه */
+  name: string;
+  /** نام برند */
+  brandName: string;
+  /**
+   * setoode → setoode.zarimen.ir
+   * @example "setoode"
+   */
+  subdomain: string;
+  /** Public URL returned by createImageUpload */
+  logoUrl?: string;
+  address?: string;
+  /** @example "02112345678" */
+  landline?: string;
+  ownerFullName: string;
+  /** @example "09120000000" */
+  ownerPhoneNumber: string;
+  /** @example "0499370899" */
+  ownerNationalCode: string;
+}
+export interface SubmitTobeShopOutput {
+  accepted: boolean;
+  subdomainTaken: boolean;
+  nationalCodeTaken: boolean;
+  phoneNumberTaken: boolean;
+}
 export interface CreateImageUploadInput {
   contentType: ImageContentType;
   size: number;
@@ -395,6 +427,50 @@ export interface CreateImageUploadOutput {
   uploadUrl: string;
   headers: Record<string, string>;
   publicUrl: string;
+}
+export interface ReadTobeShopsInput {
+  /** @default 1 */
+  page?: number;
+  status?: TobeShopStatus;
+}
+export interface TobeShopModel {
+  id: string;
+  name: string;
+  brandName: string;
+  subdomain: string;
+  logoUrl: string | null;
+  address: string | null;
+  landline: string | null;
+  ownerFullName: string;
+  ownerPhoneNumber: string;
+  ownerNationalCode: string;
+  status: TobeShopStatus;
+  problem: string | null;
+  shopId: string | null;
+  /** @format date-time */
+  smsSentAt: string | null;
+  /** @format date-time */
+  createdAt: string;
+}
+export interface ReadTobeShopsOutput {
+  data: TobeShopModel[];
+  count: number;
+  pageSize: number;
+}
+export interface CheckAndInsertTobeShopInput {
+  id: string;
+  /**
+   * Initial wallet balance in Tomans. Defaults to 0.
+   * @example "1500000"
+   */
+  initialWalletBalance?: string;
+}
+export interface TobeShopIdInput {
+  id: string;
+}
+export interface SendTobeShopSmsInput {
+  id: string;
+  value: string;
 }
 export declare enum WalletTopUpCallbackParamsStatusEnum {
   OK = "OK",
@@ -1075,6 +1151,78 @@ export declare class Api<
       data: SendTicketMessageInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<TicketModel, any>>;
+  };
+  tobeShop: {
+    /**
+     * @description Saved (and the admins texted) only when no existing shop has the subdomain, national code or mobile.
+     *
+     * @tags PublicTobeShop
+     * @name SubmitTobeShop
+     * @request POST:/tobe-shop/submitTobeShop
+     */
+    submitTobeShop: (
+      data: SubmitTobeShopInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<SubmitTobeShopOutput, any>>;
+    /**
+     * @description Presigned upload for the form's logo, limited per IP.
+     *
+     * @tags PublicTobeShop
+     * @name CreateTobeShopLogoUpload
+     * @request POST:/tobe-shop/createTobeShopLogoUpload
+     */
+    createTobeShopLogoUpload: (
+      data: CreateImageUploadInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<CreateImageUploadOutput, any>>;
+    /**
+     * @description Newest first, optionally one status only.
+     *
+     * @tags TobeShop
+     * @name ReadTobeShops
+     * @request POST:/tobe-shop/readTobeShops
+     * @secure
+     */
+    readTobeShops: (
+      data: ReadTobeShopsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadTobeShopsOutput, any>>;
+    /**
+     * @description Runs the shop checks (Shahkar included): REGISTERED with a new Shop, or CANCELED with `problem`.
+     *
+     * @tags TobeShop
+     * @name CheckAndInsertTobeShop
+     * @request POST:/tobe-shop/checkAndInsertTobeShop
+     * @secure
+     */
+    checkAndInsertTobeShop: (
+      data: CheckAndInsertTobeShopInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TobeShopModel, any>>;
+    /**
+     * No description
+     *
+     * @tags TobeShop
+     * @name CancelTobeShop
+     * @request POST:/tobe-shop/cancelTobeShop
+     * @secure
+     */
+    cancelTobeShop: (
+      data: TobeShopIdInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TobeShopModel, any>>;
+    /**
+     * @description CANCELED → rejection template (value = INFO); REGISTERED → welcome template (value = SUBDOMAIN). Once per request.
+     *
+     * @tags TobeShop
+     * @name SendTobeShopSms
+     * @request POST:/tobe-shop/sendTobeShopSms
+     * @secure
+     */
+    sendTobeShopSms: (
+      data: SendTobeShopSmsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TobeShopModel, any>>;
   };
   imageUpload: {
     /**

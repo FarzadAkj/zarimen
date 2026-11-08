@@ -22,8 +22,13 @@ export class ShopService {
 	async createShop(input: CreateShopInput): Promise<ShopModel> {
 		const { initialWalletBalance, ...shop } = input
 
-		if (await this.prisma.shop.exists({ subdomain: shop.subdomain }))
+		const taken = await this.findTaken(shop)
+		if (taken.subdomain)
 			throw this.error.throwErrorToClient(ShopErrors.SubdomainTaken)
+		if (taken.nationalCode)
+			throw this.error.throwErrorToClient(ShopErrors.NationalCodeTaken)
+		if (taken.phoneNumber)
+			throw this.error.throwErrorToClient(ShopErrors.PhoneNumberTaken)
 
 		await this.verifyOwner(shop.ownerPhoneNumber, shop.ownerNationalCode)
 
@@ -44,6 +49,19 @@ export class ShopService {
 		})
 
 		return this.toModel(created)
+	}
+
+	/**
+	 * Which of a new shop's unique values an existing shop already has. Subdomains are unique
+	 * in the table; national code and mobile only here (one shop per person).
+	 */
+	async findTaken(shop: { subdomain: string, ownerNationalCode: string, ownerPhoneNumber: string }) {
+		const [subdomain, nationalCode, phoneNumber] = await Promise.all([
+			this.prisma.shop.exists({ subdomain: shop.subdomain }),
+			this.prisma.shop.exists({ ownerNationalCode: shop.ownerNationalCode }),
+			this.prisma.shop.exists({ ownerPhoneNumber: shop.ownerPhoneNumber }),
+		])
+		return { subdomain, nationalCode, phoneNumber }
 	}
 
 	async readShops(): Promise<ShopModel[]> {
@@ -71,8 +89,15 @@ export class ShopService {
 		const shop = await this.prisma.shop.findUnique({
 			where: { subdomain },
 			select: {
-				name: true, brandName: true, logoUrl: true, address: true, landline: true,
-				ownerFullName: true, ownerPhoneNumber: true, isActive: true, subscriptionEndsAt: true,
+				name: true,
+				brandName: true,
+				logoUrl: true,
+				address: true,
+				landline: true,
+				ownerFullName: true,
+				ownerPhoneNumber: true,
+				isActive: true,
+				subscriptionEndsAt: true,
 			},
 		})
 		if (!shop)

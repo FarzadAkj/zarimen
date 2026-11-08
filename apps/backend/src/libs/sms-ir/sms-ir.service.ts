@@ -17,8 +17,28 @@ export class SmsIrService {
 	 */
 	async sendOTPMessage(phoneNumber: string, code: string) {
 		logger.log(`Sms OTP for ${phoneNumber} is: ${code}`)
-		if (!this.config.sendSms)
+		await this.sendTemplate(phoneNumber, this.config.otpTemplate, { CODE: code })
+	}
+
+	/** A canceled shop request (a failed check or the admin's decision); one `INFO` parameter. */
+	sendShopRejected(phoneNumber: string, info: string) {
+		return this.sendTemplate(phoneNumber, this.config.shopRejectedTemplate, { INFO: info })
+	}
+
+	/** A registered shop request; one `SUBDOMAIN` parameter. */
+	sendShopWelcome(phoneNumber: string, subdomain: string) {
+		return this.sendTemplate(phoneNumber, this.config.shopWelcomeTemplate, { SUBDOMAIN: subdomain })
+	}
+
+	/**
+	 * sms.ir "verify" send: `template` with its #NAME# parameters. Throws when sms.ir refuses,
+	 * so the caller can tell the user. With `sendSms=false` it is only logged.
+	 */
+	private async sendTemplate(phoneNumber: string, template: string, parameters: Record<string, string>) {
+		if (!this.config.sendSms) {
+			logger.log(`Sms template ${template} to ${phoneNumber}: ${JSON.stringify(parameters)}`)
 			return
+		}
 
 		const response = await fetch("https://api.sms.ir/v1/send/verify", {
 			method: "POST",
@@ -28,8 +48,8 @@ export class SmsIrService {
 			},
 			body: JSON.stringify({
 				Mobile: phoneNumber,
-				TemplateId: Number(this.config.otpTemplate),
-				Parameters: [{ Name: "CODE", Value: code }],
+				TemplateId: Number(template),
+				Parameters: Object.entries(parameters).map(([Name, Value]) => ({ Name, Value })),
 			}),
 		})
 

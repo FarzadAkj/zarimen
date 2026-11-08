@@ -3,7 +3,6 @@ import type { ServiceCostSettingsModel, SubscriptionPlanModel } from "@/api/Api"
 import Link from "next/link"
 import { BadgeCheck, CreditCard, FileSearch, Gift, Globe, MessageSquareText, Newspaper, ShieldCheck, Smartphone, Store, Users, Wallet } from "lucide-react"
 import { Button } from "@/components/shad/button"
-import { ContactLinks } from "@/components/site/ContactLinks"
 import { LogoMark, SiteLogo } from "@/components/site/SiteLogo"
 import { formatAmount, formatDuration } from "@/lib/format"
 import { publicApi } from "@/lib/public-api"
@@ -84,7 +83,7 @@ export default async function HomePage() {
                         <Link href="/blog" className="hover:text-primary">وبلاگ</Link>
                     </nav>
                     <Button asChild size="sm" className="ms-auto">
-                        <a href="#contact">تماس برای راه اندازی</a>
+                        <Link href="/signup">درخواست راه‌اندازی</Link>
                     </Button>
                 </div>
             </header>
@@ -106,7 +105,7 @@ export default async function HomePage() {
                         </p>
                         <div className="flex flex-wrap justify-center gap-3">
                             <Button asChild size="lg"><a href="#plans">مشاهده تعرفه‌ها</a></Button>
-                            <Button asChild size="lg" variant="outline"><a href="#contact">تماس با ما</a></Button>
+                            <Button asChild size="lg" variant="outline"><Link href="/signup">درخواست راه‌اندازی</Link></Button>
                         </div>
                     </div>
                 </section>
@@ -167,7 +166,7 @@ export default async function HomePage() {
                                     </p>
                                 </div>
                                 <Button asChild size="lg" className="shrink-0">
-                                    <a href="#contact">درخواست دوره آزمایشی</a>
+                                    <Link href="/signup">درخواست دوره آزمایشی</Link>
                                 </Button>
                             </div>
                         </div>
@@ -182,12 +181,12 @@ export default async function HomePage() {
                                                 <p className="text-sm text-muted-foreground">{formatDuration(plan.durationDays)}</p>
                                             </div>
                                             <p className="text-2xl font-bold text-primary">{formatAmount(plan.price)}</p>
-                                            <Button asChild><a href="#contact">تماس برای راه اندازی</a></Button>
+                                            <Button asChild><Link href="/signup">درخواست راه‌اندازی</Link></Button>
                                         </div>
                                     ))}
                                 </div>
                             )
-                            : <p className="mt-6 text-center text-muted-foreground">برای اطلاع از تعرفه‌ها با ما تماس بگیرید.</p>}
+                            : <p className="mt-6 text-center text-muted-foreground">تعرفه‌ها به‌زودی در این بخش اعلام می‌شود.</p>}
                     </div>
                 </section>
 
@@ -228,15 +227,6 @@ export default async function HomePage() {
                         </div>
                         <Button asChild variant="outline"><Link href="/blog">مشاهده وبلاگ</Link></Button>
                     </div>
-                </section>
-
-                {/* contact */}
-                <section id="contact" className="mx-auto max-w-4xl scroll-mt-20 px-4 py-16">
-                    <h2 className="text-center text-2xl font-bold sm:text-3xl">تماس برای راه اندازی</h2>
-                    <p className="mx-auto mt-3 mb-8 max-w-2xl text-center text-muted-foreground text-justify [text-align-last:center]">
-                        برای راه‌اندازی صفحه فروشگاه و راه اندازی پنل اختصاصی خود، از یکی از راه‌های زیر با ما در تماس باشید.
-                    </p>
-                    <ContactLinks />
                 </section>
             </main>
 

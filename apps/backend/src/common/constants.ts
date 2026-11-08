@@ -7,6 +7,7 @@ export const ModuleNames = {
 	SubscriptionModule: "SubscriptionModule",
 	ImageBucket: "ImageBucket",
 	TicketModule: "TicketModule",
+	TobeShopModule: "TobeShopModule",
 }
 
 export const SoftwareName = "Zar Imen"

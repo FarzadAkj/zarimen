@@ -113,6 +113,11 @@ adminPhoneNumbers = "0912xxxxxxx,0935xxxxxxx"
 # ---- sms.ir
 smsIrSecret = "your-sms-ir-api-key"
 smsIrOtpTemplate = "your-template-id"
+# sender line for bulk notices to the admins (new tickets, new shop requests)
+smsIrLineNumber = "your-sms-ir-line-number"
+# shop requests (zarimen.ir/signup): rejection (INFO parameter) and welcome (SUBDOMAIN parameter)
+smsIrShopRejectedTemplate = "your-template-id"
+smsIrShopWelcomeTemplate = "your-template-id"
 sendSms = true
 
 # ---- api.ir (Shahkar + CardMatch)
@@ -139,6 +144,8 @@ Check before you go live:
 - `sendSms = true` and `identityCheck = true`; with `false`, codes are only printed and
   Shahkar is skipped.
 - `zarinpalBaseUrl` is **empty**, so payments use the real Zarinpal and not the sandbox.
+- The api.zarimen.ir nginx block sets `X-Real-IP $remote_addr`: the public shop-request form
+  is limited per IP using it (without it every visitor would share one limit).
 
 ### `apps/frontend/.env`
 
@@ -146,10 +153,6 @@ Check before you go live:
 NEXT_PUBLIC_SERVER_ADDRESS = https://api.zarimen.ir
 NEXT_PUBLIC_SWAGGER_API_DOC_PATH = /api-docs
 ROOT_DOMAIN = zarimen.ir
-
-CONTACT_PHONE = 0912xxxxxxx
-CONTACT_WHATSAPP = 98912xxxxxxx
-CONTACT_TELEGRAM = your_username
 ```
 
 `NEXT_PUBLIC_*` values are built **into** the frontend bundle. After changing one, rebuild

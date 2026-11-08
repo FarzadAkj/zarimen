@@ -10,6 +10,12 @@
  * ---------------------------------------------------------------
  */
 
+export var TobeShopStatus;
+(function (TobeShopStatus) {
+  TobeShopStatus["PENDING"] = "PENDING";
+  TobeShopStatus["REGISTERED"] = "REGISTERED";
+  TobeShopStatus["CANCELED"] = "CANCELED";
+})(TobeShopStatus || (TobeShopStatus = {}));
 export var ImageContentType;
 (function (ImageContentType) {
   ImageContentType["ImageJpeg"] = "image/jpeg";
@@ -1078,6 +1084,112 @@ export class Api extends HttpClient {
     answerTicket: (data, params = {}) =>
       this.request({
         path: `/ticket/answerTicket`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  tobeShop = {
+    /**
+     * @description Saved (and the admins texted) only when no existing shop has the subdomain, national code or mobile.
+     *
+     * @tags PublicTobeShop
+     * @name SubmitTobeShop
+     * @request POST:/tobe-shop/submitTobeShop
+     */
+    submitTobeShop: (data, params = {}) =>
+      this.request({
+        path: `/tobe-shop/submitTobeShop`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Presigned upload for the form's logo, limited per IP.
+     *
+     * @tags PublicTobeShop
+     * @name CreateTobeShopLogoUpload
+     * @request POST:/tobe-shop/createTobeShopLogoUpload
+     */
+    createTobeShopLogoUpload: (data, params = {}) =>
+      this.request({
+        path: `/tobe-shop/createTobeShopLogoUpload`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Newest first, optionally one status only.
+     *
+     * @tags TobeShop
+     * @name ReadTobeShops
+     * @request POST:/tobe-shop/readTobeShops
+     * @secure
+     */
+    readTobeShops: (data, params = {}) =>
+      this.request({
+        path: `/tobe-shop/readTobeShops`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Runs the shop checks (Shahkar included): REGISTERED with a new Shop, or CANCELED with `problem`.
+     *
+     * @tags TobeShop
+     * @name CheckAndInsertTobeShop
+     * @request POST:/tobe-shop/checkAndInsertTobeShop
+     * @secure
+     */
+    checkAndInsertTobeShop: (data, params = {}) =>
+      this.request({
+        path: `/tobe-shop/checkAndInsertTobeShop`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags TobeShop
+     * @name CancelTobeShop
+     * @request POST:/tobe-shop/cancelTobeShop
+     * @secure
+     */
+    cancelTobeShop: (data, params = {}) =>
+      this.request({
+        path: `/tobe-shop/cancelTobeShop`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description CANCELED → rejection template (value = INFO); REGISTERED → welcome template (value = SUBDOMAIN). Once per request.
+     *
+     * @tags TobeShop
+     * @name SendTobeShopSms
+     * @request POST:/tobe-shop/sendTobeShopSms
+     * @secure
+     */
+    sendTobeShopSms: (data, params = {}) =>
+      this.request({
+        path: `/tobe-shop/sendTobeShopSms`,
         method: "POST",
         body: data,
         secure: true,

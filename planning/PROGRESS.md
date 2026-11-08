@@ -27,6 +27,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 7d  | Separate price for bank card checks (CardMatch) | done |
 | 8   | zarimen.ir landing page (+ /blog placeholder, contact links) | done — contacts pending |
 | 9   | Support tickets (owner ↔ admins) + SMS notice to admins | done |
+| 10  | Public shop requests (/signup) → admin "Check and Insert" | done |
 
 ## Step log
 
@@ -493,7 +494,7 @@ needs node_modules), unlike Darik's scp-the-dist script.
 - Shop staff logins (only the owner phone can log in now).
 - OTP codes are always printed to the backend console (even with `sendSms=true`), so they
   also end up in the PM2 logs in production. Decide whether to keep that before launch.
-- Landing page: CONTACT_* values in apps/frontend/.env; the blog.
+- Landing page: the blog.
 - Production: the reverse proxy must forward the original `Host` header
   (nginx `proxy_set_header Host $host;`) and DNS needs a wildcard `*.zarimen.ir` record +
   wildcard TLS certificate, since routing is by Host.
@@ -564,4 +565,49 @@ Frontend:
 - Admin: nav «تیکت‌ها», `/panel/tickets` (status filter chips), `/panel/tickets/<id>`.
 - `components/ticket/*` shared by both sides; `components/shad/textarea.tsx` added.
 - `src/api` regenerated with `pnpm api` (this also replaced the hand-edited ShopPublicInfoModel).
+
+### Step 10 — Public shop requests instead of contact details (2026-11-08)
+
+Asked for: no admin contact details on zarimen.ir; a separate page where anyone fills the
+admin's own shop form (one shared component); saved in a `tobe-shop` table (not Shop);
+admins texted (bulk, like tickets) and see the requests in the panel; statuses PENDING /
+REGISTERED / CANCELED; "Check and Insert" runs the shop checks (Shahkar included) and on
+success creates the Shop; SMS to the requester with the template variable shown to the
+admin first (editable, or not sent at all).
+User's answers: logo upload allowed for visitors, wallet balance hidden (set at Check and
+Insert); **one shop per person**: national code and mobile are refused if any shop has them
+(admin-created shops too, checked in ShopService, no schema change); 3 accepted requests per
+IP per hour; a failed check **cancels** the request. Two sms.ir templates: rejection (`INFO`,
+for failed checks and the admin's cancels) and welcome (`SUBDOMAIN`). Template ids are
+placeholders (`000000`) until the user creates them.
+
+Backend:
+- `prisma/schema/tobe-shop.prisma`: model `TobeShop` → table `tobe-shop` (the shop form's
+  fields, status, `problem`, `shopId` without a relation, `smsSentAt`, `ip`). `db push` done.
+- `ShopService.findTaken` (subdomain / national code / mobile); `createShop` refuses all
+  three (NationalCodeTaken, PhoneNumberTaken are new). ShopModule exports ShopService.
+- `SmsIrService.sendShopRejected(INFO)` / `sendShopWelcome(SUBDOMAIN)` over a shared
+  `sendTemplate`; config `smsIrShopRejectedTemplate`, `smsIrShopWelcomeTemplate`.
+- `libs/rate-limit`: in-memory `RateLimiter` + `clientIp` (`X-Real-IP` from nginx, else socket).
+- `modules/tobe-shop`: public `submitTobeShop` (all taken fields at once; saved + admins
+  texted only when none; 20 attempts / 3 accepted per IP per hour) and
+  `createTobeShopLogoUpload` (10 per IP per hour); admin `readTobeShops`,
+  `checkAndInsertTobeShop` (via `ShopService.createShop`; Shahkar mismatch / taken values →
+  CANCELED with a Persian `problem` that includes the data; Shahkar down → error, stays
+  PENDING; double clicks refused), `cancelTobeShop` (PENDING only), `sendTobeShopSms`
+  (once; template picked by status). 12 tests + 1 rate-limiter test.
+
+Frontend:
+- `components/shop/ShopForm.tsx`: the one shop form (required `*`, the "mobile and national
+  code must both belong to the owner" note); `CreateShopForm` (admin) and
+  `site/ShopRequestForm` (public) wrap it.
+- `/signup`: the public form, called **from the browser** (`lib/signup-api.ts`) so the
+  per-IP limit sees the visitor; on success «… حداکثر تا ۲۴ ساعت آینده از طریق پیامک …».
+- Landing: contact section and `ContactLinks` removed, every "contact" button → `/signup`;
+  `CONTACT_*` removed from the frontend .env files and DEPLOY.md.
+- Admin `/panel/requests` (nav «درخواست‌ها»): status chips, each request's data, «بررسی و ثبت»
+  (wallet balance → result → SMS form), «لغو درخواست» (→ SMS form), «ارسال پیامک» later
+  if skipped. The SMS form shows the template, the variable name and its prefilled value.
+- Mishap: `lib/public-api.ts` (the cookie-less `publicApi()`) was overwritten by mistake and
+  restored word for word from Next's dev source maps.
 

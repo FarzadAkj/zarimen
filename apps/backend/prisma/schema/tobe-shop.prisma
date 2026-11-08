@@ -1,0 +1,35 @@
+/// A shop someone asked for on zarimen.ir/signup (anonymous). Not a Shop until the admin's
+/// "Check and Insert" passes; then the Shop is created and this row becomes REGISTERED.
+model TobeShop {
+  id                String         @id @default(uuid()) @db.Uuid
+  name              String
+  brandName         String
+  subdomain         String
+  logoUrl           String?
+  address           String?
+  landline          String?
+  ownerFullName     String
+  ownerPhoneNumber  String
+  ownerNationalCode String
+  status            TobeShopStatus @default(PENDING)
+  /// Why "Check and Insert" failed (the request was canceled because of it).
+  problem           String?
+  /// The Shop created from this request (REGISTERED only). No relation: Shop is left untouched.
+  shopId            String?        @db.Uuid
+  /// When the admin sent the welcome / rejection SMS; null: not sent (yet).
+  smsSentAt         DateTime?
+  /// Who sent it, for the rate limit's audit trail.
+  ip                String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([status, createdAt])
+  @@map("tobe-shop")
+}
+
+enum TobeShopStatus {
+  PENDING
+  REGISTERED
+  /// By the admin, or by a failed "Check and Insert".
+  CANCELED
+}

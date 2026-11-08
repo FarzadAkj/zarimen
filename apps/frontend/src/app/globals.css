@@ -53,7 +53,7 @@
 }
 
 @layer base {
-  /* In-page links (#plans, #contact …) glide instead of jumping. */
+  /* In-page links (#plans, #how …) glide instead of jumping. */
   html {
     scroll-behavior: smooth;
   }

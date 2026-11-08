@@ -65,6 +65,14 @@ export class Config {
 	@Matches(/^\d+$/, { message: "smsIrLineNumber must be the digits of an sms.ir line number" })
 	public smsIrLineNumber!: string
 
+	/** sms.ir verify template for a canceled shop request (zarimen.ir/signup); one `INFO` parameter. */
+	@IsString()
+	public smsIrShopRejectedTemplate!: string
+
+	/** sms.ir verify template welcoming a registered shop; one `SUBDOMAIN` parameter. */
+	@IsString()
+	public smsIrShopWelcomeTemplate!: string
+
 	/** "false" logs the OTP to the console instead of sending it (local development). */
 	@IsIn(["true", "false"])
 	public sendSms!: string

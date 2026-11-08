@@ -15,6 +15,7 @@ import { SettingModule } from "./modules/setting/setting.module"
 import { ShopModule } from "./modules/shop/shop.module"
 import { SubscriptionModule } from "./modules/subscription/subscription.module"
 import { TicketModule } from "./modules/ticket/ticket.module"
+import { TobeShopModule } from "./modules/tobe-shop/tobe-shop.module"
 import { WalletModule } from "./modules/wallet/wallet.module"
 
 @Module({
@@ -32,6 +33,8 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 				sendSms: config.sendSms === "true",
 				otpTemplate: config.smsIrOtpTemplate,
 				lineNumber: config.smsIrLineNumber,
+				shopRejectedTemplate: config.smsIrShopRejectedTemplate,
+				shopWelcomeTemplate: config.smsIrShopWelcomeTemplate,
 			}),
 		}),
 		ShahkarModule,
@@ -51,6 +54,7 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 		CustomerModule,
 		SubscriptionModule,
 		TicketModule,
+		TobeShopModule,
 		ImageUploadModule,
 	],
 })
