@@ -6,6 +6,7 @@ export const ModuleNames = {
 	WalletModule: "WalletModule",
 	SubscriptionModule: "SubscriptionModule",
 	ImageBucket: "ImageBucket",
+	TicketModule: "TicketModule",
 }
 
 export const SoftwareName = "Zar Imen"

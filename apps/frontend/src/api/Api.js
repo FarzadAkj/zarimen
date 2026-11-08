@@ -16,6 +16,12 @@ export var ImageContentType;
   ImageContentType["ImagePng"] = "image/png";
   ImageContentType["ImageWebp"] = "image/webp";
 })(ImageContentType || (ImageContentType = {}));
+export var TicketStatus;
+(function (TicketStatus) {
+  TicketStatus["PENDING"] = "PENDING";
+  TicketStatus["ANSWERED"] = "ANSWERED";
+  TicketStatus["CLOSED"] = "CLOSED";
+})(TicketStatus || (TicketStatus = {}));
 export var PaidService;
 (function (PaidService) {
   PaidService["SHAHKAR"] = "SHAHKAR";
@@ -525,6 +531,114 @@ export class Api extends HttpClient {
         format: "json",
         ...params,
       }),
+    /**
+     * @description Opens a PENDING ticket with its first message and texts the admins.
+     *
+     * @tags ShopTicket
+     * @name CreateTicket
+     * @request POST:/shop-panel/createTicket
+     * @secure
+     */
+    createTicket: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/createTicket`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags ShopTicket
+     * @name ReadMyTickets
+     * @request POST:/shop-panel/readMyTickets
+     * @secure
+     */
+    readMyTickets: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/readMyTickets`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags ShopTicket
+     * @name ReadMyTicket
+     * @request POST:/shop-panel/readMyTicket
+     * @secure
+     */
+    readMyTicket: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/readMyTicket`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Owner message; the ticket goes back to PENDING and the admins get an SMS.
+     *
+     * @tags ShopTicket
+     * @name SendMyTicketMessage
+     * @request POST:/shop-panel/sendMyTicketMessage
+     * @secure
+     */
+    sendMyTicketMessage: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/sendMyTicketMessage`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Only the owner closes; no one can write afterwards.
+     *
+     * @tags ShopTicket
+     * @name CloseMyTicket
+     * @request POST:/shop-panel/closeMyTicket
+     * @secure
+     */
+    closeMyTicket: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/closeMyTicket`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags ShopImageUpload
+     * @name CreateMyImageUpload
+     * @request POST:/shop-panel/createMyImageUpload
+     * @secure
+     */
+    createMyImageUpload: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/createMyImageUpload`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   wallet = {
     /**
@@ -913,6 +1027,62 @@ export class Api extends HttpClient {
         path: `/subscription/purchaseCallback`,
         method: "GET",
         query: query,
+        ...params,
+      }),
+  };
+  ticket = {
+    /**
+     * @description All shops' tickets, latest activity first, optionally one status only.
+     *
+     * @tags Ticket
+     * @name ReadTickets
+     * @request POST:/ticket/readTickets
+     * @secure
+     */
+    readTickets: (data, params = {}) =>
+      this.request({
+        path: `/ticket/readTickets`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags Ticket
+     * @name ReadTicket
+     * @request POST:/ticket/readTicket
+     * @secure
+     */
+    readTicket: (data, params = {}) =>
+      this.request({
+        path: `/ticket/readTicket`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Admin reply; the ticket becomes ANSWERED. Refused once the owner closed it.
+     *
+     * @tags Ticket
+     * @name AnswerTicket
+     * @request POST:/ticket/answerTicket
+     * @secure
+     */
+    answerTicket: (data, params = {}) =>
+      this.request({
+        path: `/ticket/answerTicket`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
         ...params,
       }),
   };

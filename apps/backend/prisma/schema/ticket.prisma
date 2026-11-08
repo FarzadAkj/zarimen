@@ -1,0 +1,37 @@
+/// A shop owner's support ticket, answered by the admins in zarimen.ir/panel/tickets.
+/// PENDING: waiting for an admin (every owner message puts it here).
+/// ANSWERED: an admin replied last. CLOSED: the owner closed it; nobody can write any more.
+model Ticket {
+  id        String          @id @default(uuid()) @db.Uuid
+  shopId    String          @db.Uuid
+  shop      Shop            @relation(fields: [shopId], references: [id])
+  title     String
+  status    TicketStatus    @default(PENDING)
+  messages  TicketMessage[]
+  createdAt DateTime        @default(now())
+  /// Bumped by every message, so lists show the latest activity first.
+  updatedAt DateTime        @updatedAt
+
+  @@index([shopId, updatedAt])
+  @@index([status, updatedAt])
+}
+
+model TicketMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  ticketId  String   @db.Uuid
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  /// False: the shop owner wrote it.
+  fromAdmin Boolean
+  body      String
+  /// 0-2 public URLs in the image bucket (zar-imen/ folder).
+  imageUrls String[]
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+enum TicketStatus {
+  PENDING
+  ANSWERED
+  CLOSED
+}

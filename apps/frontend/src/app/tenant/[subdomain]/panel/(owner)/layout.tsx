@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BadgeCheck, LayoutDashboard, LogOut, ReceiptText, Users, Wallet } from "lucide-react"
+import { BadgeCheck, LayoutDashboard, LifeBuoy, LogOut, ReceiptText, Users, Wallet } from "lucide-react"
 import { redirect } from "next/navigation"
 import { Button } from "@/components/shad/button"
 import { logoutShop, readMyShop } from "../actions"
@@ -44,6 +44,10 @@ export default async function ShopOwnerLayout({ children }: Readonly<{ children:
                         <Link href="/panel/transactions" className="flex items-center gap-1.5 hover:text-primary">
                             <ReceiptText className="size-4" />
                             تراکنش‌ها
+                        </Link>
+                        <Link href="/panel/tickets" className="flex items-center gap-1.5 hover:text-primary">
+                            <LifeBuoy className="size-4" />
+                            پشتیبانی
                         </Link>
                     </nav>
                     <form action={logoutAction} className="ms-auto">

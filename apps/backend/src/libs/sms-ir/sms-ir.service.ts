@@ -4,7 +4,7 @@ import { logger } from "../logger"
 import { MODULE_OPTIONS_TOKEN } from "./config/sms-ir.module-builder"
 
 /**
- * sms.ir client (copied from Darik, OTP only).
+ * sms.ir client (copied from Darik): OTP codes and plain-text bulk notices.
  */
 @Injectable()
 export class SmsIrService {
@@ -36,6 +36,37 @@ export class SmsIrService {
 		if (!response.ok) {
 			logger.error(`[sms.ir] verify failed with HTTP ${response.status}`, await response.text().catch(() => ""))
 			throw new Error(`sms.ir request failed (${response.status})`)
+		}
+	}
+
+	/**
+	 * Sends `text` to every number in `mobiles` (sms.ir bulk send, from `lineNumber`).
+	 * A notice, not part of any flow: failures are logged, never thrown (like Darik's
+	 * sendPurchasedNotifyMessage). With `sendSms=false` the text is only logged.
+	 */
+	async sendBulkMessage(mobiles: string[], text: string) {
+		logger.log(`Sms to ${mobiles.join(", ")}: ${text}`)
+		if (!this.config.sendSms)
+			return
+
+		try {
+			const response = await fetch("https://api.sms.ir/v1/send/bulk", {
+				method: "POST",
+				headers: {
+					"x-api-key": this.config.secret,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					lineNumber: Number(this.config.lineNumber),
+					messageText: text,
+					mobiles,
+				}),
+			})
+			if (!response.ok)
+				logger.error(`[sms.ir] bulk send failed with HTTP ${response.status}`, await response.text().catch(() => ""))
+		}
+		catch (error) {
+			logger.error("[sms.ir] bulk send failed", error)
 		}
 	}
 }

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { LogOut, Settings, Store } from "lucide-react"
+import { LogOut, MessagesSquare, Settings, Store } from "lucide-react"
 import { redirect } from "next/navigation"
 import { Button } from "@/components/shad/button"
 import { logout } from "../login/actions"
@@ -21,6 +21,10 @@ export default function AdminLayout({ children }: Readonly<{ children: React.Rea
                         <Link href="/panel" className="flex items-center gap-1.5 hover:text-primary">
                             <Store className="size-4" />
                             فروشگاه‌ها
+                        </Link>
+                        <Link href="/panel/tickets" className="flex items-center gap-1.5 hover:text-primary">
+                            <MessagesSquare className="size-4" />
+                            تیکت‌ها
                         </Link>
                         <Link href="/panel/settings" className="flex items-center gap-1.5 hover:text-primary">
                             <Settings className="size-4" />

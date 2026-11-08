@@ -15,6 +15,11 @@ export declare enum ImageContentType {
   ImagePng = "image/png",
   ImageWebp = "image/webp",
 }
+export declare enum TicketStatus {
+  PENDING = "PENDING",
+  ANSWERED = "ANSWERED",
+  CLOSED = "CLOSED",
+}
 export declare enum PaidService {
   SHAHKAR = "SHAHKAR",
   CARD_MATCH = "CARD_MATCH",
@@ -327,6 +332,61 @@ export interface SetShopSubscriptionEndInput {
   /** @format date-time */
   endsAt: string;
 }
+export interface ReadTicketsInput {
+  /** @default 1 */
+  page?: number;
+  status?: TicketStatus;
+}
+export interface TicketSummaryModel {
+  id: string;
+  title: string;
+  status: TicketStatus;
+  shopName: string;
+  shopSubdomain: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+export interface ReadTicketsOutput {
+  data: TicketSummaryModel[];
+  count: number;
+  pageSize: number;
+}
+export interface TicketIdInput {
+  ticketId: string;
+}
+export interface TicketMessageModel {
+  id: string;
+  fromAdmin: boolean;
+  body: string;
+  imageUrls: string[];
+  /** @format date-time */
+  createdAt: string;
+}
+export interface TicketModel {
+  id: string;
+  title: string;
+  status: TicketStatus;
+  shopName: string;
+  shopSubdomain: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  messages: TicketMessageModel[];
+}
+export interface SendTicketMessageInput {
+  body: string;
+  imageUrls?: string[];
+  ticketId: string;
+}
+export interface CreateTicketInput {
+  body: string;
+  imageUrls?: string[];
+  /** @example "مشکل در شارژ کیف پول" */
+  title: string;
+}
 export interface CreateImageUploadInput {
   contentType: ImageContentType;
   size: number;
@@ -630,6 +690,78 @@ export declare class Api<
       data: StartSubscriptionPurchaseInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<SubscriptionPurchaseStartedModel, any>>;
+    /**
+     * @description Opens a PENDING ticket with its first message and texts the admins.
+     *
+     * @tags ShopTicket
+     * @name CreateTicket
+     * @request POST:/shop-panel/createTicket
+     * @secure
+     */
+    createTicket: (
+      data: CreateTicketInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TicketModel, any>>;
+    /**
+     * No description
+     *
+     * @tags ShopTicket
+     * @name ReadMyTickets
+     * @request POST:/shop-panel/readMyTickets
+     * @secure
+     */
+    readMyTickets: (
+      data: ReadTicketsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadTicketsOutput, any>>;
+    /**
+     * No description
+     *
+     * @tags ShopTicket
+     * @name ReadMyTicket
+     * @request POST:/shop-panel/readMyTicket
+     * @secure
+     */
+    readMyTicket: (
+      data: TicketIdInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TicketModel, any>>;
+    /**
+     * @description Owner message; the ticket goes back to PENDING and the admins get an SMS.
+     *
+     * @tags ShopTicket
+     * @name SendMyTicketMessage
+     * @request POST:/shop-panel/sendMyTicketMessage
+     * @secure
+     */
+    sendMyTicketMessage: (
+      data: SendTicketMessageInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TicketModel, any>>;
+    /**
+     * @description Only the owner closes; no one can write afterwards.
+     *
+     * @tags ShopTicket
+     * @name CloseMyTicket
+     * @request POST:/shop-panel/closeMyTicket
+     * @secure
+     */
+    closeMyTicket: (
+      data: TicketIdInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TicketModel, any>>;
+    /**
+     * No description
+     *
+     * @tags ShopImageUpload
+     * @name CreateMyImageUpload
+     * @request POST:/shop-panel/createMyImageUpload
+     * @secure
+     */
+    createMyImageUpload: (
+      data: CreateImageUploadInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<CreateImageUploadOutput, any>>;
   };
   wallet: {
     /**
@@ -905,6 +1037,44 @@ export declare class Api<
       },
       params?: RequestParams,
     ) => Promise<HttpResponse<any, void>>;
+  };
+  ticket: {
+    /**
+     * @description All shops' tickets, latest activity first, optionally one status only.
+     *
+     * @tags Ticket
+     * @name ReadTickets
+     * @request POST:/ticket/readTickets
+     * @secure
+     */
+    readTickets: (
+      data: ReadTicketsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadTicketsOutput, any>>;
+    /**
+     * No description
+     *
+     * @tags Ticket
+     * @name ReadTicket
+     * @request POST:/ticket/readTicket
+     * @secure
+     */
+    readTicket: (
+      data: TicketIdInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TicketModel, any>>;
+    /**
+     * @description Admin reply; the ticket becomes ANSWERED. Refused once the owner closed it.
+     *
+     * @tags Ticket
+     * @name AnswerTicket
+     * @request POST:/ticket/answerTicket
+     * @secure
+     */
+    answerTicket: (
+      data: SendTicketMessageInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TicketModel, any>>;
   };
   imageUpload: {
     /**

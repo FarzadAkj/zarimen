@@ -51,6 +51,11 @@ const ERROR_MESSAGES: Record<string, string> = {
     GatewayError: "درگاه پرداخت درخواست را نپذیرفت. دوباره تلاش کنید.",
     GatewayUnavailable: "درگاه پرداخت در دسترس نیست. لطفاً بعداً تلاش کنید.",
 
+    // ---- tickets
+    TicketNotFound: "تیکت پیدا نشد.",
+    TicketClosed: "این تیکت بسته شده است و پیام جدیدی نمی‌پذیرد.",
+    InvalidTicketImage: "تصویر پیوست معتبر نیست. دوباره آن را بارگذاری کنید.",
+
     // ---- image upload
     UnsupportedImage: "تصویر باید با فرمت JPG، PNG یا webp باشد.",
     ImageTooLarge: "حجم تصویر حداکثر می‌تواند ۵ مگابایت باشد.",

@@ -26,6 +26,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 7c  | Owner dashboard shows Shahkar / SMS prices | done |
 | 7d  | Separate price for bank card checks (CardMatch) | done |
 | 8   | zarimen.ir landing page (+ /blog placeholder, contact links) | done — contacts pending |
+| 9   | Support tickets (owner ↔ admins) + SMS notice to admins | done |
 
 ## Step log
 
@@ -530,3 +531,37 @@ needs node_modules), unlike Darik's scp-the-dist script.
   `Api.d.ts` was edited by hand. Run `pnpm api` against a running backend to regenerate it.
 - Landing info card: «مدیر فروشگاه: …», mobile, landline, address (always shown now, since
   the owner fields are required).
+
+### Step 9 — Support tickets (2026-11-08)
+
+Asked for: owners open tickets (title + body, up to 2 photos per message); statuses PENDING /
+ANSWERED / CLOSED; only the owner closes; nobody writes in a CLOSED ticket; admins get a bulk
+SMS «تیکتی با موضوع ${title} ارسال شده است.» like Darik's `sendPurchasedNotifyMessage`.
+User's answers: an owner message on an ANSWERED ticket puts it back to PENDING; the SMS goes
+on **every** owner message (opening included); the new .env key is the sms.ir sender line;
+admins may attach photos too.
+
+Backend:
+- `prisma/schema/ticket.prisma`: `Ticket` (shopId, title, status, updatedAt bumped by every
+  message), `TicketMessage` (fromAdmin, body, `imageUrls String[]`), enum `TicketStatus`.
+  `db push` applied to the dev DB.
+- Config `smsIrLineNumber` (digits) in `.env` / `.env.example`, next to `smsIrOtpTemplate`;
+  `Config.adminPhoneNumberList()`. `SmsIrService.sendBulkMessage(mobiles, text)`: never throws,
+  logs the text, sends nothing with `sendSms=false`.
+- `modules/ticket`: admin (`ticket/readTickets` with optional status, `readTicket`,
+  `answerTicket` → ANSWERED) and owner (`shop-panel/createTicket`, `readMyTickets`,
+  `readMyTicket`, `sendMyTicketMessage` → PENDING + SMS, `closeMyTicket`). Owners only reach
+  their own shop's tickets (others → TicketNotFound). Writing is a conditional update on
+  "not CLOSED", so a close that lands at the same moment wins (TicketClosed).
+- Image URLs must be in our bucket's `zar-imen/` folder (`ImageBucketService.isOwnImageUrl`,
+  else InvalidTicketImage); at most 2 (DTO). Owners sign uploads via `shop-panel/createMyImageUpload`.
+- 7 tests in `ticket.service.test.ts`.
+
+Frontend:
+- `lib/upload-image.ts` now takes the signing action (admin's or owner's).
+- Owner: nav «پشتیبانی», `/panel/tickets` (list), `/panel/tickets/new`, `/panel/tickets/<id>`
+  (thread, reply, «بستن تیکت» with a confirm).
+- Admin: nav «تیکت‌ها», `/panel/tickets` (status filter chips), `/panel/tickets/<id>`.
+- `components/ticket/*` shared by both sides; `components/shad/textarea.tsx` added.
+- `src/api` regenerated with `pnpm api` (this also replaced the hand-edited ShopPublicInfoModel).
+

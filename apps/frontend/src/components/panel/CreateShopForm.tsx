@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 import { ImagePlus, X } from "lucide-react"
 import { isValidNationalCode, isValidPhoneNumber, isValidSubdomain, RESERVED_SUBDOMAINS } from "@zar-imen/shared"
-import { createShop } from "@/app/panel/(admin)/shops/actions"
+import { createImageUpload, createShop } from "@/app/panel/(admin)/shops/actions"
 import { Button } from "@/components/shad/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/shad/form"
 import { Input } from "@/components/shad/input"
@@ -73,7 +73,7 @@ export function CreateShopForm({ rootDomain }: { rootDomain: string }) {
     async function onLogoSelected(file: File | undefined) {
         if (!file) return
         setUploading(true)
-        const result = await uploadImage(file)
+        const result = await uploadImage(file, createImageUpload)
         setUploading(false)
         if (result.error)
             toast.error(result.error)

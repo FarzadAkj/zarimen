@@ -14,6 +14,7 @@ import { ImageUploadModule } from "./modules/image-upload/image-upload.module"
 import { SettingModule } from "./modules/setting/setting.module"
 import { ShopModule } from "./modules/shop/shop.module"
 import { SubscriptionModule } from "./modules/subscription/subscription.module"
+import { TicketModule } from "./modules/ticket/ticket.module"
 import { WalletModule } from "./modules/wallet/wallet.module"
 
 @Module({
@@ -30,6 +31,7 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 				secret: config.smsIrSecret,
 				sendSms: config.sendSms === "true",
 				otpTemplate: config.smsIrOtpTemplate,
+				lineNumber: config.smsIrLineNumber,
 			}),
 		}),
 		ShahkarModule,
@@ -48,6 +50,7 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 		ShopModule,
 		CustomerModule,
 		SubscriptionModule,
+		TicketModule,
 		ImageUploadModule,
 	],
 })

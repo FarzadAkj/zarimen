@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { ServiceCostSettingsModel, MySubscriptionModel, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
+import type { CreateImageUploadInput, CreateImageUploadOutput, CreateTicketInput, ReadTicketsOutput, ServiceCostSettingsModel, MySubscriptionModel, TicketModel, TicketStatus, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
 import { cache } from "react"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -145,6 +145,77 @@ export async function readServiceCosts(): Promise<ServerResponse<ServiceCostSett
     const api = await takeApi()
     try {
         const { data } = await api.shopPanel.readServiceCosts()
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+// ---- tickets (<subdomain>.zarimen.ir/panel/tickets)
+
+/** Signs one photo upload for a ticket message (see lib/upload-image). */
+export async function createMyImageUpload(input: CreateImageUploadInput): Promise<ServerResponse<CreateImageUploadOutput>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.createMyImageUpload(input)
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readMyTickets(page: number, status?: TicketStatus): Promise<ServerResponse<ReadTicketsOutput>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readMyTickets({ page, status })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readMyTicket(ticketId: string): Promise<ServerResponse<TicketModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readMyTicket({ ticketId })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** Opens a ticket with its first message; the admins get an SMS. */
+export async function createTicket(input: CreateTicketInput): Promise<ServerResponse<TicketModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.createTicket(input)
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** Bound to a ticket id by the page: `sendMyTicketMessage.bind(null, id)`. */
+export async function sendMyTicketMessage(ticketId: string, input: { body: string, imageUrls: string[] }): Promise<ServerResponse<TicketModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.sendMyTicketMessage({ ticketId, ...input })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function closeMyTicket(ticketId: string): Promise<ServerResponse<TicketModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.closeMyTicket({ ticketId })
         return { data }
     }
     catch (error: any) {

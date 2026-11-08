@@ -65,4 +65,9 @@ export class ImageBucketService {
 
 		return { uploadUrl, headers, publicUrl }
 	}
+
+	/** Whether `url` points at an image this app could have uploaded (our bucket, our folder). */
+	isOwnImageUrl(url: string) {
+		return url.startsWith(`${this.config.imageBucketBaseUrl.replace(/\/$/, "")}/${IMAGE_FOLDER}`)
+	}
 }

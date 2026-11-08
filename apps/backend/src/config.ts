@@ -45,7 +45,11 @@ export class Config {
 
 	/** Whether `phoneNumber` is one of `adminPhoneNumbers`. */
 	isAdminPhoneNumber(phoneNumber: string) {
-		return this.adminPhoneNumbers.split(",").some(admin => admin.trim() === phoneNumber)
+		return this.adminPhoneNumberList().includes(phoneNumber)
+	}
+
+	adminPhoneNumberList() {
+		return this.adminPhoneNumbers.split(",").map(admin => admin.trim())
 	}
 
 	// ---- sms.ir
@@ -56,6 +60,10 @@ export class Config {
 	/** sms.ir "verify" template id of the OTP message; the template has one `CODE` parameter. */
 	@IsString()
 	public smsIrOtpTemplate!: string
+
+	/** sms.ir sender line number for plain-text bulk messages (the admins' new-ticket notice). */
+	@Matches(/^\d+$/, { message: "smsIrLineNumber must be the digits of an sms.ir line number" })
+	public smsIrLineNumber!: string
 
 	/** "false" logs the OTP to the console instead of sending it (local development). */
 	@IsIn(["true", "false"])
