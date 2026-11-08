@@ -11,6 +11,9 @@ import { publicApi } from "@/lib/public-api"
 export const metadata: Metadata = {
     title: "زر ایمن | احراز هویت مشتریان طلافروشی پیش از صدور فاکتور",
     description: "استعلام شاهکار، تأیید شماره موبایل و تطبیق کارت بانکی مشتری با کد ملی، در صفحه اختصاصی فروشگاه شما.",
+    other: {
+        enamad: "8594365",
+    },
 }
 
 /** Plans are re-read from the backend at most every 5 minutes. */
@@ -240,6 +243,23 @@ export default async function HomePage() {
             <footer className="border-t">
                 <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:justify-between">
                     <SiteLogo className="[&_span]:text-base" markClassName="h-7" />
+                    <a
+                        referrerPolicy="origin"
+                        target="_blank"
+                        rel="noopener"
+                        href="https://trustseal.enamad.ir/?id=8594365&Code=rzVrOIyDAt9Z8MeaT9GynPG6hb2i9obH"
+                        className="flex h-24 items-center justify-center"
+                    >
+                        {/* plain <img>: enamad checks the zarimen.ir referrer, next/image would proxy it */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            referrerPolicy="origin"
+                            src="https://trustseal.enamad.ir/logo.aspx?id=8594365&Code=rzVrOIyDAt9Z8MeaT9GynPG6hb2i9obH"
+                            alt="نماد اعتماد الکترونیکی"
+                            className="max-h-full max-w-full cursor-pointer object-contain"
+                            {...{ code: "rzVrOIyDAt9Z8MeaT9GynPG6hb2i9obH" }}
+                        />
+                    </a>
                     <span>© {new Date().getFullYear().toLocaleString("fa-IR", { useGrouping: false })} زر ایمن — zarimen.ir</span>
                 </div>
             </footer>

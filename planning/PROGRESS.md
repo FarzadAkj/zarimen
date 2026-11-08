@@ -509,3 +509,14 @@ needs node_modules), unlike Darik's scp-the-dist script.
 - Favicon: `src/app/icon.png` (transparent, square) and `src/app/apple-icon.png` (white bg),
   generated from the logo. If the logo changes, regenerate them.
 - `proxy.ts` matcher skips `images/`, `icon.png`, `apple-icon.png` so they also load on shop subdomains.
+
+## Deploy fixes + enamad (2026-11-08)
+
+- `NEXT_PUBLIC_SERVER_ADDRESS` must have no trailing slash (it caused `//auth/...` 404s on the
+  server); noted in `docs/DEPLOY.md`.
+- `turbo.json` build inputs include `.env*`, so an env change is no longer a cache hit.
+- Plan / service-price admin actions also `revalidatePath("/")` (the landing page lists them).
+- enamad trust seal (id 8594365) in the landing page footer + `enamad` meta tag, same markup as
+  Darik's footer. Plain `<img>` on purpose (enamad checks the referrer).
+- Site-ownership file `zarimen.ir/75213451.txt` is served by nginx from `/var/www/zarimen-verify`
+  (server-only, not in the repo).
