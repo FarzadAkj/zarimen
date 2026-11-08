@@ -13,13 +13,12 @@ export class SmsIrService {
 	/**
 	 * Sends `code` with the OTP template. Throws when sms.ir rejects the request, so the
 	 * caller can tell the user instead of making them wait for a code that never comes.
-	 * With `sendSms=false` the code is only printed to the console.
+	 * The code is always printed to the console; with `sendSms=false` nothing is sent.
 	 */
 	async sendOTPMessage(phoneNumber: string, code: string) {
-		if (!this.config.sendSms) {
-			logger.log(`Sms OTP for ${phoneNumber} is: ${code}`)
+		logger.log(`Sms OTP for ${phoneNumber} is: ${code}`)
+		if (!this.config.sendSms)
 			return
-		}
 
 		const response = await fetch("https://api.sms.ir/v1/send/verify", {
 			method: "POST",

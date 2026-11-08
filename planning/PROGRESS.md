@@ -25,7 +25,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 7b  | Admin moves a shop's end date (later only); no subscription → no customer data | done |
 | 7c  | Owner dashboard shows Shahkar / SMS prices | done |
 | 7d  | Separate price for bank card checks (CardMatch) | done |
-| 8   | zarimen.ir landing page (+ /blog placeholder, contact links) | done — logo + contacts pending |
+| 8   | zarimen.ir landing page (+ /blog placeholder, contact links) | done — contacts pending |
 
 ## Step log
 
@@ -380,7 +380,7 @@ the user to buy. User chose: **direct contact links only** (no form).
 - Frontend `src/app/page.tsx` (root host): sticky header (logo, anchors, «تماس برای خرید»),
   hero, «چطور کار می‌کند» (3 steps), «با زر ایمن چه به دست می‌آورید» (8 benefits), blog
   teaser → `/blog`, plans (live, `revalidate = 300`, `publicApi()` without cookies), contact.
-- `components/site/SiteLogo.tsx`: placeholder (gem icon + «زر ایمن") — swap in the real logo here.
+- `components/site/SiteLogo.tsx`: logo image (`LogoMark`) + «زر ایمن» — see "Logo" below.
 - `components/site/ContactLinks.tsx`: `CONTACT_PHONE` (tel:), `CONTACT_WHATSAPP` (wa.me),
   `CONTACT_TELEGRAM` (t.me) from apps/frontend/.env; empty ones hidden.
 - `/blog`: placeholder page until the blog is specified.
@@ -490,10 +490,22 @@ needs node_modules), unlike Darik's scp-the-dist script.
 - Customers cannot remove a card; the owner's customer list is not paginated yet.
 - Full card numbers at rest: consider encrypting the column.
 - Shop staff logins (only the owner phone can log in now).
-- Landing page: real logo (SiteLogo) and CONTACT_* values in apps/frontend/.env; the blog.
+- OTP codes are always printed to the backend console (even with `sendSms=true`), so they
+  also end up in the PM2 logs in production. Decide whether to keep that before launch.
+- Landing page: CONTACT_* values in apps/frontend/.env; the blog.
 - Production: the reverse proxy must forward the original `Host` header
   (nginx `proxy_set_header Host $host;`) and DNS needs a wildcard `*.zarimen.ir` record +
   wildcard TLS certificate, since routing is by Host.
 - Editing a shop's details is not built (only create + enable/disable were asked for).
 - No git repo initialised yet.
 - All product questions in `planning/product.md` → "Open questions".
+
+## Logo (2026-11-08)
+
+- Logo file: `apps/frontend/public/images/logo.png` (white background, portrait).
+- `components/site/SiteLogo.tsx`: `LogoMark` (the image, `mix-blend-multiply` hides the white
+  background) replaces the lucide `Gem` placeholder in `SiteLogo` (header, footer, /blog);
+  the landing hero shows it big.
+- Favicon: `src/app/icon.png` (transparent, square) and `src/app/apple-icon.png` (white bg),
+  generated from the logo. If the logo changes, regenerate them.
+- `proxy.ts` matcher skips `images/`, `icon.png`, `apple-icon.png` so they also load on shop subdomains.

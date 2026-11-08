@@ -74,5 +74,5 @@ function notFound() {
 
 export const config = {
     // everything except Next's own assets and static files
-    matcher: ["/((?!_next/|favicon.ico|fonts/).*)"],
+    matcher: ["/((?!_next/|favicon.ico|icon.png|apple-icon.png|fonts/|images/).*)"],
 }

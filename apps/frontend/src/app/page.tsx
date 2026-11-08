@@ -4,7 +4,7 @@ import Link from "next/link"
 import { BadgeCheck, CreditCard, FileSearch, Gift, Globe, MessageSquareText, Newspaper, ShieldCheck, Smartphone, Store, Users, Wallet } from "lucide-react"
 import { Button } from "@/components/shad/button"
 import { ContactLinks } from "@/components/site/ContactLinks"
-import { SiteLogo } from "@/components/site/SiteLogo"
+import { LogoMark, SiteLogo } from "@/components/site/SiteLogo"
 import { formatAmount, formatDuration } from "@/lib/format"
 import { publicApi } from "@/lib/public-api"
 
@@ -90,6 +90,7 @@ export default async function HomePage() {
                 {/* hero */}
                 <section className="bg-gradient-to-b from-primary/15 via-primary/5 to-background">
                     <div className="mx-auto grid max-w-6xl gap-6 px-4 py-20 text-center justify-items-center">
+                        <LogoMark priority className="h-40 sm:h-56" />
                         <span className="rounded-full border border-primary/30 bg-background/70 px-4 py-1 text-sm text-primary">
                             ویژه طلافروشی‌ها، گالری‌های جواهر و نقره
                         </span>
@@ -238,7 +239,7 @@ export default async function HomePage() {
 
             <footer className="border-t">
                 <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:justify-between">
-                    <SiteLogo className="[&_svg]:size-5 [&_span]:text-base" />
+                    <SiteLogo className="[&_span]:text-base" markClassName="h-7" />
                     <span>© {new Date().getFullYear().toLocaleString("fa-IR", { useGrouping: false })} زر ایمن — zarimen.ir</span>
                 </div>
             </footer>
