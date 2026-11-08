@@ -153,7 +153,8 @@ CONTACT_TELEGRAM = your_username
 ```
 
 `NEXT_PUBLIC_*` values are built **into** the frontend bundle. After changing one, rebuild
-(step 6), not only restart.
+(step 6), not only restart. `NEXT_PUBLIC_SERVER_ADDRESS` must have **no trailing slash**
+(`https://api.zarimen.ir`, not `…/`); otherwise every request goes to `//auth/...` and 404s.
 
 ---
 
