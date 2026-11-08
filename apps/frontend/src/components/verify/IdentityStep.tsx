@@ -15,7 +15,7 @@ type Errors = Partial<Record<keyof SignupDetails, string>>
 function validate(details: SignupDetails): Errors {
     const errors: Errors = {}
     if (!isValidNationalCode(details.ssn))
-        errors.ssn = details.ssn.length === 10 ? "کد ملی معتبر نیست." : "کد ملی ۱۰ رقم است."
+        errors.ssn = "کد ملی معتبر نیست."
     if (!isValidPhoneNumber(details.phoneNumber))
         errors.phoneNumber = "شماره موبایل ۱۱ رقم و با ۰۹ شروع می‌شود."
     if (!isValidJalaliDate(details.birthDate))

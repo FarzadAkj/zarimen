@@ -24,7 +24,7 @@ The user drives the work one step at a time. Do only the step you were given.
    (`apps/backend/package.json` or `apps/frontend/package.json`), never "just in case".
 5. **Every step ends green:** `pnpm verify` (build + typecheck + test). Then stop and
    report. Do not commit unless the user says so.
-6. **Test logic, not static data.** Validators (national-code checksum, Luhn card
+6. **Test logic, not static data.** Validators (national-code format, Luhn card
    check, phone normalisation), state transitions and error paths — yes. Constants — no.
 
 ---

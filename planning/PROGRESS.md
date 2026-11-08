@@ -611,3 +611,10 @@ Frontend:
 - Mishap: `lib/public-api.ts` (the cookie-less `publicApi()`) was overwritten by mistake and
   restored word for word from Next's dev source maps.
 
+
+### National code: 10 digits only (2026-11-08)
+
+- `isValidNationalCode` (packages/shared) now only checks for exactly 10 digits; the
+  check-digit test is gone, by the user's choice: Shahkar decides whether a code is real.
+  Same function in the browser (shop form, customer verification) and the backend
+  (`@IsNationalCode`). Error text: «کد ملی ۱۰ رقم است.»

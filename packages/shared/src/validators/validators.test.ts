@@ -6,29 +6,17 @@ import { isValidPhoneNumber } from "./phone-number"
 import { isValidSubdomain } from "./subdomain"
 
 describe("isValidNationalCode", () => {
-	it("accepts codes with a correct check digit", () => {
-		expect(isValidNationalCode("0499370899")).toBe(true) // remainder >= 2
-		expect(isValidNationalCode("0790419904")).toBe(true)
+	it("accepts any 10 digits (the rest is Shahkar's job)", () => {
+		expect(isValidNationalCode("0499370899")).toBe(true)
+		expect(isValidNationalCode("0499370898")).toBe(true)
+		expect(isValidNationalCode("1111111111")).toBe(true)
 	})
 
-	it("handles the remainder < 2 branch", () => {
-		// 3*3 + 1*2 = 11 → remainder 0 → check digit must be 0
-		expect(isValidNationalCode("0000000310")).toBe(true)
-		expect(isValidNationalCode("0000000319")).toBe(false)
-		// 4*3 = 12 → remainder 1 → check digit must be 1
-		expect(isValidNationalCode("0000000401")).toBe(true)
-		expect(isValidNationalCode("0000000410")).toBe(false)
-	})
-
-	it("rejects a wrong check digit", () => {
-		expect(isValidNationalCode("0499370898")).toBe(false)
-	})
-
-	it("rejects all-same-digit codes, wrong length and non-digits", () => {
-		expect(isValidNationalCode("1111111111")).toBe(false)
+	it("rejects wrong length and non-digits", () => {
 		expect(isValidNationalCode("049937089")).toBe(false)
 		expect(isValidNationalCode("04993708990")).toBe(false)
 		expect(isValidNationalCode("04993708a9")).toBe(false)
+		expect(isValidNationalCode("")).toBe(false)
 	})
 })
 
