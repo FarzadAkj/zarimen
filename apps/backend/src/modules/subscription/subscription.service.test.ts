@@ -81,15 +81,16 @@ describe("subscriptionService purchase", () => {
 	let zarinpal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
 	let service: SubscriptionService
 
-	function setup(subscriptionEndsAt: Date | null) {
+	function setup(subscriptionEndsAt: Date | null, vatPercent = 0) {
 		prisma = createPrisma(subscriptionEndsAt)
+		const settings = { getSetting: async () => ({ vatPercent }) }
 		zarinpal = {
 			requestPayment: vi.fn(async () => ({ ok: true, authority: "S0001" })),
 			verifyPayment: vi.fn(async () => ({ ok: true, code: 100, refId: "888", cardPan: null })),
 			gatewayUrl: (authority: string) => `https://sandbox.zarinpal.com/pg/StartPay/${authority}`,
 		}
 		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010", backendUrl: "http://127.0.0.1:8010" })
-		service = new SubscriptionService(prisma as never, zarinpal as never, config, new ErrorService())
+		service = new SubscriptionService(prisma as never, zarinpal as never, settings as never, config, new ErrorService())
 	}
 
 	beforeEach(() => setup(null))
@@ -101,6 +102,17 @@ describe("subscriptionService purchase", () => {
 			callbackUrl: "http://127.0.0.1:8010/subscription/purchaseCallback",
 		}))
 		expect(prisma.purchases[0]).toMatchObject({ status: "PENDING", planTitle: "یک‌ماهه", durationDays: 30 })
+	})
+
+	it("adds the VAT to the plan's price at the gateway and verifies the same total", async () => {
+		setup(null, 10)
+		await service.startPurchase("shop-1", "month")
+		expect(zarinpal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 2_200_000 }))
+		expect(prisma.purchases[0]).toMatchObject({ vatAmount: 200_000 })
+		expect(prisma.purchases[0]!.price.toNumber()).toBe(2_000_000)
+
+		expect(await service.handlePurchaseCallback("S0001", "OK")).toContain("purchase=success")
+		expect(zarinpal.verifyPayment).toHaveBeenCalledWith({ amount: 2_200_000, authority: "S0001" })
 	})
 
 	it("refuses a disabled plan", async () => {

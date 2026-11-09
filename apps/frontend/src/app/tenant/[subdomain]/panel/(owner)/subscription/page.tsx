@@ -6,7 +6,7 @@ import { SubscriptionSummary } from "@/components/shop-panel/SubscriptionSummary
 import { parsePage } from "@/components/shop-panel/WalletTransactionsTable"
 import { formatAmount, formatDuration } from "@/lib/format"
 import { formatDate } from "@/lib/format-date"
-import { readAvailablePlans, readMySubscription, readMySubscriptionPurchases } from "../../actions"
+import { readAvailablePlans, readMySubscription, readMySubscriptionPurchases, readVat } from "../../actions"
 
 type Params = { purchase?: string, plan?: string, endsAt?: string, refId?: string, reason?: string, page?: string }
 
@@ -23,10 +23,11 @@ const FAILURE_REASONS: Record<string, string> = {
 export default async function ShopSubscriptionPage({ searchParams }: { searchParams: Promise<Params> }) {
     const params = await searchParams
     const page = parsePage(params.page)
-    const [subscription, plans, purchases] = await Promise.all([
+    const [subscription, plans, purchases, vat] = await Promise.all([
         readMySubscription(),
         readAvailablePlans(),
         readMySubscriptionPurchases(page),
+        readVat(),
     ])
 
     return (
@@ -62,12 +63,15 @@ export default async function ShopSubscriptionPage({ searchParams }: { searchPar
             <Card>
                 <CardHeader>
                     <CardTitle>خرید اشتراک</CardTitle>
-                    <CardDescription>اگر اشتراک فعال دارید، مدت طرح جدید به انتهای آن اضافه می‌شود.</CardDescription>
+                    <CardDescription>
+                        اگر اشتراک فعال دارید، مدت طرح جدید به انتهای آن اضافه می‌شود.
+                        {vat.data && vat.data.vatPercent > 0 && ` ${vat.data.vatPercent.toLocaleString("fa-IR")}٪ مالیات بر ارزش افزوده به قیمت‌ها اضافه می‌شود.`}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {!plans.data && <p className="text-destructive">{plans.error?.translation}</p>}
-                    {plans.data && !plans.data.length && <p className="text-muted-foreground">در حال حاضر طرحی برای خرید وجود ندارد.</p>}
-                    {plans.data && plans.data.length > 0 && (
+                    {(!plans.data || !vat.data) && <p className="text-destructive">{(plans.error ?? vat.error)?.translation}</p>}
+                    {plans.data && vat.data && !plans.data.length && <p className="text-muted-foreground">در حال حاضر طرحی برای خرید وجود ندارد.</p>}
+                    {plans.data && vat.data && plans.data.length > 0 && (
                         <div className="grid gap-3 sm:grid-cols-2">
                             {plans.data.map(plan => (
                                 <div key={plan.id} className="grid gap-3 rounded-xl border p-4">
@@ -76,7 +80,7 @@ export default async function ShopSubscriptionPage({ searchParams }: { searchPar
                                         <p className="text-sm text-muted-foreground">{formatDuration(plan.durationDays)}</p>
                                     </div>
                                     <p className="text-xl font-bold text-primary">{formatAmount(plan.price)}</p>
-                                    <BuyPlanButton planId={plan.id} />
+                                    <BuyPlanButton planId={plan.id} planTitle={plan.title} price={Number(plan.price)} vatPercent={vat.data!.vatPercent} />
                                 </div>
                             ))}
                         </div>

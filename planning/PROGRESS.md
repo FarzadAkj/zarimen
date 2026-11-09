@@ -33,6 +33,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 11b | SMS link to the owner when an admin writes in their ticket | done |
 | 12  | Admin notices: a CLOSED ticket to every enabled shop + bulk SMS | done — `db push` applied to the dev DB |
 | 13  | Admin panel on phones + admin edits a shop (not subdomain / mobile / national code) | done |
+| 14  | VAT (مالیات بر ارزش افزوده) on top-ups and subscriptions, default 10% | done — `db push` applied to the dev DB |
 
 ## Step log
 
@@ -746,3 +747,28 @@ Edit shop:
   Reached from «ویرایش» on the shop view and a pencil next to each shop name in the list.
   `updateShop` action revalidates every page (`revalidatePath("/", "layout")`).
 
+### Step 14 — VAT on Zarinpal payments (2026-11-10)
+
+Asked for: an admin setting «مالیات بر ارزش افزوده» (default 10%). Before going to the gateway, the
+owner sees the amount, the VAT and the total. Example: top-up 50,000 Tomans → VAT 5,000 → Zarinpal
+charges 55,000 Tomans (550,000 Rials); a 10,000,000 plan → 1,000,000 VAT.
+
+- `packages/shared/src/vat.ts`: `DEFAULT_VAT_PERCENT = 10`, `vatOf(amount, percent)` (rounded to a
+  whole Toman). Used by the backend to charge and by the dialog to display, so they can't differ.
+  3 tests.
+- Setting `VatSettingsModel { vatPercent }` (int 0–100), key `VAT_SETTINGS_KEY`. Endpoints:
+  `setting/readVatSettings` + `setting/setVatSettings` (admin), `shop-panel/readVat` (owner).
+- Schema: `vatAmount Decimal @default(0)` on `WalletTransaction` (TOP_UP) and `SubscriptionPurchase`.
+  `db push` done on the dev DB.
+- `startTopUp` / `startPurchase` read the percent when the payment starts, store `vatAmount` and ask
+  Zarinpal for amount + VAT. Callbacks verify with the stored amount + vatAmount. **The wallet is
+  credited only `amount`** (the VAT is not wallet money); the plan `price` stays the pre-VAT price.
+- The backend uses the percent in force when the payment starts. If the admin changes it between
+  the dialog opening and «پرداخت», the gateway amount follows the new value.
+- Frontend: «مالیات بر ارزش افزوده» card on `/panel/settings` (with a 50,000 example);
+  `PaymentConfirmDialog` (amount, VAT %, total in Tomans + gateway total in Rials) opened by
+  `WalletTopUpForm` and `BuyPlanButton`; the subscription page notes that VAT is added.
+  `formatRials` in `lib/format.ts`.
+- Not changed: transaction / purchase history still shows the pre-VAT amounts (vatAmount is stored
+  if it should be shown later).
+- 2 backend tests (top-up: gateway 55,000, wallet +50,000; purchase: gateway 2,200,000).

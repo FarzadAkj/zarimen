@@ -43,6 +43,10 @@ export interface ServiceCostSettingsModel {
   /** Tomans per SMS sent to a customer. */
   smsCost: number;
 }
+export interface VatSettingsModel {
+  /** Whole percent added to the amount the owner pays (10 → 50,000 + 5,000 Tomans). */
+  vatPercent: number;
+}
 export interface StartWalletTopUpInput {
   /**
    * Tomans to add to the wallet
@@ -649,6 +653,29 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
     /**
+     * No description
+     *
+     * @tags Setting
+     * @name ReadVatSettings
+     * @request POST:/setting/readVatSettings
+     * @secure
+     */
+    readVatSettings: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<VatSettingsModel, any>>;
+    /**
+     * No description
+     *
+     * @tags Setting
+     * @name SetVatSettings
+     * @request POST:/setting/setVatSettings
+     * @secure
+     */
+    setVatSettings: (
+      data: VatSettingsModel,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<VatSettingsModel, any>>;
+    /**
      * @description Public: what each Shahkar check, card check and SMS costs a shop.
      *
      * @tags PublicServiceCost
@@ -706,6 +733,17 @@ export declare class Api<
     readServiceCosts: (
       params?: RequestParams,
     ) => Promise<HttpResponse<ServiceCostSettingsModel, any>>;
+    /**
+     * @description The VAT percent added to top-ups and subscription purchases (shown before paying).
+     *
+     * @tags ShopServiceCost
+     * @name ReadVat
+     * @request POST:/shop-panel/readVat
+     * @secure
+     */
+    readVat: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<VatSettingsModel, any>>;
     /**
      * @description Returns the Zarinpal url to add `amount` Tomans to the owner's wallet.
      *

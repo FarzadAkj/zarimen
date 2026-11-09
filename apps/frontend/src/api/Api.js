@@ -282,6 +282,40 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
+     * No description
+     *
+     * @tags Setting
+     * @name ReadVatSettings
+     * @request POST:/setting/readVatSettings
+     * @secure
+     */
+    readVatSettings: (params = {}) =>
+      this.request({
+        path: `/setting/readVatSettings`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags Setting
+     * @name SetVatSettings
+     * @request POST:/setting/setVatSettings
+     * @secure
+     */
+    setVatSettings: (data, params = {}) =>
+      this.request({
+        path: `/setting/setVatSettings`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
      * @description Public: what each Shahkar check, card check and SMS costs a shop.
      *
      * @tags PublicServiceCost
@@ -360,6 +394,22 @@ export class Api extends HttpClient {
     readServiceCosts: (params = {}) =>
       this.request({
         path: `/shop-panel/readServiceCosts`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description The VAT percent added to top-ups and subscription purchases (shown before paying).
+     *
+     * @tags ShopServiceCost
+     * @name ReadVat
+     * @request POST:/shop-panel/readVat
+     * @secure
+     */
+    readVat: (params = {}) =>
+      this.request({
+        path: `/shop-panel/readVat`,
         method: "POST",
         secure: true,
         format: "json",

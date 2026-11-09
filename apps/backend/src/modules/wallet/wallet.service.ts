@@ -4,14 +4,16 @@ import type { ReadWalletTransactionsOutput, WalletTransactionModel } from "./mod
 import { Injectable } from "@nestjs/common"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { WalletTransactionStatus, WalletTransactionType } from "@prisma/client"
+import { vatOf } from "@zar-imen/shared"
 import { SoftwareName } from "~/common/constants"
 import { Config } from "~/config"
 import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { ZarinpalService } from "~/libs/zarinpal/zarinpal.service"
-import { SERVICE_COST_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
+import { SERVICE_COST_SETTINGS_KEY, VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
 import { ServiceCostSettingsModel } from "../setting/model/service-cost-settings.model"
+import { VatSettingsModel } from "../setting/model/vat-settings.model"
 import { SettingService } from "../setting/setting.service"
 import { PENDING_TOP_UP_TTL_MINUTES, WALLET_TRANSACTIONS_PAGE_SIZE } from "./constants/wallet.constants"
 import { WalletErrors } from "./constants/wallet.errors"
@@ -101,10 +103,12 @@ export class WalletService {
 	}
 
 	/**
-	 * Starts a Zarinpal payment of `amount` Tomans; once verified by `GET /wallet/topUpCallback`,
-	 * it is added to the shop's wallet.
+	 * Starts a Zarinpal payment of `amount` Tomans plus the admin's VAT; once verified by
+	 * `GET /wallet/topUpCallback`, `amount` (without the VAT) is added to the shop's wallet.
 	 */
 	async startTopUp(shopId: string, amount: number): Promise<WalletTopUpModel> {
+		const { vatPercent } = await this.settings.getSetting(VAT_SETTINGS_KEY, VatSettingsModel)
+		const vatAmount = vatOf(amount, vatPercent)
 		const shop = await this.prisma.shop.findUniqueOrThrow({
 			where: { id: shopId },
 			select: { ownerPhoneNumber: true, subdomain: true, wallet: { select: { id: true } } },
@@ -116,13 +120,14 @@ export class WalletService {
 				type: WalletTransactionType.TOP_UP,
 				status: WalletTransactionStatus.PENDING,
 				amount,
+				vatAmount,
 			},
 		})
 
 		let request: Awaited<ReturnType<ZarinpalService["requestPayment"]>>
 		try {
 			request = await this.zarinpal.requestPayment({
-				amount,
+				amount: amount + vatAmount,
 				description: `${SoftwareName} - شارژ کیف پول ${shop.subdomain}`,
 				orderId: topUp.id,
 				callbackUrl: new URL("/wallet/topUpCallback", this.config.backendUrl).toString(),
@@ -175,7 +180,7 @@ export class WalletService {
 
 		let verification: Awaited<ReturnType<ZarinpalService["verifyPayment"]>>
 		try {
-			verification = await this.zarinpal.verifyPayment({ amount: Number(amount), authority })
+			verification = await this.zarinpal.verifyPayment({ amount: topUp.amount.add(topUp.vatAmount).toNumber(), authority })
 		}
 		catch (e) {
 			// Stays PENDING: Zarinpal reverses unverified payments, and nothing was credited.

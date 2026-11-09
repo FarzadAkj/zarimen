@@ -4,12 +4,16 @@ import type { MySubscriptionModel, ReadSubscriptionPurchasesOutput, Subscription
 import { Injectable } from "@nestjs/common"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { SubscriptionPurchaseStatus } from "@prisma/client"
+import { vatOf } from "@zar-imen/shared"
 import { SoftwareName } from "~/common/constants"
 import { Config } from "~/config"
 import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { ZarinpalService } from "~/libs/zarinpal/zarinpal.service"
+import { VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
+import { VatSettingsModel } from "../setting/model/vat-settings.model"
+import { SettingService } from "../setting/setting.service"
 import { ADMIN_EXTENSION_TITLE, adminExtension, extendSubscription, hasActiveSubscription, PENDING_PURCHASE_TTL_MINUTES, SUBSCRIPTION_PURCHASES_PAGE_SIZE } from "./constants/subscription"
 import { SubscriptionErrors } from "./constants/subscription.errors"
 
@@ -26,6 +30,7 @@ export class SubscriptionService {
 	constructor(
 		private prisma: PrismaService,
 		private zarinpal: ZarinpalService,
+		private settings: SettingService,
 		private config: Config,
 		private error: ErrorService,
 	) { }
@@ -79,21 +84,25 @@ export class SubscriptionService {
 		return { data: data.map(row => this.toPurchaseModel(row)), count, pageSize: SUBSCRIPTION_PURCHASES_PAGE_SIZE }
 	}
 
-	/** Starts a Zarinpal payment for an active plan; verified by `GET /subscription/purchaseCallback`. */
+	/** Starts a Zarinpal payment for an active plan, plus the admin's VAT; verified by `GET /subscription/purchaseCallback`. */
 	async startPurchase(shopId: string, planId: string): Promise<SubscriptionPurchaseStartedModel> {
 		const plan = await this.prisma.subscriptionPlan.findUnique({ where: { id: planId } })
 		if (!plan?.isActive)
 			throw this.error.throwErrorToClient(SubscriptionErrors.PlanNotFound)
 
+		const { vatPercent } = await this.settings.getSetting(VAT_SETTINGS_KEY, VatSettingsModel)
+		const price = plan.price.toNumber()
+		const vatAmount = vatOf(price, vatPercent)
+
 		const shop = await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId }, select: { ownerPhoneNumber: true, subdomain: true } })
 		const purchase = await this.prisma.subscriptionPurchase.create({
-			data: { shopId, planId, planTitle: plan.title, price: plan.price, durationDays: plan.durationDays },
+			data: { shopId, planId, planTitle: plan.title, price: plan.price, vatAmount, durationDays: plan.durationDays },
 		})
 
 		let request: Awaited<ReturnType<ZarinpalService["requestPayment"]>>
 		try {
 			request = await this.zarinpal.requestPayment({
-				amount: plan.price.toNumber(),
+				amount: price + vatAmount,
 				description: `${SoftwareName} - ${plan.title} - ${shop.subdomain}`,
 				orderId: purchase.id,
 				callbackUrl: new URL("/subscription/purchaseCallback", this.config.backendUrl).toString(),
@@ -144,7 +153,7 @@ export class SubscriptionService {
 
 		let verification: Awaited<ReturnType<ZarinpalService["verifyPayment"]>>
 		try {
-			verification = await this.zarinpal.verifyPayment({ amount: purchase.price.toNumber(), authority })
+			verification = await this.zarinpal.verifyPayment({ amount: purchase.price.add(purchase.vatAmount).toNumber(), authority })
 		}
 		catch (e) {
 			// Stays PENDING: Zarinpal reverses unverified payments, and nothing was extended.

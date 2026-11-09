@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { CheckCardManuallyInput, ManualCardCheckModel, CreateImageUploadInput, CreateImageUploadOutput, CreateTicketInput, ReadTicketsOutput, ServiceCostSettingsModel, MySubscriptionModel, TicketModel, TicketStatus, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
+import type { CheckCardManuallyInput, ManualCardCheckModel, CreateImageUploadInput, CreateImageUploadOutput, CreateTicketInput, ReadTicketsOutput, ServiceCostSettingsModel, VatSettingsModel, MySubscriptionModel, TicketModel, TicketStatus, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
 import { cache } from "react"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -157,6 +157,18 @@ export async function readServiceCosts(): Promise<ServerResponse<ServiceCostSett
     const api = await takeApi()
     try {
         const { data } = await api.shopPanel.readServiceCosts()
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** The VAT percent added to top-ups and subscription purchases (set by the admin), shown before paying. */
+export async function readVat(): Promise<ServerResponse<VatSettingsModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readVat()
         return { data }
     }
     catch (error: any) {

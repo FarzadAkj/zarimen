@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Config } from "~/config"
 import { GlobalError } from "~/libs/error/classes/global-error"
 import { ErrorService } from "~/libs/error/error.service"
+import { VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
 import { ServiceCostSettingsModel } from "../setting/model/service-cost-settings.model"
+import { VatSettingsModel } from "../setting/model/vat-settings.model"
 import { WalletService } from "./wallet.service"
 import "reflect-metadata"
 
@@ -84,10 +86,11 @@ describe("walletService", () => {
 	let zarinpal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
 	let wallet: WalletService
 
-	function setup(balance: number, shahkarCost: number, smsCost: number, cardMatchCost = 700) {
+	function setup(balance: number, shahkarCost: number, smsCost: number, cardMatchCost = 700, vatPercent = 0) {
 		prisma = createPrisma(balance)
 		const costs = Object.assign(new ServiceCostSettingsModel(), { shahkarCost, smsCost, cardMatchCost })
-		const settings = { getSetting: async () => costs }
+		const vat = Object.assign(new VatSettingsModel(), { vatPercent })
+		const settings = { getSetting: async (key: string) => key === VAT_SETTINGS_KEY ? vat : costs }
 		zarinpal = {
 			requestPayment: vi.fn(async () => ({ ok: true, authority: "A0001" })),
 			verifyPayment: vi.fn(async () => ({ ok: true, code: 100, refId: "777", cardPan: "6037**1234" })),
@@ -165,6 +168,18 @@ describe("walletService", () => {
 			expect(zarinpal.verifyPayment).toHaveBeenCalledWith({ amount: 50_000, authority: "A0001" })
 			expect(prisma.wallet.balance).toBe(55_000)
 			expect(prisma.rows[0]).toMatchObject({ status: "SUCCESS", refId: "777" })
+		})
+
+		it("charges the VAT on top at the gateway, but credits only the amount", async () => {
+			setup(5000, 1000, 200, 700, 10)
+			await wallet.startTopUp("shop-1", 50_000)
+			expect(zarinpal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 55_000 }))
+			expect(prisma.rows[0]).toMatchObject({ vatAmount: 5_000 })
+			expect(prisma.rows[0]!.amount.toNumber()).toBe(50_000)
+
+			expect(await wallet.handleTopUpCallback("A0001", "OK")).toContain("amount=50000")
+			expect(zarinpal.verifyPayment).toHaveBeenCalledWith({ amount: 55_000, authority: "A0001" })
+			expect(prisma.wallet.balance).toBe(55_000)
 		})
 
 		it("credits only once when the callback comes twice", async () => {

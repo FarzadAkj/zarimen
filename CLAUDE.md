@@ -113,7 +113,8 @@ Anything only one app uses lives in that app, not in `packages/shared`.
 - Customer actions go through `CustomerService.findActiveShop` (enabled + subscribed).
 - Zarinpal payments: each kind has its own callback under `backendUrl` and redirects back to
   `shopSiteUrl`; completion is conditional on PENDING (idempotent); a cron cancels PENDING
-  rows older than 20 minutes.
+  rows older than 20 minutes. Every payment adds the admin's VAT (`vatOf` from `@zar-imen/shared`,
+  stored as `vatAmount`); Zarinpal charges and verifies amount + vatAmount, the wallet gets `amount`.
 - Dates shown to users are Jalali: `formatDate` / `formatDateTime` (`lib/format-date.ts`).
 - Owner and admin views of a shop share components; pass the data loaders as props
   (owner actions, or admin actions bound to the shopId).

@@ -7,6 +7,11 @@ export function toLatinDigits(value: string) {
 
 const numberFormat = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 })
 
+/** Tomans → "۵۵۰٬۰۰۰ ریال" (what Zarinpal's page shows). */
+export function formatRials(tomans: number) {
+    return `${numberFormat.format(tomans * 10)} ریال`
+}
+
 /** "1500000.50" → "۱٬۵۰۰٬۰۰۰٫۵" */
 export function formatAmount(value: string) {
     return `${numberFormat.format(Number(value))} تومان`

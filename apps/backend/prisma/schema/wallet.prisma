@@ -8,6 +8,9 @@ model WalletTransaction {
   /// Only top-ups are ever PENDING / FAILED / CANCELED; charges and adjustments are written as SUCCESS.
   status   WalletTransactionStatus @default(SUCCESS)
   amount   Decimal                 @db.Decimal(20, 0)
+  /// TOP_UP: VAT paid on top of `amount` (whole Tomans). Zarinpal charged amount + vatAmount;
+  /// only `amount` goes into the wallet.
+  vatAmount Decimal                @default(0) @db.Decimal(20, 0)
 
   /// SERVICE_CHARGE: what was paid for, and for which customer.
   service     PaidService?

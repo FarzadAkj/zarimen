@@ -4,7 +4,7 @@ import { CheckCircle2, XCircle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shad/card"
 import { WalletTopUpForm } from "@/components/shop-panel/WalletTopUpForm"
 import { formatAmount } from "@/lib/format"
-import { readMyShop } from "../../actions"
+import { readMyShop, readVat } from "../../actions"
 
 type Params = { topUp?: string, amount?: string, refId?: string, reason?: string }
 
@@ -20,7 +20,7 @@ const FAILURE_REASONS: Record<string, string> = {
  */
 export default async function ShopWalletPage({ searchParams }: { searchParams: Promise<Params> }) {
     const params = await searchParams
-    const { data: shop } = await readMyShop()
+    const [{ data: shop }, vat] = await Promise.all([readMyShop(), readVat()])
     if (!shop) redirect("/panel/login")
 
     return (
@@ -57,7 +57,9 @@ export default async function ShopWalletPage({ searchParams }: { searchParams: P
                     <CardTitle>افزایش موجودی</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <WalletTopUpForm />
+                    {vat.data
+                        ? <WalletTopUpForm vatPercent={vat.data.vatPercent} />
+                        : <p className="text-destructive">{vat.error?.translation}</p>}
                 </CardContent>
             </Card>
         </div>
