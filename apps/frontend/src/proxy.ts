@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { me } from "./app/panel/login/actions"
 import { readMyShop } from "./app/tenant/[subdomain]/panel/actions"
 import { parseHost } from "./lib/host"
+import { safeNextPath } from "./lib/next-path"
 import { TOKEN_COOKIE } from "./lib/session"
 
 /** zarimen.ir in production, localhost:3010 in development. Shops live on <subdomain>.ROOT_DOMAIN. */
@@ -49,18 +50,22 @@ export async function proxy(request: NextRequest) {
 }
 
 /**
- * Logged in → the login page bounces to /panel, other pages are served.
- * Not logged in → the login page is served, other pages bounce to the login page
- * (dropping a stale / invalid token).
+ * Logged in → the login page bounces to its `next` (or /panel), other pages are served.
+ * Not logged in → the login page is served, other pages bounce to the login page with
+ * `?next=<the page>` so login returns there (dropping a stale / invalid token).
  */
 async function guard(request: NextRequest, isLoggedIn: () => Promise<boolean>, serve = () => NextResponse.next()) {
     const loggedIn = request.cookies.has(TOKEN_COOKIE) && await isLoggedIn()
 
     if (request.nextUrl.pathname === LOGIN_PATH)
-        return loggedIn ? NextResponse.redirect(new URL("/panel", request.url)) : serve()
+        return loggedIn ? NextResponse.redirect(new URL(safeNextPath(request.nextUrl.searchParams.get("next")), request.url)) : serve()
 
     if (!loggedIn) {
-        const res = NextResponse.redirect(new URL(LOGIN_PATH, request.url))
+        const login = new URL(LOGIN_PATH, request.url)
+        const next = request.nextUrl.pathname + request.nextUrl.search
+        if (next !== "/panel")
+            login.searchParams.set("next", next)
+        const res = NextResponse.redirect(login)
         res.cookies.delete(TOKEN_COOKIE)
         return res
     }

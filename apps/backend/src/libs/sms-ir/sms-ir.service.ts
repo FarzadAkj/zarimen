@@ -31,6 +31,14 @@ export class SmsIrService {
 	}
 
 	/**
+	 * Tells the shop owner a customer added a card; the template links to
+	 * https://#SUBDOMAIN#.zarimen.ir/panel/customers?ssn=#SSN# (filtered, cards dialog open).
+	 */
+	sendCardAdded(phoneNumber: string, subdomain: string, ssn: string) {
+		return this.sendTemplate(phoneNumber, this.config.cardAddedTemplate, { SUBDOMAIN: subdomain, SSN: ssn })
+	}
+
+	/**
 	 * sms.ir "verify" send: `template` with its #NAME# parameters. Throws when sms.ir refuses,
 	 * so the caller can tell the user. With `sendSms=false` it is only logged.
 	 */

@@ -19,19 +19,25 @@ const SEARCH_DELAY_MS = 1000
  * Search box + customers table. Typing filters by any part of the national code or the
  * mobile number; only the table reloads. Used by the shop owner and by the admin viewing a
  * shop: each passes server actions that load *that* shop's customers and cards.
+ * `initial` may already be filtered by `initialQuery`; the customer whose national code is
+ * `openCardsOfSsn` gets their cards dialog opened on arrival.
  */
-export function CustomersBrowser({ initial, loadCustomers, loadCards }: {
+export function CustomersBrowser({ initial, initialQuery = "", openCardsOfSsn, loadCustomers, loadCards }: {
     initial: ShopCustomerModel[]
+    initialQuery?: string
+    openCardsOfSsn?: string
     loadCustomers: (search: string) => Promise<ServerResponse<ShopCustomerModel[]>>
     loadCards: (customerId: string) => Promise<ServerResponse<ShopCustomerCardModel[]>>
 }) {
-    const [query, setQuery] = useState("")
+    const [query, setQuery] = useState(initialQuery)
+    /** Whose cards open by themselves: only on arrival, until the owner's first search. */
+    const [autoOpenSsn, setAutoOpenSsn] = useState(openCardsOfSsn)
     const [customers, setCustomers] = useState(initial)
     const [loading, setLoading] = useState(false)
     /** The search the table's rows are for (drives the "nothing found" text). */
-    const [shownQuery, setShownQuery] = useState("")
+    const [shownQuery, setShownQuery] = useState(initialQuery)
     /** The search the table shows or is loading; a query equal to it needs no request. */
-    const searched = useRef("")
+    const searched = useRef(initialQuery)
     /** Bumped per search, so a slow older response cannot overwrite a newer one. */
     const latest = useRef(0)
 
@@ -40,6 +46,7 @@ export function CustomersBrowser({ initial, loadCustomers, loadCards }: {
         const timer = setTimeout(async () => {
             const search = query
             searched.current = search
+            setAutoOpenSsn(undefined)
             const id = ++latest.current
             setLoading(true)
             const { data, error } = await loadCustomers(search)
@@ -94,7 +101,7 @@ export function CustomersBrowser({ initial, loadCustomers, loadCards }: {
                                     <TableCell dir="ltr" className="text-end font-mono">{customer.phoneNumber}</TableCell>
                                     <TableCell dir="ltr" className="text-end">{customer.birthDate}</TableCell>
                                     <TableCell>
-                                        <CustomerCardsDialog customerId={customer.id} ssn={customer.ssn} cardCount={customer.cardCount} loadCards={loadCards} />
+                                        <CustomerCardsDialog customerId={customer.id} ssn={customer.ssn} cardCount={customer.cardCount} loadCards={loadCards} openOnMount={customer.ssn === autoOpenSsn} />
                                     </TableCell>
                                     <TableCell>{formatDateTime(customer.firstSeenAt)}</TableCell>
                                     <TableCell>{formatDateTime(customer.lastSeenAt)}</TableCell>

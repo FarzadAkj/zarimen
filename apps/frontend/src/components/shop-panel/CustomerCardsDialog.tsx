@@ -1,7 +1,7 @@
 "use client"
 import type { ShopCustomerCardModel } from "@/api/Api"
 import type { ServerResponse } from "@/app/types"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { CreditCard, Eye } from "lucide-react"
 import { Button } from "@/components/shad/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/shad/dialog"
@@ -11,18 +11,29 @@ import { formatCardNumber } from "@/lib/format"
 /**
  * The card count in the customers table, with an eye button that opens the customer's
  * cards with their full numbers. The numbers are fetched only when the dialog opens.
+ * `openOnMount`: opened as soon as the row appears (the owner came from an SMS link).
  */
-export function CustomerCardsDialog({ customerId, ssn, cardCount, loadCards }: {
+export function CustomerCardsDialog({ customerId, ssn, cardCount, loadCards, openOnMount = false }: {
     customerId: string
     ssn: string
     cardCount: number
     loadCards: (customerId: string) => Promise<ServerResponse<ShopCustomerCardModel[]>>
+    openOnMount?: boolean
 }) {
+    const [open, setOpen] = useState(false)
     const [cards, setCards] = useState<ShopCustomerCardModel[]>()
     const [error, setError] = useState<string>()
 
-    async function onOpenChange(open: boolean) {
-        if (!open) return
+    useEffect(() => {
+        if (openOnMount && cardCount)
+            onOpenChange(true)
+        // only on arrival: later searches must not reopen it
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    async function onOpenChange(next: boolean) {
+        setOpen(next)
+        if (!next) return
         setCards(undefined)
         setError(undefined)
         const result = await loadCards(customerId)
@@ -36,7 +47,7 @@ export function CustomerCardsDialog({ customerId, ssn, cardCount, loadCards }: {
         return <span className="text-muted-foreground">۰</span>
 
     return (
-        <Dialog onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <div className="flex items-center gap-1">
                 <span>{cardCount.toLocaleString("fa-IR")}</span>
                 <DialogTrigger asChild>

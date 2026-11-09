@@ -35,6 +35,7 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 				lineNumber: config.smsIrLineNumber,
 				shopRejectedTemplate: config.smsIrShopRejectedTemplate,
 				shopWelcomeTemplate: config.smsIrShopWelcomeTemplate,
+				cardAddedTemplate: config.smsIrCardAddedTemplate,
 			}),
 		}),
 		ShahkarModule,

@@ -12,6 +12,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/shad/input-o
 import { Label } from "@/components/shad/label"
 import { Spinner } from "@/components/shad/spinner"
 import { toLatinDigits } from "@/lib/format"
+import { safeNextPath } from "@/lib/next-path"
 
 type Props = {
     title: string
@@ -22,7 +23,7 @@ type Props = {
     exchangeOtp: (phoneNumber: string, code: string) => Promise<ServerResponse<true>>
 }
 
-/** Two-step SMS login (phone → 6-digit code) for the admin panel and the shop panels. Lands on /panel. */
+/** Two-step SMS login (phone → 6-digit code) for the admin panel and the shop panels. Lands on `?next=` (a /panel page) or /panel. */
 export function OtpLoginCard({ title, description, logoUrl, sendOtp, exchangeOtp }: Props) {
     const router = useRouter()
     const [phoneNumber, setPhoneNumber] = useState("")
@@ -64,7 +65,7 @@ export function OtpLoginCard({ title, description, logoUrl, sendOtp, exchangeOtp
             toast.error(error?.translation)
             return
         }
-        router.replace("/panel")
+        router.replace(safeNextPath(new URLSearchParams(window.location.search).get("next")))
         router.refresh()
     }
 

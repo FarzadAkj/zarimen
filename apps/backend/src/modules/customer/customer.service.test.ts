@@ -19,7 +19,7 @@ type Link = { customerId: string, shopId: string, lastSeenAt: Date }
 function createPrisma() {
 	const subscribed = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 	const shops = [
-		{ id: "shop-1", subdomain: "setoode", isActive: true, subscriptionEndsAt: subscribed },
+		{ id: "shop-1", subdomain: "setoode", ownerPhoneNumber: "09350000001", isActive: true, subscriptionEndsAt: subscribed },
 		{ id: "shop-2", subdomain: "rahimi", isActive: true, subscriptionEndsAt: subscribed },
 		{ id: "shop-3", subdomain: "closed", isActive: false, subscriptionEndsAt: subscribed },
 		{ id: "shop-4", subdomain: "expired", isActive: true, subscriptionEndsAt: new Date(Date.now() - 1000) },
@@ -91,6 +91,7 @@ describe("customerService", () => {
 	let shahkar: { verifyMobileNationalCode: ReturnType<typeof vi.fn>, verifyCardMatch: ReturnType<typeof vi.fn> }
 	let otp: { send: ReturnType<typeof vi.fn>, consume: ReturnType<typeof vi.fn> }
 	let wallet: { assertCanAfford: ReturnType<typeof vi.fn>, charge: ReturnType<typeof vi.fn> }
+	let sms: { sendCardAdded: ReturnType<typeof vi.fn> }
 	let jwt: JwtService
 	let service: CustomerService
 
@@ -105,8 +106,9 @@ describe("customerService", () => {
 			assertCanAfford: vi.fn(async () => {}),
 			charge: vi.fn((_bill: unknown, _service: string, run: () => Promise<unknown>) => run()),
 		}
+		sms = { sendCardAdded: vi.fn(async () => {}) }
 		jwt = new JwtService({ secret: "x".repeat(32) })
-		service = new CustomerService(prisma as never, shahkar as never, otp as never, wallet as never, jwt, new ErrorService())
+		service = new CustomerService(prisma as never, shahkar as never, otp as never, wallet as never, sms as never, jwt, new ErrorService())
 	})
 
 	const signup = async (subdomain = "setoode", details = { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }) => {
@@ -229,6 +231,31 @@ describe("customerService", () => {
 			expect(prisma.cards).toHaveLength(0)
 		})
 
+		it("texts the owner the shop's subdomain and the customer's national code, billed as an SMS", async () => {
+			await service.addCard("customer-1", "shop-1", CARD)
+			expect(sms.sendCardAdded).toHaveBeenCalledWith("09350000001", "setoode", SSN)
+			expect(wallet.charge).toHaveBeenLastCalledWith({ shopId: "shop-1", customerSsn: SSN }, "SMS", expect.any(Function))
+		})
+
+		it("keeps the card when the owner's SMS cannot be paid or sent", async () => {
+			wallet.charge
+				.mockImplementationOnce((_bill: unknown, _service: string, run: () => Promise<unknown>) => run())
+				.mockRejectedValueOnce(new GlobalError({ module: "WalletModule", message: "InsufficientBalance" }))
+			const { cards } = await service.addCard("customer-1", "shop-1", CARD)
+			expect(cards).toHaveLength(1)
+			expect(sms.sendCardAdded).not.toHaveBeenCalled()
+
+			sms.sendCardAdded.mockRejectedValueOnce(new Error("sms.ir down"))
+			const second = await service.addCard("customer-1", "shop-1", "6037991899999999")
+			expect(second.cards).toHaveLength(2)
+		})
+
+		it("does not text the owner about a card CardMatch rejects", async () => {
+			shahkar.verifyCardMatch.mockResolvedValueOnce({ matched: false })
+			await errorCode(service.addCard("customer-1", "shop-1", CARD))
+			expect(sms.sendCardAdded).not.toHaveBeenCalled()
+		})
+
 		it("refuses the same card twice without asking CardMatch again", async () => {
 			await service.addCard("customer-1", "shop-1", CARD)
 			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD))).toBe("CardAlreadyAdded")
@@ -302,7 +329,7 @@ describe("customerService", () => {
 		it("bills a card check at the card price, not the Shahkar price", async () => {
 			await signup()
 			await service.addCard("customer-1", "shop-1", CARD)
-			expect(wallet.charge).toHaveBeenLastCalledWith({ shopId: "shop-1", customerSsn: SSN }, "CARD_MATCH", expect.any(Function))
+			expect(wallet.charge).toHaveBeenCalledWith({ shopId: "shop-1", customerSsn: SSN }, "CARD_MATCH", expect.any(Function))
 		})
 
 		it("reports an unpaid CardMatch as InsufficientBalance, not as the identity service being down", async () => {

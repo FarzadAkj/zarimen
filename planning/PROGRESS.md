@@ -29,6 +29,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 9   | Support tickets (owner ↔ admins) + SMS notice to admins | done |
 | 10  | Public shop requests (/signup) → admin "Check and Insert" | done |
 | 10b | Owner «استعلام دستی»: one-off CardMatch from the customers page | done |
+| 11  | SMS link to the owner after each added card | done |
 
 ## Step log
 
@@ -646,4 +647,32 @@ fails). That row is the only DB write.
   card-check price; InsufficientBalance → link to `/panel/wallet`. The result is cleared on
   any edit and when the modal closes. Not added to the admin's view of a shop.
 - `src/api` regenerated with `pnpm api`.
+
+### Step 11 — SMS link to the owner after a customer adds a card (2026-11-09) — client side
+
+Asked for: after each card a customer adds, the owner gets an SMS with a link; the link opens
+the owner's panel with the customer's national code filtered and that customer's cards dialog
+open. Client side first; the user then creates the sms.ir template and gives its id.
+
+Link: `https://<subdomain>.zarimen.ir/panel/customers?ssn=<10-digit national code>`
+(backend builds it from `shopSiteUrl`).
+
+- Customers page reads `?ssn=` (10 digits, else ignored), loads the list already filtered by it
+  on the server, and `CustomersBrowser` shows it in the search box. The row with that exact
+  national code opens `CustomerCardsDialog` by itself (`openOnMount`), only on arrival: the
+  owner's first search turns it off.
+- Logged-out owners: `proxy.ts` sends them to `/panel/login?next=<page + query>`; after login
+  `OtpLoginCard` goes to `next`. `lib/next-path.ts` `safeNextPath` only accepts our own `/panel…`
+  paths (not the login page, not `//host`), else `/panel` (tested). Works for the admin panel too.
+
+Backend (2026-11-10): sms.ir template **449513**, text links to
+`https://#SUBDOMAIN#.zarimen.ir/panel/customers?ssn=#SSN#` (two parameters).
+- Config `smsIrCardAddedTemplate` in `.env`, `.env.example`, DEPLOY.md;
+  `SmsIrService.sendCardAdded(phone, subdomain, ssn)`.
+- `CustomerService.addCard` → after the card is saved, `notifyOwnerOfCard` texts the shop's
+  `ownerPhoneNumber`. Charged at the SMS price through `WalletService.charge` (the CLAUDE.md
+  rule for customer-triggered costs; the user did not answer this question, so tell them).
+  Empty wallet or sms.ir failure → logged and skipped, the card stays added.
+- 3 tests (sent with the right values + billed as SMS; card kept when unpaid / sms.ir down;
+  no SMS for a rejected card).
 

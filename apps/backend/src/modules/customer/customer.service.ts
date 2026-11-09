@@ -11,8 +11,10 @@ import { JwtService } from "@nestjs/jwt"
 import { PaidService } from "@prisma/client"
 import { GlobalError } from "~/libs/error/classes/global-error"
 import { ErrorService } from "~/libs/error/error.service"
+import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { ShahkarService } from "~/libs/shahkar/shahkar.service"
+import { SmsIrService } from "~/libs/sms-ir/sms-ir.service"
 import { OtpService } from "../auth/otp.service"
 import { hasActiveSubscription } from "../subscription/constants/subscription"
 import { WalletService } from "../wallet/wallet.service"
@@ -28,7 +30,8 @@ type SignupDetails = { ssn: string, phoneNumber: string, birthDate: string }
  * 1. startSignup: Shahkar (phone ↔ national code), then an SMS code. Skips Shahkar when the
  *    national code + birth date + phone are already saved together.
  * 2. completeSignup: the code → customer saved (unique by national code) + linked to the shop
- * 3. readMyCards / addCard: cards confirmed by CardMatch (card ↔ national code + birth date)
+ * 3. readMyCards / addCard: cards confirmed by CardMatch (card ↔ national code + birth date);
+ *    each added card texts the shop owner a link to that customer's cards
  * Returning customers skip 1-2 with startLogin / completeLogin (phone + SMS code).
  * Every Shahkar / CardMatch call and every SMS is paid from the shop's wallet (WalletService).
  */
@@ -39,6 +42,7 @@ export class CustomerService {
 		private shahkar: ShahkarService,
 		private otp: OtpService,
 		private wallet: WalletService,
+		private sms: SmsIrService,
 		private jwt: JwtService,
 		private error: ErrorService,
 	) { }
@@ -122,7 +126,7 @@ export class CustomerService {
 	 * birth date. The check is paid by `shopId`, the shop the customer's session is on.
 	 */
 	async addCard(customerId: string, shopId: string, cardNumber: string): Promise<CustomerCardsModel> {
-		await this.findActiveShop({ id: shopId })
+		const shop = await this.findActiveShop({ id: shopId })
 		const customer = await this.prisma.customer.findUniqueOrThrow({ where: { id: customerId } })
 
 		if (await this.prisma.customerCard.exists({ customerId, cardNumber }))
@@ -135,7 +139,23 @@ export class CustomerService {
 		}), CustomerErrors.CardNotOwned)
 
 		await this.prisma.customerCard.create({ data: { customerId, cardNumber } })
+		await this.notifyOwnerOfCard(shop, customer.ssn)
 		return this.readMyCards(customerId)
+	}
+
+	/**
+	 * Texts the shop owner a link to the customer's cards (smsIrCardAddedTemplate), paid from the
+	 * shop's wallet at the SMS price. A notice only: when the wallet cannot pay or sms.ir fails,
+	 * it is skipped and the customer's card stays added.
+	 */
+	private async notifyOwnerOfCard(shop: { id: string, subdomain: string, ownerPhoneNumber: string }, ssn: string) {
+		try {
+			await this.wallet.charge({ shopId: shop.id, customerSsn: ssn }, PaidService.SMS, () =>
+				this.sms.sendCardAdded(shop.ownerPhoneNumber, shop.subdomain, ssn))
+		}
+		catch (e) {
+			logger.warn(`[customer] card-added SMS to shop ${shop.subdomain} skipped: ${e instanceof GlobalError ? e.errorContext.message : (e as Error).message}`)
+		}
 	}
 
 	/**
@@ -217,7 +237,7 @@ export class CustomerService {
 
 	/** The shop, if it is enabled and subscribed; every customer action goes through this. */
 	private async findActiveShop(where: { subdomain: string } | { id: string }) {
-		const shop = await this.prisma.shop.findUnique({ where, select: { id: true, isActive: true, subscriptionEndsAt: true } })
+		const shop = await this.prisma.shop.findUnique({ where, select: { id: true, subdomain: true, ownerPhoneNumber: true, isActive: true, subscriptionEndsAt: true } })
 		if (!shop)
 			throw this.error.throwErrorToClient(CustomerErrors.ShopNotFound)
 		if (!shop.isActive)

@@ -73,6 +73,13 @@ export class Config {
 	@IsString()
 	public smsIrShopWelcomeTemplate!: string
 
+	/**
+	 * sms.ir verify template telling a shop owner a customer added a card; `SUBDOMAIN` and `SSN`
+	 * parameters, used in the link https://#SUBDOMAIN#.zarimen.ir/panel/customers?ssn=#SSN#.
+	 */
+	@IsString()
+	public smsIrCardAddedTemplate!: string
+
 	/** "false" logs the OTP to the console instead of sending it (local development). */
 	@IsIn(["true", "false"])
 	public sendSms!: string
