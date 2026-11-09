@@ -253,6 +253,35 @@ describe("customerService", () => {
 		})
 	})
 
+	describe("owner's manual card check", () => {
+		const details = { ssn: SSN, birthDate: BIRTH, cardNumber: CARD }
+
+		it("asks CardMatch, bills the card price to the owner's shop and saves nothing", async () => {
+			expect(await service.checkCardManually("shop-1", details)).toEqual({ matched: true, bankName: "بانک ملی ایران" })
+			expect(shahkar.verifyCardMatch).toHaveBeenCalledWith({ nationalCode: SSN, birthDate: "1370/1/5", cardNumber: CARD })
+			expect(wallet.charge).toHaveBeenCalledWith({ shopId: "shop-1", customerSsn: SSN }, "CARD_MATCH", expect.any(Function))
+			expect(prisma.customers).toHaveLength(0)
+			expect(prisma.cards).toHaveLength(0)
+		})
+
+		it("returns a mismatch as a result, not an error", async () => {
+			shahkar.verifyCardMatch.mockResolvedValueOnce({ matched: false })
+			expect(await service.checkCardManually("shop-1", details)).toMatchObject({ matched: false })
+		})
+
+		it("reports an unpaid check as InsufficientBalance and an unreachable CardMatch as unavailable", async () => {
+			wallet.charge.mockRejectedValueOnce(new GlobalError({ module: "WalletModule", message: "InsufficientBalance" }))
+			expect(await errorCode(service.checkCardManually("shop-1", details))).toBe("InsufficientBalance")
+			shahkar.verifyCardMatch.mockRejectedValueOnce(new Error("down"))
+			expect(await errorCode(service.checkCardManually("shop-1", details))).toBe("IdentityServiceUnavailable")
+		})
+
+		it("refuses a shop without a running subscription before any paid call", async () => {
+			expect(await errorCode(service.checkCardManually("shop-4", details))).toBe("SubscriptionInactive")
+			expect(wallet.charge).not.toHaveBeenCalled()
+		})
+	})
+
 	describe("billing", () => {
 		const insufficient = () => new GlobalError({ module: "WalletModule", message: "InsufficientBalance" })
 

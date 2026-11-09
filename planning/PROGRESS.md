@@ -28,6 +28,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 8   | zarimen.ir landing page (+ /blog placeholder, contact links) | done — contacts pending |
 | 9   | Support tickets (owner ↔ admins) + SMS notice to admins | done |
 | 10  | Public shop requests (/signup) → admin "Check and Insert" | done |
+| 10b | Owner «استعلام دستی»: one-off CardMatch from the customers page | done |
 
 ## Step log
 
@@ -627,3 +628,22 @@ Frontend:
   a long brand name leaves too little room.
 - Page grids (dashboard, subscription, wallet, `ticket/TicketPage`) use `grid-cols-1` so a
   wide table can't stretch the page; tables already scroll inside their own container.
+
+### Step 10b — Owner «استعلام دستی» (2026-11-09)
+
+Asked for: a «استعلام دستی» button on the owner's customers page; a modal takes national code,
+birth date and card number, asks CardMatch and shows only whether the card is verified. Nothing
+saved; the wallet must cover it. User's answer: it is **charged** at the CardMatch price, like
+a customer's card check (one wallet-history row with the national code, refunded if api.ir
+fails). That row is the only DB write.
+
+- Backend: `shop-panel/checkCardManually` (`ShopCustomersController`, so IsShopOwner +
+  HasActiveSubscription) → `CustomerService.checkCardManually` → `{ matched, bankName }`.
+  A mismatch is a result, not an error. `verify` now sits on a shared `paidCheck` (wallet
+  charge + IdentityServiceUnavailable mapping). 4 tests.
+- Frontend: `components/shop-panel/ManualCardCheckDialog.tsx` in the customers card header
+  (`CardAction`), shown only when the customer list loaded (active subscription). Shows the
+  card-check price; InsufficientBalance → link to `/panel/wallet`. The result is cleared on
+  any edit and when the modal closes. Not added to the admin's view of a shop.
+- `src/api` regenerated with `pnpm api`.
+

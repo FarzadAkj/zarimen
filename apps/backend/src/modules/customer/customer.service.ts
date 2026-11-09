@@ -3,6 +3,7 @@ import type { Bill } from "../wallet/wallet.service"
 import type { CustomerJwtPayload, SignupTicketPayload } from "./constants/customer.constants"
 import type { CustomerCardModel, CustomerCardsModel } from "./model/customer-card.model"
 import type { CustomerTokenModel } from "./model/customer-token.model"
+import type { ManualCardCheckModel } from "./model/manual-card-check.model"
 import type { ShopCustomerCardModel, ShopCustomerModel } from "./model/shop-customer.model"
 import type { SignupStartedModel } from "./model/signup-started.model"
 import { Injectable } from "@nestjs/common"
@@ -138,6 +139,21 @@ export class CustomerService {
 	}
 
 	/**
+	 * The owner's «استعلام دستی»: CardMatch for any national code + birth date + card, paid by
+	 * the shop at the card-check price (its wallet history names the national code). Nothing
+	 * else is saved: the result is only returned.
+	 */
+	async checkCardManually(shopId: string, details: { ssn: string, birthDate: string, cardNumber: string }): Promise<ManualCardCheckModel> {
+		await this.findActiveShop({ id: shopId })
+		const matched = await this.paidCheck({ shopId, customerSsn: details.ssn }, PaidService.CARD_MATCH, () => this.shahkar.verifyCardMatch({
+			nationalCode: details.ssn,
+			birthDate: toCardMatchDate(details.birthDate),
+			cardNumber: details.cardNumber,
+		}))
+		return { matched, bankName: getBankName(details.cardNumber) }
+	}
+
+	/**
 	 * The shop owner's customers, most recently seen first. `search` (digits) matches
 	 * anywhere in the national code or the mobile number. Cards are only counted here.
 	 */
@@ -224,9 +240,15 @@ export class CustomerService {
 	 * (still paid: the check was done), unavailable when it cannot answer (refunded).
 	 */
 	private async verify(bill: Bill, service: PaidService, check: () => Promise<{ matched: boolean }>, mismatch: (typeof CustomerErrors)[keyof typeof CustomerErrors]) {
-		let matched: boolean
+		if (!await this.paidCheck(bill, service, check))
+			throw this.error.throwErrorToClient(mismatch)
+	}
+
+	/** Runs `check` paid by the shop's wallet; whether it matched (a mismatch is still paid). */
+	private async paidCheck(bill: Bill, service: PaidService, check: () => Promise<{ matched: boolean }>): Promise<boolean> {
 		try {
-			({ matched } = await this.wallet.charge(bill, service, check))
+			const { matched } = await this.wallet.charge(bill, service, check)
+			return matched
 		}
 		catch (e) {
 			// e.g. the shop's wallet cannot pay for the check
@@ -234,8 +256,6 @@ export class CustomerService {
 				throw e
 			throw this.error.throwErrorToClient(CustomerErrors.IdentityServiceUnavailable, e as Error)
 		}
-		if (!matched)
-			throw this.error.throwErrorToClient(mismatch)
 	}
 
 	private toCardModel(card: { id: string, cardNumber: string, createdAt: Date }): CustomerCardModel {

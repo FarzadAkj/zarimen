@@ -470,6 +470,24 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
+     * @description Manual inquiry: CardMatch for a national code + birth date + card, paid from the shop's wallet. Nothing is saved but the wallet charge.
+     *
+     * @tags ShopCustomers
+     * @name CheckCardManually
+     * @request POST:/shop-panel/checkCardManually
+     * @secure
+     */
+    checkCardManually: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/checkCardManually`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
      * @description Plans the owner can buy.
      *
      * @tags ShopSubscription

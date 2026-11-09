@@ -271,6 +271,21 @@ export interface ShopCustomerCardModel {
   /** @format date-time */
   createdAt: string;
 }
+export interface CheckCardManuallyInput {
+  /** @example "0499370899" */
+  ssn: string;
+  /**
+   * Jalali YYYY/MM/DD
+   * @example "1370/01/05"
+   */
+  birthDate: string;
+  /** @example "6037997599999993" */
+  cardNumber: string;
+}
+export interface ManualCardCheckModel {
+  matched: boolean;
+  bankName: string | null;
+}
 export interface ReadShopCustomersInput {
   /** @example "0912" */
   search?: string;
@@ -720,6 +735,18 @@ export declare class Api<
       data: ReadMyCustomerCardsInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
+    /**
+     * @description Manual inquiry: CardMatch for a national code + birth date + card, paid from the shop's wallet. Nothing is saved but the wallet charge.
+     *
+     * @tags ShopCustomers
+     * @name CheckCardManually
+     * @request POST:/shop-panel/checkCardManually
+     * @secure
+     */
+    checkCardManually: (
+      data: CheckCardManuallyInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ManualCardCheckModel, any>>;
     /**
      * @description Plans the owner can buy.
      *

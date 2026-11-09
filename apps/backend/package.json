@@ -10,7 +10,7 @@
 		"typecheck": "tsc --project ./tsconfig.json",
 		"lint": "eslint --fix .",
 		"test": "vitest run --passWithNoTests",
-		"db:push": "prisma db push",
+		"db:push": "npx prisma generate && npx prisma db push",
 		"db:migrate": "prisma migrate dev",
 		"db:studio": "prisma studio",
 		"postinstall": "prisma generate --no-hints"

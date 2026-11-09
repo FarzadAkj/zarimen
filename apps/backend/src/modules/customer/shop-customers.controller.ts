@@ -4,8 +4,10 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from "@nestjs/swagg
 import { IsShopOwner } from "../auth/guards/is-shop-owner.guard"
 import { HasActiveSubscription } from "../subscription/guards/has-active-subscription.guard"
 import { CustomerService } from "./customer.service"
+import { CheckCardManuallyInput } from "./dto/check-card-manually.input"
 import { ReadMyCustomerCardsInput } from "./dto/read-my-customer-cards.input"
 import { ReadMyCustomersInput } from "./dto/read-my-customers.input"
+import { ManualCardCheckModel } from "./model/manual-card-check.model"
 import { ShopCustomerCardModel, ShopCustomerModel } from "./model/shop-customer.model"
 
 /** The shop owner's view of their customers (<subdomain>.zarimen.ir/panel); needs a running subscription. */
@@ -29,5 +31,13 @@ export class ShopCustomersController {
 	@ApiResponse({ type: ShopCustomerCardModel, isArray: true, status: 200 })
 	readMyCustomerCards(@Req() request: ShopOwnerRequest, @Body() input: ReadMyCustomerCardsInput): Promise<ShopCustomerCardModel[]> {
 		return this.customer.readShopCustomerCards(request._shopOwner.shopId, input.customerId)
+	}
+
+	@Post("checkCardManually")
+	@ApiOperation({ operationId: "checkCardManually", description: "Manual inquiry: CardMatch for a national code + birth date + card, paid from the shop's wallet. Nothing is saved but the wallet charge." })
+	@ApiBody({ type: CheckCardManuallyInput })
+	@ApiResponse({ type: ManualCardCheckModel, status: 200 })
+	checkCardManually(@Req() request: ShopOwnerRequest, @Body() input: CheckCardManuallyInput): Promise<ManualCardCheckModel> {
+		return this.customer.checkCardManually(request._shopOwner.shopId, input)
 	}
 }
