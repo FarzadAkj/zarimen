@@ -17,6 +17,10 @@ export class TicketSummaryModel {
 	@ApiProperty({ type: String })
 	shopSubdomain!: string
 
+	/** A copy of an admins' notice: CLOSED, a single admin message. */
+	@ApiProperty({ type: Boolean })
+	isNotice!: boolean
+
 	@ApiProperty({ type: String, format: "date-time" })
 	createdAt!: Date
 
@@ -52,6 +56,42 @@ export class TicketModel extends TicketSummaryModel {
 export class ReadTicketsOutput {
 	@ApiProperty({ type: TicketSummaryModel, isArray: true })
 	data!: TicketSummaryModel[]
+
+	@ApiProperty({ type: Number })
+	count!: number
+
+	@ApiProperty({ type: Number })
+	pageSize!: number
+}
+
+export class TicketNoticeModel {
+	@ApiProperty({ type: String })
+	id!: string
+
+	@ApiProperty({ type: String })
+	title!: string
+
+	@ApiProperty({ type: String })
+	body!: string
+
+	@ApiProperty({ type: String, isArray: true })
+	imageUrls!: string[]
+
+	/** How many shops got a copy. */
+	@ApiProperty({ type: Number })
+	shopCount!: number
+
+	/** The owners' SMS text; null when none was sent. */
+	@ApiProperty({ type: String, nullable: true })
+	smsText!: string | null
+
+	@ApiProperty({ type: String, format: "date-time" })
+	createdAt!: Date
+}
+
+export class ReadNoticesOutput {
+	@ApiProperty({ type: TicketNoticeModel, isArray: true })
+	data!: TicketNoticeModel[]
 
 	@ApiProperty({ type: Number })
 	count!: number

@@ -45,7 +45,7 @@ export function TicketsTable({ result, page, pageHref, basePath, showShop }: {
                                     <span dir="ltr" className="block text-xs text-muted-foreground text-end">{ticket.shopSubdomain}</span>
                                 </TableCell>
                             )}
-                            <TableCell><TicketStatusBadge status={ticket.status} /></TableCell>
+                            <TableCell><TicketStatusBadge status={ticket.status} isNotice={ticket.isNotice} /></TableCell>
                             <TableCell>{formatDateTime(ticket.updatedAt)}</TableCell>
                         </TableRow>
                     ))}

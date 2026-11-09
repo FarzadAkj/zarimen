@@ -56,6 +56,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     PhoneNumberTaken: "این شماره موبایل قبلاً برای فروشگاه دیگری ثبت شده است.",
     TooManyRequests: "تعداد درخواست‌ها زیاد است؛ لطفاً یک ساعت دیگر دوباره تلاش کنید.",
     InvalidLogo: "لوگو معتبر نیست. دوباره آن را بارگذاری کنید.",
+    NoShopsToNotify: "هیچ فروشگاه فعالی برای دریافت اطلاعیه وجود ندارد.",
     TobeShopNotFound: "درخواست پیدا نشد.",
     TobeShopWrongStatus: "وضعیت این درخواست تغییر کرده است. صفحه را دوباره باز کنید.",
     TobeShopBusy: "این درخواست در حال بررسی است.",

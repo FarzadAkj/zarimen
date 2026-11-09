@@ -3,6 +3,9 @@ import { Inject, Injectable } from "@nestjs/common"
 import { logger } from "../logger"
 import { MODULE_OPTIONS_TOKEN } from "./config/sms-ir.module-builder"
 
+/** Numbers per sms.ir bulk request (their per-request limit, as we understand it). */
+const BULK_BATCH_SIZE = 100
+
 /**
  * sms.ir client (copied from Darik): OTP codes and plain-text bulk notices.
  */
@@ -73,15 +76,20 @@ export class SmsIrService {
 	}
 
 	/**
-	 * Sends `text` to every number in `mobiles` (sms.ir bulk send, from `lineNumber`).
-	 * A notice, not part of any flow: failures are logged, never thrown (like Darik's
-	 * sendPurchasedNotifyMessage). With `sendSms=false` the text is only logged.
+	 * Sends `text` to every number in `mobiles` (sms.ir bulk send, from `lineNumber`), in requests
+	 * of at most BULK_BATCH_SIZE numbers. A notice, not part of any flow: failures are logged,
+	 * never thrown (like Darik's sendPurchasedNotifyMessage). With `sendSms=false` the text is only logged.
 	 */
 	async sendBulkMessage(mobiles: string[], text: string) {
-		logger.log(`Sms to ${mobiles.join(", ")}: ${text}`)
+		logger.log(`Sms to ${mobiles.length} number(s): ${text}`)
 		if (!this.config.sendSms)
 			return
 
+		for (let i = 0; i < mobiles.length; i += BULK_BATCH_SIZE)
+			await this.sendBulkBatch(mobiles.slice(i, i + BULK_BATCH_SIZE), text)
+	}
+
+	private async sendBulkBatch(mobiles: string[], text: string) {
 		try {
 			const response = await fetch("https://api.sms.ir/v1/send/bulk", {
 				method: "POST",

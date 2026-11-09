@@ -8,12 +8,20 @@ import "reflect-metadata"
 const BUCKET = "https://bucket.example/zar-imen/"
 const ADMINS = ["09120000000", "09130000000"]
 
-type Ticket = { id: string, shopId: string, title: string, status: string, createdAt: Date, updatedAt: Date }
+type Ticket = { id: string, shopId: string, title: string, status: string, noticeId: string | null, createdAt: Date, updatedAt: Date }
 type Message = { id: string, ticketId: string, fromAdmin: boolean, body: string, imageUrls: string[], createdAt: Date }
 
 /** In-memory stand-in for the Prisma calls TicketService makes. */
 function createPrisma() {
 	const tickets: Ticket[] = []
+	const notices: { id: string, title: string, body: string, imageUrls: string[], shopCount: number, smsText: string | null, createdAt: Date }[] = []
+	/** shop-1 is the owner's shop used throughout; shop-2 shares its owner's phone; shop-3 is disabled. */
+	const shops = [
+		{ id: "shop-1", isActive: true, ownerPhoneNumber: "09350000001" },
+		{ id: "shop-2", isActive: true, ownerPhoneNumber: "09350000001" },
+		{ id: "shop-4", isActive: true, ownerPhoneNumber: "09350000004" },
+		{ id: "shop-3", isActive: false, ownerPhoneNumber: "09350000003" },
+	]
 	const messages: Message[] = []
 	const shop = { name: "طلای ستوده", subdomain: "setoode", ownerPhoneNumber: "09350000001" }
 
@@ -31,10 +39,28 @@ function createPrisma() {
 	const prisma = {
 		tickets,
 		messages,
+		shops,
+		shop: {
+			findMany: async ({ where }: { where: { isActive: boolean } }) => shops.filter(shop => shop.isActive === where.isActive),
+		},
+		ticketNotice: {
+			create: async ({ data }: { data: { title: string, body: string, imageUrls: string[], shopCount: number, smsText: string | null, tickets: { create: { shopId: string, title: string, status: string, messages: { create: Omit<Message, "id" | "ticketId" | "createdAt"> } }[] } } }) => {
+				const { tickets: copies, ...fields } = data
+				const notice = { id: `n-${notices.length + 1}`, createdAt: new Date(), ...fields }
+				notices.push(notice)
+				for (const copy of copies.create) {
+					const ticket: Ticket = { id: `t-${tickets.length + 1}`, shopId: copy.shopId, title: copy.title, status: copy.status, noticeId: notice.id, createdAt: new Date(), updatedAt: new Date() }
+					tickets.push(ticket)
+					messages.push({ id: `m-${messages.length + 1}`, ticketId: ticket.id, createdAt: new Date(), ...copy.messages.create })
+				}
+				return notice
+			},
+			findManyAndCount: async () => ({ data: [...notices].reverse(), count: notices.length }),
+		},
 		$transaction: async (work: (tx: unknown) => unknown) => work(prisma),
 		ticket: {
 			create: async ({ data }: { data: { shopId: string, title: string, messages: { create: Omit<Message, "id" | "ticketId" | "createdAt"> } } }) => {
-				const ticket: Ticket = { id: `t-${tickets.length + 1}`, shopId: data.shopId, title: data.title, status: "PENDING", createdAt: new Date(), updatedAt: new Date() }
+				const ticket: Ticket = { id: `t-${tickets.length + 1}`, shopId: data.shopId, title: data.title, status: "PENDING", noticeId: null, createdAt: new Date(), updatedAt: new Date() }
 				tickets.push(ticket)
 				messages.push({ id: `m-${messages.length + 1}`, ticketId: ticket.id, createdAt: new Date(), ...data.messages.create })
 				return withRelations(ticket)
@@ -162,5 +188,48 @@ describe("ticketService", () => {
 		expect((await service.readTickets({ shopId: owner.shopId })).count).toBe(1)
 		expect((await service.readTickets({})).count).toBe(2)
 		expect((await service.readTickets({ status: "ANSWERED" })).data.map(t => t.id)).toEqual([id])
+	})
+
+	describe("notices", () => {
+		const notice = { title: " تعطیلی نوروز ", body: " پشتیبانی تا ۵ فروردین تعطیل است. ", imageUrls: [`${BUCKET}n.jpg`], smsText: " اطلاعیه جدید " }
+
+		it("gives every enabled shop a CLOSED ticket with the one admin message", async () => {
+			const sent = await service.sendNotice(notice)
+			expect(sent).toMatchObject({ title: "تعطیلی نوروز", body: "پشتیبانی تا ۵ فروردین تعطیل است.", shopCount: 3, smsText: "اطلاعیه جدید" })
+			expect(prisma.tickets.map(t => [t.shopId, t.status])).toEqual([["shop-1", "CLOSED"], ["shop-2", "CLOSED"], ["shop-4", "CLOSED"]])
+
+			const copy = (await service.readTickets({ shopId: owner.shopId })).data[0]!
+			expect(copy.isNotice).toBe(true)
+			expect((await service.readTicket(copy.id, owner)).messages).toEqual([
+				expect.objectContaining({ fromAdmin: true, body: "پشتیبانی تا ۵ فروردین تعطیل است.", imageUrls: [`${BUCKET}n.jpg`] }),
+			])
+			expect(await errorCode(service.sendMessage(copy.id, owner, { body: "سلام" }))).toBe("TicketClosed")
+		})
+
+		it("texts each owner once, with the admin's text", async () => {
+			await service.sendNotice(notice)
+			expect(sms.sendBulkMessage).toHaveBeenCalledWith(["09350000001", "09350000004"], "اطلاعیه جدید")
+		})
+
+		it("sends no SMS when the admin skips it", async () => {
+			await service.sendNotice({ ...notice, smsText: undefined })
+			await service.sendNotice({ ...notice, smsText: "   " })
+			expect(sms.sendBulkMessage).not.toHaveBeenCalled()
+			expect((await service.readNotices()).data.map(n => n.smsText)).toEqual([null, null])
+		})
+
+		it("keeps the copies out of the admins' ticket list, which shows the notice once", async () => {
+			await open()
+			await service.sendNotice(notice)
+			expect((await service.readTickets({ noticeId: null })).count).toBe(1)
+			expect((await service.readNotices()).count).toBe(1)
+		})
+
+		it("refuses a notice no shop would receive, and foreign images", async () => {
+			expect(await errorCode(service.sendNotice({ ...notice, imageUrls: ["https://evil.example/x.jpg"] }))).toBe("InvalidTicketImage")
+			prisma.shops.forEach(shop => shop.isActive = false)
+			expect(await errorCode(service.sendNotice(notice))).toBe("NoShopsToNotify")
+			expect(prisma.tickets).toHaveLength(0)
+		})
 	})
 })

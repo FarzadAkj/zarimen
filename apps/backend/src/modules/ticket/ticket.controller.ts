@@ -3,8 +3,8 @@ import { Body, Controller, Post, Req, UseGuards } from "@nestjs/common"
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from "@nestjs/swagger"
 import { IsAdmin } from "../auth/guards/is-admin.guard"
 import { IsShopOwner } from "../auth/guards/is-shop-owner.guard"
-import { CreateTicketInput, ReadTicketsInput, SendTicketMessageInput, TicketIdInput } from "./dto/ticket.input"
-import { ReadTicketsOutput, TicketModel } from "./model/ticket.model"
+import { CreateTicketInput, ReadNoticesInput, ReadTicketsInput, SendNoticeInput, SendTicketMessageInput, TicketIdInput } from "./dto/ticket.input"
+import { ReadNoticesOutput, ReadTicketsOutput, TicketModel, TicketNoticeModel } from "./model/ticket.model"
 import { TicketService } from "./ticket.service"
 
 /** The admins' side (zarimen.ir/panel/tickets): every shop's tickets. */
@@ -15,11 +15,27 @@ export class TicketController {
 	constructor(private tickets: TicketService) { }
 
 	@Post("readTickets")
-	@ApiOperation({ operationId: "readTickets", description: "All shops' tickets, latest activity first, optionally one status only." })
+	@ApiOperation({ operationId: "readTickets", description: "All shops' tickets, latest activity first, optionally one status only. Notice copies are left out (see readNotices)." })
 	@ApiBody({ type: ReadTicketsInput })
 	@ApiResponse({ type: ReadTicketsOutput, status: 200 })
 	readTickets(@Body() input: ReadTicketsInput): Promise<ReadTicketsOutput> {
-		return this.tickets.readTickets({ status: input.status }, input.page)
+		return this.tickets.readTickets({ status: input.status, noticeId: null }, input.page)
+	}
+
+	@Post("sendNotice")
+	@ApiOperation({ operationId: "sendNotice", description: "A CLOSED ticket with this message to every enabled shop; `smsText` is texted to their owners." })
+	@ApiBody({ type: SendNoticeInput })
+	@ApiResponse({ type: TicketNoticeModel, status: 200 })
+	sendNotice(@Body() input: SendNoticeInput): Promise<TicketNoticeModel> {
+		return this.tickets.sendNotice(input)
+	}
+
+	@Post("readNotices")
+	@ApiOperation({ operationId: "readNotices", description: "The admins' notices, newest first." })
+	@ApiBody({ type: ReadNoticesInput })
+	@ApiResponse({ type: ReadNoticesOutput, status: 200 })
+	readNotices(@Body() input: ReadNoticesInput): Promise<ReadNoticesOutput> {
+		return this.tickets.readNotices(input.page)
 	}
 
 	@Post("readTicket")

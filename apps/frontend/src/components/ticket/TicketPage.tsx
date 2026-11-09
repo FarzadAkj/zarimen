@@ -35,7 +35,7 @@ export function TicketPage({ ticket, error, viewer, onReply }: {
                     <div className="grid gap-1.5 flex-1">
                         <CardTitle className="flex flex-wrap items-center gap-2">
                             {ticket.title}
-                            <TicketStatusBadge status={ticket.status} />
+                            <TicketStatusBadge status={ticket.status} isNotice={ticket.isNotice} />
                         </CardTitle>
                         <CardDescription>
                             {viewer === "admin" && `${ticket.shopName} · `}
@@ -51,7 +51,9 @@ export function TicketPage({ ticket, error, viewer, onReply }: {
 
             <Card>
                 <CardContent>
-                    {closed
+                    {ticket.isNotice
+                        ? <p className="text-center text-muted-foreground">این پیام یک اطلاعیه از طرف زر ایمن است و پاسخ نمی‌پذیرد. برای سؤال، یک تیکت جدید ثبت کنید.</p>
+                        : closed
                         ? <p className="text-center text-muted-foreground">این تیکت بسته شده است و پیام جدیدی نمی‌پذیرد.</p>
                         : <TicketComposer side={viewer} submitLabel={viewer === "admin" ? "ارسال پاسخ" : "ارسال پیام"} onSend={onReply} />}
                 </CardContent>

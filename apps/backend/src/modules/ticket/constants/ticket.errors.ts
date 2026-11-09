@@ -9,4 +9,6 @@ export const TicketErrors = defineErrorList(ModuleNames.TicketModule, {
 	TicketClosed: { statusCode: HttpStatus.BAD_REQUEST },
 	/** An image URL that is not one of ours (not in the bucket's zar-imen/ folder). */
 	InvalidTicketImage: { statusCode: HttpStatus.BAD_REQUEST },
+	/** A notice with no enabled shop to receive it. */
+	NoShopsToNotify: { statusCode: HttpStatus.BAD_REQUEST },
 })

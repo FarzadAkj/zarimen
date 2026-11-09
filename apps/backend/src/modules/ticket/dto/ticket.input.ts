@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
 import { TicketStatus } from "@prisma/client"
 import { ArrayMaxSize, IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID, MaxLength, Min } from "class-validator"
-import { MAX_TICKET_BODY_LENGTH, MAX_TICKET_IMAGES, MAX_TICKET_TITLE_LENGTH } from "../constants/ticket"
+import { MAX_NOTICE_SMS_LENGTH, MAX_TICKET_BODY_LENGTH, MAX_TICKET_IMAGES, MAX_TICKET_TITLE_LENGTH } from "../constants/ticket"
 
 export class TicketMessageInput {
 	@ApiProperty({ type: String })
@@ -51,4 +51,23 @@ export class ReadTicketsInput {
 	@IsOptional()
 	@IsEnum(TicketStatus)
 	status?: TicketStatus
+}
+
+/** An admins' notice to every enabled shop: a CLOSED ticket each, and an optional bulk SMS. */
+export class SendNoticeInput extends CreateTicketInput {
+	/** Texted to every recipient owner; leave out to send no SMS. */
+	@ApiPropertyOptional({ type: String })
+	@IsOptional()
+	@IsString()
+	@MaxLength(MAX_NOTICE_SMS_LENGTH)
+	smsText?: string
+}
+
+export class ReadNoticesInput {
+	/** 1-based; newest first. */
+	@ApiPropertyOptional({ type: Number, default: 1 })
+	@IsOptional()
+	@IsInt()
+	@Min(1)
+	page?: number
 }

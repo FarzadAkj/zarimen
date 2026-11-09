@@ -1056,7 +1056,7 @@ export class Api extends HttpClient {
   };
   ticket = {
     /**
-     * @description All shops' tickets, latest activity first, optionally one status only.
+     * @description All shops' tickets, latest activity first, optionally one status only. Notice copies are left out (see readNotices).
      *
      * @tags Ticket
      * @name ReadTickets
@@ -1066,6 +1066,42 @@ export class Api extends HttpClient {
     readTickets: (data, params = {}) =>
       this.request({
         path: `/ticket/readTickets`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description A CLOSED ticket with this message to every enabled shop; `smsText` is texted to their owners.
+     *
+     * @tags Ticket
+     * @name SendNotice
+     * @request POST:/ticket/sendNotice
+     * @secure
+     */
+    sendNotice: (data, params = {}) =>
+      this.request({
+        path: `/ticket/sendNotice`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description The admins' notices, newest first.
+     *
+     * @tags Ticket
+     * @name ReadNotices
+     * @request POST:/ticket/readNotices
+     * @secure
+     */
+    readNotices: (data, params = {}) =>
+      this.request({
+        path: `/ticket/readNotices`,
         method: "POST",
         body: data,
         secure: true,

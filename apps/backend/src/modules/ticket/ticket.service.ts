@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client"
-import type { CreateTicketInput, TicketMessageInput } from "./dto/ticket.input"
-import type { ReadTicketsOutput, TicketModel, TicketSummaryModel } from "./model/ticket.model"
+import type { CreateTicketInput, SendNoticeInput, TicketMessageInput } from "./dto/ticket.input"
+import type { ReadNoticesOutput, ReadTicketsOutput, TicketModel, TicketNoticeModel, TicketSummaryModel } from "./model/ticket.model"
 import { Injectable } from "@nestjs/common"
 import { TicketStatus } from "@prisma/client"
 import { Config } from "~/config"
@@ -9,7 +9,7 @@ import { ImageBucketService } from "~/libs/image-bucket/image-bucket.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { SmsIrService } from "~/libs/sms-ir/sms-ir.service"
-import { ticketNotice, TICKETS_PAGE_SIZE } from "./constants/ticket"
+import { NOTICES_PAGE_SIZE, ticketNotice, TICKETS_PAGE_SIZE } from "./constants/ticket"
 import { TicketErrors } from "./constants/ticket.errors"
 
 /** Who is writing: an admin, or the owner of `shopId` (who only reaches their own tickets). */
@@ -21,6 +21,7 @@ const summarySelect = {
 	status: true,
 	createdAt: true,
 	updatedAt: true,
+	noticeId: true,
 	shop: { select: { name: true, subdomain: true } },
 } satisfies Prisma.TicketSelect
 
@@ -39,7 +40,8 @@ type TicketRow = Prisma.TicketGetPayload<{ select: typeof ticketSelect }>
  * Support tickets between shop owners and the admins.
  * Owner message (opening one included) → PENDING and an SMS to every admin.
  * Admin message → ANSWERED and an SMS to the shop owner with a link to the ticket (free: the
- * admins' doing, not a customer's). Only the owner closes; a CLOSED ticket takes no more messages.
+ * admins' doing, not a customer's). Only the owner closes;
+ * Notices (sendNotice): one admin message to every enabled shop, each as its own CLOSED ticket. a CLOSED ticket takes no more messages.
  */
 @Injectable()
 export class TicketService {
@@ -65,8 +67,11 @@ export class TicketService {
 		return this.toModel(ticket)
 	}
 
-	/** Latest activity first. Owners pass their `shopId`; admins see every shop's tickets. */
-	async readTickets(filter: { shopId?: string, status?: TicketStatus }, page = 1): Promise<ReadTicketsOutput> {
+	/**
+	 * Latest activity first. Owners pass their `shopId` (their notice copies included); admins
+	 * pass `noticeId: null` to see every shop's real tickets (notices are read with readNotices).
+	 */
+	async readTickets(filter: { shopId?: string, status?: TicketStatus, noticeId?: null }, page = 1): Promise<ReadTicketsOutput> {
 		const [data, count] = await Promise.all([
 			this.prisma.ticket.findMany({
 				where: filter,
@@ -112,6 +117,52 @@ export class TicketService {
 		return this.readTicket(ticketId, author)
 	}
 
+	/**
+	 * Sends a notice: a CLOSED ticket with this one admin message to every enabled shop, all
+	 * written together, then (when `smsText` is given) one bulk SMS to their owners.
+	 */
+	async sendNotice(input: SendNoticeInput): Promise<TicketNoticeModel> {
+		const imageUrls = this.checkImages(input.imageUrls)
+		const shops = await this.prisma.shop.findMany({ where: { isActive: true }, select: { id: true, ownerPhoneNumber: true } })
+		if (!shops.length)
+			throw this.error.throwErrorToClient(TicketErrors.NoShopsToNotify)
+
+		const title = input.title.trim()
+		const body = input.body.trim()
+		const smsText = input.smsText?.trim() || null
+		const notice = await this.prisma.ticketNotice.create({
+			data: {
+				title,
+				body,
+				imageUrls,
+				shopCount: shops.length,
+				smsText,
+				tickets: {
+					create: shops.map(shop => ({
+						shopId: shop.id,
+						title,
+						status: TicketStatus.CLOSED,
+						messages: { create: { fromAdmin: true, body, imageUrls } },
+					})),
+				},
+			},
+		})
+
+		if (smsText)
+			await this.sms.sendBulkMessage([...new Set(shops.map(shop => shop.ownerPhoneNumber))], smsText)
+		return this.toNoticeModel(notice)
+	}
+
+	/** The admins' notices, newest first. */
+	async readNotices(page = 1): Promise<ReadNoticesOutput> {
+		const { data, count } = await this.prisma.ticketNotice.findManyAndCount({
+			orderBy: { createdAt: "desc" },
+			skip: (page - 1) * NOTICES_PAGE_SIZE,
+			take: NOTICES_PAGE_SIZE,
+		})
+		return { data: data.map(row => this.toNoticeModel(row)), count, pageSize: NOTICES_PAGE_SIZE }
+	}
+
 	/** Owner only. Closing a closed ticket changes nothing. */
 	async closeTicket(ticketId: string, shopId: string): Promise<TicketModel> {
 		const { count } = await this.prisma.ticket.updateMany({
@@ -148,8 +199,13 @@ export class TicketService {
 		return this.sms.sendBulkMessage(this.config.adminPhoneNumberList(), ticketNotice(title))
 	}
 
-	private toSummary({ shop, ...row }: SummaryRow): TicketSummaryModel {
-		return { ...row, shopName: shop.name, shopSubdomain: shop.subdomain }
+	private toSummary({ shop, noticeId, ...row }: SummaryRow): TicketSummaryModel {
+		return { ...row, shopName: shop.name, shopSubdomain: shop.subdomain, isNotice: noticeId !== null }
+	}
+
+	private toNoticeModel(row: { id: string, title: string, body: string, imageUrls: string[], shopCount: number, smsText: string | null, createdAt: Date }): TicketNoticeModel {
+		const { id, title, body, imageUrls, shopCount, smsText, createdAt } = row
+		return { id, title, body, imageUrls, shopCount, smsText, createdAt }
 	}
 
 	private toModel({ messages, ...row }: TicketRow): TicketModel {

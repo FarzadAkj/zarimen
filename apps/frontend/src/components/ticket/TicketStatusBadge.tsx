@@ -10,6 +10,9 @@ const LOOK: Record<TicketStatus, { label: string, className: string }> = {
 
 export const TICKET_STATUS_LABELS = Object.fromEntries(Object.entries(LOOK).map(([status, { label }]) => [status, label])) as Record<TicketStatus, string>
 
-export function TicketStatusBadge({ status }: { status: TicketStatus }) {
+/** A notice copy (CLOSED by design) shows «اطلاعیه» instead of its status. */
+export function TicketStatusBadge({ status, isNotice = false }: { status: TicketStatus, isNotice?: boolean }) {
+    if (isNotice)
+        return <Badge variant="outline" className="border-transparent bg-primary/10 text-primary">اطلاعیه</Badge>
     return <Badge variant="outline" className={cn("border-transparent", LOOK[status].className)}>{LOOK[status].label}</Badge>
 }

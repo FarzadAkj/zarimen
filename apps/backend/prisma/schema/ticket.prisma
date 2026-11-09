@@ -1,6 +1,6 @@
 /// A shop owner's support ticket, answered by the admins in zarimen.ir/panel/tickets.
 /// PENDING: waiting for an admin (every owner message puts it here).
-/// ANSWERED: an admin replied last. CLOSED: the owner closed it; nobody can write any more.
+/// ANSWERED: an admin replied last. CLOSED: the owner closed it (or it is a notice copy); nobody can write any more.
 model Ticket {
   id        String          @id @default(uuid()) @db.Uuid
   shopId    String          @db.Uuid
@@ -8,12 +8,33 @@ model Ticket {
   title     String
   status    TicketStatus    @default(PENDING)
   messages  TicketMessage[]
+  /// Set on the copies of an admins' notice (CLOSED, one admin message); null for owners' tickets.
+  noticeId  String?         @db.Uuid
+  notice    TicketNotice?   @relation(fields: [noticeId], references: [id])
   createdAt DateTime        @default(now())
   /// Bumped by every message, so lists show the latest activity first.
   updatedAt DateTime        @updatedAt
 
   @@index([shopId, updatedAt])
   @@index([status, updatedAt])
+  @@index([noticeId])
+}
+
+/// An admins' notification to every enabled shop (zarimen.ir/panel/tickets → «ارسال اطلاعیه»).
+/// Each shop gets its own CLOSED Ticket holding this message; admins see the notice once.
+model TicketNotice {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  body      String
+  imageUrls String[]
+  /// How many shops got a copy.
+  shopCount Int
+  /// The bulk SMS text sent to the owners; null when the admin skipped it.
+  smsText   String?
+  tickets   Ticket[]
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model TicketMessage {

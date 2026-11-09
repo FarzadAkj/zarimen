@@ -363,6 +363,7 @@ export interface TicketSummaryModel {
   status: TicketStatus;
   shopName: string;
   shopSubdomain: string;
+  isNotice: boolean;
   /** @format date-time */
   createdAt: string;
   /** @format date-time */
@@ -370,6 +371,32 @@ export interface TicketSummaryModel {
 }
 export interface ReadTicketsOutput {
   data: TicketSummaryModel[];
+  count: number;
+  pageSize: number;
+}
+export interface SendNoticeInput {
+  body: string;
+  imageUrls?: string[];
+  /** @example "مشکل در شارژ کیف پول" */
+  title: string;
+  smsText?: string;
+}
+export interface TicketNoticeModel {
+  id: string;
+  title: string;
+  body: string;
+  imageUrls: string[];
+  shopCount: number;
+  smsText: string | null;
+  /** @format date-time */
+  createdAt: string;
+}
+export interface ReadNoticesInput {
+  /** @default 1 */
+  page?: number;
+}
+export interface ReadNoticesOutput {
+  data: TicketNoticeModel[];
   count: number;
   pageSize: number;
 }
@@ -390,6 +417,7 @@ export interface TicketModel {
   status: TicketStatus;
   shopName: string;
   shopSubdomain: string;
+  isNotice: boolean;
   /** @format date-time */
   createdAt: string;
   /** @format date-time */
@@ -1143,7 +1171,7 @@ export declare class Api<
   };
   ticket: {
     /**
-     * @description All shops' tickets, latest activity first, optionally one status only.
+     * @description All shops' tickets, latest activity first, optionally one status only. Notice copies are left out (see readNotices).
      *
      * @tags Ticket
      * @name ReadTickets
@@ -1154,6 +1182,30 @@ export declare class Api<
       data: ReadTicketsInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<ReadTicketsOutput, any>>;
+    /**
+     * @description A CLOSED ticket with this message to every enabled shop; `smsText` is texted to their owners.
+     *
+     * @tags Ticket
+     * @name SendNotice
+     * @request POST:/ticket/sendNotice
+     * @secure
+     */
+    sendNotice: (
+      data: SendNoticeInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<TicketNoticeModel, any>>;
+    /**
+     * @description The admins' notices, newest first.
+     *
+     * @tags Ticket
+     * @name ReadNotices
+     * @request POST:/ticket/readNotices
+     * @secure
+     */
+    readNotices: (
+      data: ReadNoticesInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadNoticesOutput, any>>;
     /**
      * No description
      *

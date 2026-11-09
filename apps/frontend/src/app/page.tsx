@@ -239,7 +239,8 @@ export default async function HomePage() {
                         rel="noopener"
                         href="https://trustseal.enamad.ir/?id=8594365&Code=rzVrOIyDAt9Z8MeaT9GynPG6hb2i9obH"
                         className="flex h-24 items-center justify-center"
-                    >
+                        >
+                        پروانه اینماد
                         {/* plain <img>: enamad checks the zarimen.ir referrer, next/image would proxy it */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img

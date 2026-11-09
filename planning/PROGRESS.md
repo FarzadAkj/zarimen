@@ -31,6 +31,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 10b | Owner «استعلام دستی»: one-off CardMatch from the customers page | done |
 | 11  | SMS link to the owner after each added card | done |
 | 11b | SMS link to the owner when an admin writes in their ticket | done |
+| 12  | Admin notices: a CLOSED ticket to every enabled shop + bulk SMS | done — `db push` applied to the dev DB |
 
 ## Step log
 
@@ -690,4 +691,31 @@ Asked for: every message sent to an owner through a ticket texts the owner. sms.
   logged; the message stays sent.
 - Logged-out owners reach the ticket after login through `?next=` (step 11).
 - 1 new test, 1 extended.
+
+### Step 12 — Admin notices to all owners (2026-11-10)
+
+Asked for: from the admin tickets page, a "notify ticket" sent to all owners: CLOSED, one admin
+message, plus a bulk SMS to the owners that a new notice arrived. Not a notification system.
+User's answers: recipients = **all enabled shops** (`isActive`, subscription not required); the
+admin list shows **each notice once** (schema change accepted).
+
+Backend:
+- `prisma/schema/ticket.prisma`: `TicketNotice` (title, body, imageUrls, shopCount, smsText) and
+  `Ticket.noticeId` (null for owners' tickets). `db push` done on the dev DB.
+- `ticket/sendNotice` (admin): one nested create (notice + a CLOSED ticket with one admin message
+  per enabled shop); then, if `smsText` is given, `sendBulkMessage` to the distinct owner phones.
+  No enabled shop → `NoShopsToNotify`. `ticket/readNotices` (paged, newest first).
+- Admin `readTickets` leaves notice copies out (`noticeId: null`); owners' list includes them;
+  `TicketSummaryModel.isNotice`.
+- `SmsIrService.sendBulkMessage` now sends in batches of 100 numbers (sms.ir's per-request limit as
+  we understand it; not verified against their docs) and logs the count, not the numbers.
+- SMS: free (admin action). Bulk failures are logged, never thrown (as before).
+- 5 tests.
+
+Frontend:
+- Admin `/panel/tickets`: «ارسال اطلاعیه» button, «اطلاعیه‌ها» chip (`?view=notices`, `NoticesList`).
+- `/panel/tickets/notice`: `NoticeComposer` (title, text, 2 photos, SMS switch + prefilled
+  editable text, confirm before sending) → back to the notices list.
+- `TicketImagesPicker` extracted from `TicketComposer` (shared by both forms).
+- Owner: notice copies show an «اطلاعیه» badge; the ticket page says it takes no replies.
 
