@@ -10,7 +10,7 @@ export default async function ShopsPage() {
 
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-wrap items-center justify-between gap-3">
                 <CardTitle>فروشگاه‌ها</CardTitle>
                 <Button asChild>
                     <Link href="/panel/shops/new">

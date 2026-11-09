@@ -10,7 +10,7 @@ export default async function SettingsPage() {
         return <p className="text-destructive">{(error ?? plans.error)?.translation ?? "مشکلی در گرفتن تنظیمات پیش آمده است."}</p>
 
     return (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ServiceCostSettingSection data={serviceCosts} />
             <SubscriptionPlansSection plans={plans.data} />
         </div>

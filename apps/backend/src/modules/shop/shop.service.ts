@@ -1,5 +1,6 @@
 import type { SelectedShop } from "./constants/shop.select"
 import type { CreateShopInput } from "./dto/create-shop.input"
+import type { UpdateShopInput } from "./dto/update-shop.input"
 import type { ShopPublicInfoModel } from "./model/shop-public-info.model"
 import type { ShopModel } from "./model/shop.model"
 import { Injectable } from "@nestjs/common"
@@ -79,6 +80,27 @@ export class ShopService {
 		const shop = await this.prisma.shop.update({
 			where: { id },
 			data: { isActive },
+			select: shopSelect,
+		})
+		return this.toModel(shop)
+	}
+
+	/** The admin edits a shop's details; the subdomain and the owner's mobile and national code never change. */
+	async updateShop(input: UpdateShopInput): Promise<ShopModel> {
+		const { shopId } = input
+		if (!await this.prisma.shop.exists({ id: shopId }))
+			throw this.error.throwErrorToClient(ShopErrors.NotFound)
+
+		const shop = await this.prisma.shop.update({
+			where: { id: shopId },
+			data: {
+				name: input.name,
+				brandName: input.brandName,
+				ownerFullName: input.ownerFullName,
+				logoUrl: input.logoUrl ?? null,
+				address: input.address ?? null,
+				landline: input.landline ?? null,
+			},
 			select: shopSelect,
 		})
 		return this.toModel(shop)

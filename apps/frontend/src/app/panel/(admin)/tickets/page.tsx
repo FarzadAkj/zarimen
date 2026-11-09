@@ -43,7 +43,7 @@ export default async function AdminTicketsPage({ searchParams }: { searchParams:
                     </Button>
                 </CardAction>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            <CardContent className="grid grid-cols-1 gap-4">
                 <nav className="flex flex-wrap gap-2 text-sm">
                     {([undefined, ...STATUSES, "notices"] as View[]).map(v => (
                         <Link

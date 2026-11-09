@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { CreateImageUploadInput, CreateImageUploadOutput, CreateShopInput, MySubscriptionModel, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel } from "@/api/Api"
+import type { CreateImageUploadInput, CreateImageUploadOutput, CreateShopInput, MySubscriptionModel, UpdateShopInput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel } from "@/api/Api"
 import { revalidatePath } from "next/cache"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -22,6 +22,19 @@ export async function createShop(input: CreateShopInput): Promise<ServerResponse
     try {
         const { data } = await api.shop.createShop(input)
         revalidatePath("/panel")
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** Edits a shop's details (not the owner's mobile / national code). Every page may show them. */
+export async function updateShop(input: UpdateShopInput): Promise<ServerResponse<ShopModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shop.updateShop(input)
+        revalidatePath("/", "layout")
         return { data }
     }
     catch (error: any) {

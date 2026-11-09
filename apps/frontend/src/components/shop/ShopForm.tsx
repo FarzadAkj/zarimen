@@ -1,4 +1,5 @@
 "use client"
+import type { ShopModel } from "@/api/Api"
 import type { SignImageUpload } from "@/lib/upload-image"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
@@ -76,13 +77,19 @@ const FIELDS: { name: ShopFormField, label: string, required?: boolean, placehol
     { name: "initialWalletBalance", label: "موجودی اولیه کیف پول به تومان (اختیاری)", placeholder: "0", ltr: true },
 ]
 
+/** Fields an existing shop can't change: its address and the owner's identity (checked by Shahkar at creation). */
+const LOCKED_WHEN_EDITING = new Set<ShopFormField>(["subdomain", "ownerPhoneNumber", "ownerNationalCode"])
+
 /**
- * The shop form, shared by the admin's "new shop" page and the public request page
- * (zarimen.ir/signup), so a change here shows up in both.
+ * The shop form, shared by the admin's "new shop" and "edit shop" pages and the public request
+ * page (zarimen.ir/signup), so a change here shows up in all of them.
+ * `shop` (editing): prefilled; the subdomain and the owner's mobile and national code read-only.
  * `onSubmit` returns messages for fields the server refused (e.g. a taken subdomain), or nothing.
  */
-export function ShopForm({ rootDomain, withWalletBalance, signLogoUpload, submitLabel, onSubmit, onCancel }: {
+export function ShopForm({ rootDomain, shop, withWalletBalance, signLogoUpload, submitLabel, onSubmit, onCancel }: {
     rootDomain: string
+    /** The shop being edited; absent for a new one. */
+    shop?: ShopModel
     /** Admin only: the new shop's starting wallet balance. */
     withWalletBalance?: boolean
     signLogoUpload: SignImageUpload
@@ -90,21 +97,21 @@ export function ShopForm({ rootDomain, withWalletBalance, signLogoUpload, submit
     onSubmit: (values: ShopFormValues) => Promise<Partial<Record<ShopFormField, string>> | void>
     onCancel?: () => void
 }) {
-    const [logoUrl, setLogoUrl] = useState<string>()
+    const [logoUrl, setLogoUrl] = useState<string | undefined>(shop?.logoUrl ?? undefined)
     const [uploading, setUploading] = useState(false)
     const fields = FIELDS.filter(field => withWalletBalance || field.name !== "initialWalletBalance")
 
     const form = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues: {
-            name: "",
-            brandName: "",
-            subdomain: "",
-            address: "",
-            landline: "",
-            ownerFullName: "",
-            ownerPhoneNumber: "",
-            ownerNationalCode: "",
+            name: shop?.name ?? "",
+            brandName: shop?.brandName ?? "",
+            subdomain: shop?.subdomain ?? "",
+            address: shop?.address ?? "",
+            landline: shop?.landline ?? "",
+            ownerFullName: shop?.ownerFullName ?? "",
+            ownerPhoneNumber: shop?.ownerPhoneNumber ?? "",
+            ownerNationalCode: shop?.ownerNationalCode ?? "",
             initialWalletBalance: "",
         },
     })
@@ -173,7 +180,9 @@ export function ShopForm({ rootDomain, withWalletBalance, signLogoUpload, submit
                             key={field.name}
                             control={form.control}
                             name={field.name}
-                            render={({ field: input }) => (
+                            render={({ field: input }) => {
+                                const locked = !!shop && LOCKED_WHEN_EDITING.has(field.name)
+                                return (
                                 <FormItem className={field.name === "address" ? "sm:col-span-2" : undefined}>
                                     <FormLabel>
                                         {field.label}
@@ -182,6 +191,8 @@ export function ShopForm({ rootDomain, withWalletBalance, signLogoUpload, submit
                                     <FormControl>
                                         <Input
                                             {...input}
+                                            readOnly={locked}
+                                            className={locked ? "bg-muted text-muted-foreground" : undefined}
                                             required={field.required}
                                             dir={field.ltr ? "ltr" : undefined}
                                             placeholder={field.placeholder}
@@ -194,10 +205,13 @@ export function ShopForm({ rootDomain, withWalletBalance, signLogoUpload, submit
                                             {(subdomain || "darik").toLowerCase()}.{rootDomain}
                                         </FormDescription>
                                     )}
-                                    {field.description && <FormDescription>{field.description}</FormDescription>}
+                                    {locked
+                                        ? <FormDescription>قابل تغییر نیست.</FormDescription>
+                                        : field.description && <FormDescription>{field.description}</FormDescription>}
                                     <FormMessage />
                                 </FormItem>
-                            )}
+                                )
+                            }}
                         />
                     ))}
                 </div>

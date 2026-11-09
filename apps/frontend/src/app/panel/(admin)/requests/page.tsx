@@ -69,7 +69,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: Pro
                 <CardTitle>درخواست‌های راه‌اندازی</CardTitle>
                 <CardDescription>فرم‌های ارسال‌شده از صفحه zarimen.ir/signup. با هر درخواست جدید پیامک اطلاع‌رسانی برای مدیران ارسال می‌شود.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            <CardContent className="grid grid-cols-1 gap-4">
                 <nav className="flex flex-wrap gap-2 text-sm">
                     {[undefined, ...STATUSES].map(s => (
                         <Link

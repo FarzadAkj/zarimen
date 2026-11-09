@@ -164,6 +164,19 @@ export interface ShopModel {
   /** @format date-time */
   createdAt: string;
 }
+export interface UpdateShopInput {
+  /** نام فروشگاه */
+  name: string;
+  /** نام برند */
+  brandName: string;
+  /** Public URL returned by createImageUpload */
+  logoUrl?: string;
+  address?: string;
+  /** @example "02112345678" */
+  landline?: string;
+  ownerFullName: string;
+  shopId: string;
+}
 export interface SetShopActiveInput {
   id: string;
   isActive: boolean;
@@ -933,6 +946,18 @@ export declare class Api<
      */
     createShop: (
       data: CreateShopInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ShopModel, any>>;
+    /**
+     * @description Edits a shop's details; the subdomain and the owner's mobile and national code cannot change.
+     *
+     * @tags Shop
+     * @name UpdateShop
+     * @request POST:/shop/updateShop
+     * @secure
+     */
+    updateShop: (
+      data: UpdateShopInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopModel, any>>;
     /**

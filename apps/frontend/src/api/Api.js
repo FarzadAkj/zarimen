@@ -718,6 +718,24 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
+     * @description Edits a shop's details; the subdomain and the owner's mobile and national code cannot change.
+     *
+     * @tags Shop
+     * @name UpdateShop
+     * @request POST:/shop/updateShop
+     * @secure
+     */
+    updateShop: (data, params = {}) =>
+      this.request({
+        path: `/shop/updateShop`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
      * No description
      *
      * @tags Shop

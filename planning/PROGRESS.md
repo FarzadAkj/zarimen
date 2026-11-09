@@ -32,6 +32,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 11  | SMS link to the owner after each added card | done |
 | 11b | SMS link to the owner when an admin writes in their ticket | done |
 | 12  | Admin notices: a CLOSED ticket to every enabled shop + bulk SMS | done — `db push` applied to the dev DB |
+| 13  | Admin panel on phones + admin edits a shop (not subdomain / mobile / national code) | done |
 
 ## Step log
 
@@ -718,4 +719,30 @@ Frontend:
   editable text, confirm before sending) → back to the notices list.
 - `TicketImagesPicker` extracted from `TicketComposer` (shared by both forms).
 - Owner: notice copies show an «اطلاعیه» badge; the ticket page says it takes no replies.
+
+### Step 13 — Admin panel on phones; admin edits shops (2026-11-10)
+
+Asked for: the admin panel as phone-friendly as the owner panel; admins can change every owner's
+data except the mobile number and the national code.
+
+Phones:
+- `panel/(admin)/layout.tsx`: same header as the owner panel (brand + «خروج», nav on its own
+  sideways-scrolling row below `md`).
+- Page grids `grid-cols-1` (shop view, settings, tickets, requests); shop view header wraps and
+  puts the wallet balance on its own row below `sm`; shops page header wraps.
+- Checked with headless Chrome at 390px on /panel, the shop view, edit, tickets, requests,
+  settings: no horizontal page scroll; tables scroll inside their cards.
+
+Edit shop:
+- `shop/updateShop` (admin): name, brand, logo, address, landline, owner's full name
+  (`UpdateShopInput` = PickType of CreateShopInput + shopId). Optional fields left out are
+  cleared. Mobile / national code are not in the input and the service only writes the listed
+  fields. 3 tests in `shop.service.test.ts`.
+  **Subdomain locked too** (user's follow-up): not in the input, read-only in the form (it is the
+  shop's address and is in links already sent by SMS).
+  Wallet balance, subscription end and enabled/disabled keep their own controls.
+- `/panel/customers/<subdomain>/edit` with `EditShopForm` → `ShopForm` in edit mode (`shop`
+  prop: prefilled; subdomain, mobile and national code read-only «قابل تغییر نیست»).
+  Reached from «ویرایش» on the shop view and a pencil next to each shop name in the list.
+  `updateShop` action revalidates every page (`revalidatePath("/", "layout")`).
 

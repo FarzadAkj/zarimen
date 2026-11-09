@@ -2,6 +2,7 @@
 import type { ShopModel } from "@/api/Api"
 import { useState } from "react"
 import Link from "next/link"
+import { Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { setShopActive } from "@/app/panel/(admin)/shops/actions"
 import { Badge } from "@/components/shad/badge"
@@ -39,7 +40,12 @@ export function ShopsTable({ shops, rootDomain }: { shops: ShopModel[], rootDoma
                                     ? <img src={shop.logoUrl} alt="" className="size-9 rounded-md object-cover border" />
                                     : <div className="size-9 rounded-md bg-muted border" />}
                                 <div>
-                                    <Link href={`/panel/customers/${shop.subdomain}`} className="font-medium hover:text-primary hover:underline">{shop.name}</Link>
+                                    <div className="flex items-center gap-1">
+                                        <Link href={`/panel/customers/${shop.subdomain}`} className="font-medium hover:text-primary hover:underline">{shop.name}</Link>
+                                        <Link href={`/panel/customers/${shop.subdomain}/edit`} aria-label="ویرایش فروشگاه" className="p-1 text-muted-foreground hover:text-primary">
+                                            <Pencil className="size-3.5" />
+                                        </Link>
+                                    </div>
                                     <div className="text-xs text-muted-foreground">{shop.brandName}</div>
                                 </div>
                             </div>
