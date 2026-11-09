@@ -24,11 +24,11 @@ export function TicketPage({ ticket, error, viewer, onReply }: {
         </Link>
     )
     if (!ticket)
-        return <div className="grid gap-4">{back}<p className="text-destructive">{error?.translation}</p></div>
+        return <div className="grid grid-cols-1 gap-4">{back}<p className="text-destructive">{error?.translation}</p></div>
 
     const closed = ticket.status === "CLOSED"
     return (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
             {back}
             <Card>
                 <CardHeader className="flex flex-wrap items-start gap-3">

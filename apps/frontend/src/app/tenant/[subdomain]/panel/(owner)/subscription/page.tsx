@@ -30,7 +30,7 @@ export default async function ShopSubscriptionPage({ searchParams }: { searchPar
     ])
 
     return (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
             {params.purchase === "success" && (
                 <div className="flex gap-3 rounded-xl border border-green-600/30 bg-green-50 p-4 text-green-800">
                     <CheckCircle2 className="size-6 shrink-0" />

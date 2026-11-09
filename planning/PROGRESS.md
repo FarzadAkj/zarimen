@@ -618,3 +618,12 @@ Frontend:
   check-digit test is gone, by the user's choice: Shahkar decides whether a code is real.
   Same function in the browser (shop form, customer verification) and the backend
   (`@IsNationalCode`). Error text: «کد ملی ۱۰ رقم است.»
+
+### Owner panel on phones (2026-11-09)
+
+- `tenant/[subdomain]/panel/(owner)/layout.tsx`: below `md` the header is two rows: logo +
+  brand (truncated) + «خروج», then the nav on its own row that scrolls sideways (scrollbar
+  hidden, links don't shrink). From `md` up it is one row as before; the nav still scrolls if
+  a long brand name leaves too little room.
+- Page grids (dashboard, subscription, wallet, `ticket/TicketPage`) use `grid-cols-1` so a
+  wide table can't stretch the page; tables already scroll inside their own container.
