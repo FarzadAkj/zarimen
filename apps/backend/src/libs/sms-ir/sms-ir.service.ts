@@ -38,6 +38,11 @@ export class SmsIrService {
 		return this.sendTemplate(phoneNumber, this.config.cardAddedTemplate, { SUBDOMAIN: subdomain, SSN: ssn })
 	}
 
+	/** Tells the shop owner an admin wrote in their ticket; links to https://#SUBDOMAIN#.zarimen.ir/panel/tickets/#UUID#. */
+	sendTicketAnswered(phoneNumber: string, subdomain: string, ticketId: string) {
+		return this.sendTemplate(phoneNumber, this.config.ticketAnsweredTemplate, { SUBDOMAIN: subdomain, UUID: ticketId })
+	}
+
 	/**
 	 * sms.ir "verify" send: `template` with its #NAME# parameters. Throws when sms.ir refuses,
 	 * so the caller can tell the user. With `sendSms=false` it is only logged.

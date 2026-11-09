@@ -30,6 +30,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 10  | Public shop requests (/signup) → admin "Check and Insert" | done |
 | 10b | Owner «استعلام دستی»: one-off CardMatch from the customers page | done |
 | 11  | SMS link to the owner after each added card | done |
+| 11b | SMS link to the owner when an admin writes in their ticket | done |
 
 ## Step log
 
@@ -675,4 +676,18 @@ Backend (2026-11-10): sms.ir template **449513**, text links to
   Empty wallet or sms.ir failure → logged and skipped, the card stays added.
 - 3 tests (sent with the right values + billed as SMS; card kept when unpaid / sms.ir down;
   no SMS for a rejected card).
+
+### Step 11b — SMS to the owner on an admin's ticket message (2026-11-10)
+
+Asked for: every message sent to an owner through a ticket texts the owner. sms.ir template
+**144151**, link `https://#SUBDOMAIN#.zarimen.ir/panel/tickets/#UUID#` (UUID = ticket id).
+
+- Config `smsIrTicketAnsweredTemplate` in `.env`, `.env.example`, DEPLOY.md;
+  `SmsIrService.sendTicketAnswered(phone, subdomain, ticketId)`.
+- `TicketService.sendMessage`: admin message → `notifyOwner` (shop's `ownerPhoneNumber`).
+  Admins can't open tickets, so this is the only way an owner receives a message.
+  **Free** (an admin's action, not a customer's; like the shop-request SMS). sms.ir failure is
+  logged; the message stays sent.
+- Logged-out owners reach the ticket after login through `?next=` (step 11).
+- 1 new test, 1 extended.
 

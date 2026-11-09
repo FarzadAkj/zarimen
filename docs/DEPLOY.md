@@ -120,6 +120,8 @@ smsIrShopRejectedTemplate = "your-template-id"
 smsIrShopWelcomeTemplate = "your-template-id"
 # to the owner when a customer adds a card (SUBDOMAIN + SSN parameters)
 smsIrCardAddedTemplate = "449513"
+# to the owner when an admin writes in their ticket (SUBDOMAIN + UUID parameters)
+smsIrTicketAnsweredTemplate = "144151"
 sendSms = true
 
 # ---- api.ir (Shahkar + CardMatch)
@@ -304,7 +306,7 @@ sudo nginx -t && sudo systemctl reload nginx
 | Service | What to set |
 | ------- | ----------- |
 | **Zarinpal** (merchant panel) | The site's domain must be `zarimen.ir`. Payments return to `https://api.zarimen.ir/wallet/topUpCallback` and `/subscription/purchaseCallback`, both on that domain. |
-| **sms.ir** | A "verify" template with one parameter named **`CODE`**; its id → `smsIrOtpTemplate`. Template 449513 (`SUBDOMAIN`, `SSN`; text links to `https://#SUBDOMAIN#.zarimen.ir/panel/customers?ssn=#SSN#`) → `smsIrCardAddedTemplate`. A line with enough credit. |
+| **sms.ir** | A "verify" template with one parameter named **`CODE`**; its id → `smsIrOtpTemplate`. Template 449513 (`SUBDOMAIN`, `SSN`; text links to `https://#SUBDOMAIN#.zarimen.ir/panel/customers?ssn=#SSN#`) → `smsIrCardAddedTemplate`. Template 144151 (`SUBDOMAIN`, `UUID`; links to `https://#SUBDOMAIN#.zarimen.ir/panel/tickets/#UUID#`) → `smsIrTicketAnsweredTemplate`. A line with enough credit. |
 | **api.ir** | A token with Shahkar and CardMatch enabled and credit. |
 | **ArvanCloud bucket** | The panel uploads logos **from the browser** straight to the bucket, so the bucket's CORS must allow `PUT` from `https://zarimen.ir` (headers: `content-type`, `x-amz-acl`). Without it, logo upload fails in the browser. |
 

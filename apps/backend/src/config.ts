@@ -80,6 +80,13 @@ export class Config {
 	@IsString()
 	public smsIrCardAddedTemplate!: string
 
+	/**
+	 * sms.ir verify template telling a shop owner an admin wrote in their ticket; `SUBDOMAIN` and
+	 * `UUID` (ticket id) parameters, used in the link https://#SUBDOMAIN#.zarimen.ir/panel/tickets/#UUID#.
+	 */
+	@IsString()
+	public smsIrTicketAnsweredTemplate!: string
+
 	/** "false" logs the OTP to the console instead of sending it (local development). */
 	@IsIn(["true", "false"])
 	public sendSms!: string

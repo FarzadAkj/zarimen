@@ -15,7 +15,7 @@ type Message = { id: string, ticketId: string, fromAdmin: boolean, body: string,
 function createPrisma() {
 	const tickets: Ticket[] = []
 	const messages: Message[] = []
-	const shop = { name: "طلای ستوده", subdomain: "setoode" }
+	const shop = { name: "طلای ستوده", subdomain: "setoode", ownerPhoneNumber: "09350000001" }
 
 	/** Supports the `where` shapes the service uses: plain equality and `{ not: value }`. */
 	const match = (row: Record<string, unknown>, where: Record<string, unknown> = {}) =>
@@ -72,7 +72,7 @@ function errorCode(promise: Promise<unknown>) {
 
 describe("ticketService", () => {
 	let prisma: ReturnType<typeof createPrisma>
-	let sms: { sendBulkMessage: ReturnType<typeof vi.fn> }
+	let sms: { sendBulkMessage: ReturnType<typeof vi.fn>, sendTicketAnswered: ReturnType<typeof vi.fn> }
 	let service: TicketService
 
 	const owner = { shopId: "shop-1" }
@@ -80,7 +80,7 @@ describe("ticketService", () => {
 
 	beforeEach(() => {
 		prisma = createPrisma()
-		sms = { sendBulkMessage: vi.fn(async () => {}) }
+		sms = { sendBulkMessage: vi.fn(async () => {}), sendTicketAnswered: vi.fn(async () => {}) }
 		const images = { isOwnImageUrl: (url: string) => url.startsWith(BUCKET) }
 		const config = { adminPhoneNumberList: () => ADMINS }
 		service = new TicketService(prisma as never, images as never, sms as never, config as never, new ErrorService())
@@ -97,7 +97,7 @@ describe("ticketService", () => {
 		expect(sms.sendBulkMessage).toHaveBeenCalledWith(ADMINS, "تیکتی با موضوع شارژ کیف پول ارسال شده است.")
 	})
 
-	it("admin reply → ANSWERED with no SMS; owner reply → back to PENDING with an SMS", async () => {
+	it("admin reply → ANSWERED and only the owner is texted; owner reply → back to PENDING, admins texted", async () => {
 		const { id } = await open()
 		sms.sendBulkMessage.mockClear()
 
@@ -105,11 +105,19 @@ describe("ticketService", () => {
 		expect(answered.status).toBe("ANSWERED")
 		expect(answered.messages.at(-1)).toMatchObject({ fromAdmin: true, body: "بررسی شد" })
 		expect(sms.sendBulkMessage).not.toHaveBeenCalled()
+		expect(sms.sendTicketAnswered).toHaveBeenCalledWith("09350000001", "setoode", id)
 
 		const pending = await service.sendMessage(id, owner, { body: "هنوز مشکل دارد" })
 		expect(pending.status).toBe("PENDING")
 		expect(pending.messages).toHaveLength(3)
 		expect(sms.sendBulkMessage).toHaveBeenCalledWith(ADMINS, ticketNotice("شارژ کیف پول"))
+		expect(sms.sendTicketAnswered).toHaveBeenCalledTimes(1)
+	})
+
+	it("the admin's message stays sent when the owner's SMS fails", async () => {
+		const { id } = await open()
+		sms.sendTicketAnswered.mockRejectedValueOnce(new Error("sms.ir down"))
+		expect((await service.sendMessage(id, admin, { body: "بررسی شد" })).status).toBe("ANSWERED")
 	})
 
 	it("owner can keep writing while PENDING", async () => {

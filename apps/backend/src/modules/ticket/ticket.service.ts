@@ -6,6 +6,7 @@ import { TicketStatus } from "@prisma/client"
 import { Config } from "~/config"
 import { ErrorService } from "~/libs/error/error.service"
 import { ImageBucketService } from "~/libs/image-bucket/image-bucket.service"
+import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { SmsIrService } from "~/libs/sms-ir/sms-ir.service"
 import { ticketNotice, TICKETS_PAGE_SIZE } from "./constants/ticket"
@@ -37,7 +38,8 @@ type TicketRow = Prisma.TicketGetPayload<{ select: typeof ticketSelect }>
 /**
  * Support tickets between shop owners and the admins.
  * Owner message (opening one included) → PENDING and an SMS to every admin.
- * Admin message → ANSWERED. Only the owner closes; a CLOSED ticket takes no more messages.
+ * Admin message → ANSWERED and an SMS to the shop owner with a link to the ticket (free: the
+ * admins' doing, not a customer's). Only the owner closes; a CLOSED ticket takes no more messages.
  */
 @Injectable()
 export class TicketService {
@@ -88,7 +90,7 @@ export class TicketService {
 	async sendMessage(ticketId: string, author: TicketAuthor, input: TicketMessageInput): Promise<TicketModel> {
 		const imageUrls = this.checkImages(input.imageUrls)
 		const fromAdmin = "admin" in author
-		const ticket = await this.prisma.ticket.findFirst({ where: this.whereFor(ticketId, author), select: { title: true, status: true } })
+		const ticket = await this.prisma.ticket.findFirst({ where: this.whereFor(ticketId, author), select: { title: true, status: true, shop: { select: { subdomain: true, ownerPhoneNumber: true } } } })
 		if (!ticket)
 			throw this.error.throwErrorToClient(TicketErrors.TicketNotFound)
 
@@ -103,7 +105,9 @@ export class TicketService {
 			await tx.ticketMessage.create({ data: { ticketId, fromAdmin, body: input.body.trim(), imageUrls } })
 		})
 
-		if (!fromAdmin)
+		if (fromAdmin)
+			await this.notifyOwner(ticket.shop, ticketId)
+		else
 			await this.notifyAdmins(ticket.title)
 		return this.readTicket(ticketId, author)
 	}
@@ -128,6 +132,16 @@ export class TicketService {
 		if (imageUrls.some(url => !this.images.isOwnImageUrl(url)))
 			throw this.error.throwErrorToClient(TicketErrors.InvalidTicketImage)
 		return imageUrls
+	}
+
+	/** A notice only: if sms.ir fails, the admin's message stays sent. */
+	private async notifyOwner(shop: { subdomain: string, ownerPhoneNumber: string }, ticketId: string) {
+		try {
+			await this.sms.sendTicketAnswered(shop.ownerPhoneNumber, shop.subdomain, ticketId)
+		}
+		catch (e) {
+			logger.warn(`[ticket] answer SMS to shop ${shop.subdomain} failed: ${(e as Error).message}`)
+		}
 	}
 
 	private notifyAdmins(title: string) {
