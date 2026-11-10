@@ -36,6 +36,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 14  | VAT (مالیات بر ارزش افزوده) on top-ups and subscriptions, default 10% | done — `db push` applied to the dev DB |
 | 15  | Terms checkbox on zarimen.ir/signup | done |
 | 16  | «استعلام دستی» history (owner customers page + admin shop view) | done — `db push` applied to the dev DB |
+| 17  | Zarinpal off for now: payment dialogs point owners to a support ticket | done |
 
 ## Step log
 
@@ -816,3 +817,19 @@ Frontend:
 - Admin `/panel/customers/<subdomain>`: same card between customers and wallet history; `?page=`
   (wallet) and `?checks=` keep each other in the pager links.
 - Checks made before this step were never saved, so the history starts empty.
+
+### Step 17 — Payments off until Zarinpal is registered (2026-11-10)
+
+Asked for: the Zarinpal account is not registered yet, so instead of redirecting to Zarinpal,
+show a modal that sends owners to support through tickets.
+
+- Frontend env `NEXT_PUBLIC_ZARINPAL_ENABLED` (`"true"` = on; missing / anything else = off), in
+  `.env.example` and DEPLOY.md. Built into the bundle: rebuild after changing it.
+- `PaymentConfirmDialog` (used by `WalletTopUpForm` and `BuyPlanButton`): when off it still shows
+  amount, VAT and total, says online payment is not active, and its button «ثبت تیکت به پشتیبانی»
+  opens `/panel/tickets/new?title=…&body=…` (dialog title as subject; amount, VAT, total as text).
+- `TicketComposer` takes `initialTitle` / `initialBody` (clamped to the max lengths); the new-ticket
+  page reads `?title=` / `?body=`.
+- Backend unchanged: the start-payment endpoints still work if called directly.
+- Payment then happens outside the app; the admin credits the wallet (wallet pencil) or moves the
+  subscription end date by hand.

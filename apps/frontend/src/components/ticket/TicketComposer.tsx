@@ -19,7 +19,13 @@ export const MAX_BODY = 4000
 type Message = { body: string, imageUrls: string[] }
 type Send<T> = (message: T) => Promise<ServerResponse<TicketModel>>
 
-type Props = { side: "owner" | "admin", submitLabel: string } & (
+type Props = {
+    side: "owner" | "admin"
+    submitLabel: string
+    /** Prefilled text, e.g. from the payment dialog's «ثبت تیکت به پشتیبانی». */
+    initialTitle?: string
+    initialBody?: string
+} & (
     | { withTitle: true, onSend: Send<Message & { title: string }> }
     | { withTitle?: false, onSend: Send<Message> }
 )
@@ -32,8 +38,8 @@ type Props = { side: "owner" | "admin", submitLabel: string } & (
 export function TicketComposer(props: Props) {
     const { side, withTitle, submitLabel } = props
     const router = useRouter()
-    const [title, setTitle] = useState("")
-    const [body, setBody] = useState("")
+    const [title, setTitle] = useState((props.initialTitle ?? "").slice(0, MAX_TITLE))
+    const [body, setBody] = useState((props.initialBody ?? "").slice(0, MAX_BODY))
     const [imageUrls, setImageUrls] = useState<string[]>([])
     const [uploading, setUploading] = useState(false)
     const [pending, setPending] = useState(false)

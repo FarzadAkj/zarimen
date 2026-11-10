@@ -157,7 +157,12 @@ Check before you go live:
 NEXT_PUBLIC_SERVER_ADDRESS = https://api.zarimen.ir
 NEXT_PUBLIC_SWAGGER_API_DOC_PATH = /api-docs
 ROOT_DOMAIN = zarimen.ir
+NEXT_PUBLIC_ZARINPAL_ENABLED = false
 ```
+
+`NEXT_PUBLIC_ZARINPAL_ENABLED`: leave `false` (or out) until the Zarinpal merchant account is
+registered; the wallet top-up and plan purchase dialogs then show the amounts and a «ثبت تیکت به
+پشتیبانی» button instead of going to the gateway. Set `true` and rebuild to turn payments on.
 
 `NEXT_PUBLIC_*` values are built **into** the frontend bundle. After changing one, rebuild
 (step 6), not only restart. `NEXT_PUBLIC_SERVER_ADDRESS` must have **no trailing slash**
