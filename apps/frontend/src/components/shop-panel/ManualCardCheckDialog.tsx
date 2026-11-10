@@ -3,6 +3,7 @@ import type { CheckCardManuallyInput, ManualCardCheckModel } from "@/api/Api"
 import type { ServerResponse } from "@/app/types"
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { CircleCheck, CircleX, SearchCheck } from "lucide-react"
 import { isValidBankCardNumber, isValidJalaliDate, isValidNationalCode } from "@zar-imen/shared"
 import { Button } from "@/components/shad/button"
@@ -30,14 +31,15 @@ function validate(input: CheckCardManuallyInput): Errors {
 
 /**
  * «استعلام دستی» on the owner's customers page: does a card belong to a national code +
- * birth date? Paid from the wallet at the card-check price; the answer is only shown here,
- * nothing about the person is saved.
+ * birth date? Paid from the wallet at the card-check price. Each answered check goes into the
+ * shop's history (the table under the customers), which is refreshed after every answer.
  */
 export function ManualCardCheckDialog({ cost, check }: {
     /** Card-check price in Tomans, when known. */
     cost?: number
     check: (input: CheckCardManuallyInput) => Promise<ServerResponse<ManualCardCheckModel>>
 }) {
+    const router = useRouter()
     const [input, setInput] = useState(EMPTY)
     const [errors, setErrors] = useState<Errors>({})
     const [pending, setPending] = useState(false)
@@ -63,8 +65,10 @@ export function ManualCardCheckDialog({ cost, check }: {
         setError(undefined)
         const response = await check(input)
         setPending(false)
-        if (response.data)
+        if (response.data) {
             setResult(response.data)
+            router.refresh()
+        }
         else
             setError({ code: response.error?.message ?? "", text: response.error?.translation })
     }
@@ -87,7 +91,7 @@ export function ManualCardCheckDialog({ cost, check }: {
                 <DialogHeader>
                     <DialogTitle>استعلام دستی کارت بانکی</DialogTitle>
                     <DialogDescription>
-                        بررسی می‌شود که کارت بانکی به نام صاحب این کد ملی و تاریخ تولد باشد. این اطلاعات ذخیره نمی‌شود.
+                        بررسی می‌شود که کارت بانکی به نام صاحب این کد ملی و تاریخ تولد باشد. نتیجه در «سابقه استعلام‌های دستی» ثبت می‌شود.
                     </DialogDescription>
                     {cost !== undefined && (
                         <DialogDescription>

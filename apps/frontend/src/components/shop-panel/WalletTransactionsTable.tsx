@@ -1,7 +1,5 @@
 import type { ReadWalletTransactionsOutput, WalletTransactionModel } from "@/api/Api"
-import Link from "next/link"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@/components/shad/button"
+import { Pager } from "@/components/shared/Pager"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shad/table"
 import { formatAmount } from "@/lib/format"
 import { formatDateTime } from "@/lib/format-date"
@@ -69,17 +67,7 @@ export function WalletTransactionsTable({ result, page, pageHref }: {
                 </TableBody>
             </Table>
 
-            {pages > 1 && (
-                <div className="flex items-center justify-center gap-3 text-sm">
-                    <Button asChild variant="outline" size="sm" className={cn(page <= 1 && "pointer-events-none opacity-50")}>
-                        <Link href={pageHref(page - 1)}><ChevronRight />قبلی</Link>
-                    </Button>
-                    <span>صفحه {page.toLocaleString("fa-IR")} از {pages.toLocaleString("fa-IR")}</span>
-                    <Button asChild variant="outline" size="sm" className={cn(page >= pages && "pointer-events-none opacity-50")}>
-                        <Link href={pageHref(page + 1)}>بعدی<ChevronLeft /></Link>
-                    </Button>
-                </div>
-            )}
+            <Pager page={page} pages={pages} pageHref={pageHref} />
         </div>
     )
 }

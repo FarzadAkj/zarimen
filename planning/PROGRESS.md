@@ -34,6 +34,8 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 12  | Admin notices: a CLOSED ticket to every enabled shop + bulk SMS | done — `db push` applied to the dev DB |
 | 13  | Admin panel on phones + admin edits a shop (not subdomain / mobile / national code) | done |
 | 14  | VAT (مالیات بر ارزش افزوده) on top-ups and subscriptions, default 10% | done — `db push` applied to the dev DB |
+| 15  | Terms checkbox on zarimen.ir/signup | done |
+| 16  | «استعلام دستی» history (owner customers page + admin shop view) | done — `db push` applied to the dev DB |
 
 ## Step log
 
@@ -786,3 +788,31 @@ Asked for: a terms-of-use checkbox on zarimen.ir/signup like Darik's `SignupInne
   as true and show no checkbox. Only `ShopRequestForm` passes `requireTerms`.
 - Native checkbox (no shadcn checkbox / new dependency). «ارسال درخواست» stays disabled until it is checked.
 - Not done: the backend does not record the acceptance (no field in `submitTobeShop`).
+
+### Step 16 — «استعلام دستی» history (2026-11-10)
+
+Asked for: owners see a history of their manual card checks. User's answers: a section on the
+customers page; **full card number** stored and shown; the admin sees it on the shop view; the owner
+needs a running subscription (same as customer data).
+
+Backend:
+- `prisma/schema/customer.prisma`: `ManualCardCheck` (shopId, ssn, birthDate, cardNumber, matched,
+  createdAt; index shopId + createdAt). `db push` done on the dev DB.
+- `checkCardManually` writes one row after CardMatch answers (matched or not). Unpaid checks and
+  checks CardMatch could not answer (refunded) are not kept. Bank name is derived on read.
+- `shop-panel/readMyManualCardChecks` (IsShopOwner + HasActiveSubscription) and admin
+  `shop/readShopManualCardChecks { shopId }`; both paged (20, newest first) via
+  `CustomerService.readManualCardChecks`. 2 new tests.
+- `src/api` regenerated from a temporary backend on :8011.
+
+Frontend:
+- `components/shop-panel/ManualCardChecksTable.tsx` (date/time, national code, birth date, full card
+  + bank, result), shared by owner and admin. `components/shared/Pager.tsx` extracted from
+  `WalletTransactionsTable` (now two users).
+- Owner `/panel/customers`: «سابقه استعلام‌های دستی» card under the customers, `?checks=<page>`;
+  hidden without a subscription (the customers card already shows the «خرید اشتراک» notice).
+  The dialog calls `router.refresh()` after each answer so the new row shows at once; its text now
+  says the result is recorded.
+- Admin `/panel/customers/<subdomain>`: same card between customers and wallet history; `?page=`
+  (wallet) and `?checks=` keep each other in the pager links.
+- Checks made before this step were never saved, so the history starts empty.

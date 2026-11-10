@@ -41,3 +41,21 @@ model CustomerCard {
 
   @@unique([customerId, cardNumber])
 }
+
+/// One «استعلام دستی» a shop owner ran from their panel (CardMatch for any person), kept as the
+/// owner's history. Not a Customer: the person may never have verified at the shop.
+/// Only answered checks are saved; a check CardMatch could not answer is refunded and not kept.
+model ManualCardCheck {
+  id         String   @id @default(uuid()) @db.Uuid
+  shopId     String   @db.Uuid
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  /// National code (کد ملی)
+  ssn        String
+  /// Jalali, "1370/01/05"
+  birthDate  String
+  cardNumber String
+  matched    Boolean
+  createdAt  DateTime @default(now())
+
+  @@index([shopId, createdAt])
+}

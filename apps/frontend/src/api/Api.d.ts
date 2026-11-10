@@ -303,6 +303,26 @@ export interface ManualCardCheckModel {
   matched: boolean;
   bankName: string | null;
 }
+export interface ReadManualCardChecksInput {
+  /** @default 1 */
+  page?: number;
+}
+export interface ManualCardCheckRecordModel {
+  matched: boolean;
+  bankName: string | null;
+  id: string;
+  ssn: string;
+  /** Jalali YYYY/MM/DD */
+  birthDate: string;
+  cardNumber: string;
+  /** @format date-time */
+  createdAt: string;
+}
+export interface ReadManualCardChecksOutput {
+  data: ManualCardCheckRecordModel[];
+  count: number;
+  pageSize: number;
+}
 export interface ReadShopCustomersInput {
   /** @example "0912" */
   search?: string;
@@ -310,6 +330,11 @@ export interface ReadShopCustomersInput {
 }
 export interface ReadShopCustomerCardsInput {
   customerId: string;
+  shopId: string;
+}
+export interface ReadShopManualCardChecksInput {
+  /** @default 1 */
+  page?: number;
   shopId: string;
 }
 export interface SubscriptionPlanModel {
@@ -815,7 +840,7 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
     /**
-     * @description Manual inquiry: CardMatch for a national code + birth date + card, paid from the shop's wallet. Nothing is saved but the wallet charge.
+     * @description Manual inquiry: CardMatch for a national code + birth date + card, paid from the shop's wallet. Kept in the shop's manual-check history.
      *
      * @tags ShopCustomers
      * @name CheckCardManually
@@ -826,6 +851,18 @@ export declare class Api<
       data: CheckCardManuallyInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<ManualCardCheckModel, any>>;
+    /**
+     * @description The owner's «استعلام دستی» history, newest first.
+     *
+     * @tags ShopCustomers
+     * @name ReadMyManualCardChecks
+     * @request POST:/shop-panel/readMyManualCardChecks
+     * @secure
+     */
+    readMyManualCardChecks: (
+      data: ReadManualCardChecksInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadManualCardChecksOutput, any>>;
     /**
      * @description Plans the owner can buy.
      *
@@ -1069,6 +1106,18 @@ export declare class Api<
       data: ReadShopCustomerCardsInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<ShopCustomerCardModel[], any>>;
+    /**
+     * @description A shop owner's «استعلام دستی» history, newest first.
+     *
+     * @tags AdminShopCustomers
+     * @name ReadShopManualCardChecks
+     * @request POST:/shop/readShopManualCardChecks
+     * @secure
+     */
+    readShopManualCardChecks: (
+      data: ReadShopManualCardChecksInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadManualCardChecksOutput, any>>;
     /**
      * @description Moves the shop's subscription end later (never earlier than the current end or now).
      *

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { CheckCardManuallyInput, ManualCardCheckModel, CreateImageUploadInput, CreateImageUploadOutput, CreateTicketInput, ReadTicketsOutput, ServiceCostSettingsModel, VatSettingsModel, MySubscriptionModel, TicketModel, TicketStatus, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
+import type { CheckCardManuallyInput, ManualCardCheckModel, ReadManualCardChecksOutput, CreateImageUploadInput, CreateImageUploadOutput, CreateTicketInput, ReadTicketsOutput, ServiceCostSettingsModel, VatSettingsModel, MySubscriptionModel, TicketModel, TicketStatus, OtpSentModel, ReadSubscriptionPurchasesOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel, SubscriptionPlanModel, SubscriptionPurchaseStartedModel, WalletTopUpModel } from "@/api/Api"
 import { cache } from "react"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -72,11 +72,23 @@ export async function readMyCustomerCards(customerId: string): Promise<ServerRes
     }
 }
 
-/** «استعلام دستی»: CardMatch for any national code + birth date + card, paid from the wallet; nothing saved. */
+/** «استعلام دستی»: CardMatch for any national code + birth date + card, paid from the wallet; kept in the history. */
 export async function checkCardManually(input: CheckCardManuallyInput): Promise<ServerResponse<ManualCardCheckModel>> {
     const api = await takeApi()
     try {
         const { data } = await api.shopPanel.checkCardManually(input)
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** The owner's «استعلام دستی» history, newest first. */
+export async function readMyManualCardChecks(page: number): Promise<ServerResponse<ReadManualCardChecksOutput>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shopPanel.readMyManualCardChecks({ page })
         return { data }
     }
     catch (error: any) {

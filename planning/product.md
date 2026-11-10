@@ -50,6 +50,9 @@ The customer is identified by three things, and all three matter:
   and their purchase history; the admin sees each shop's due date. All dates are Jalali.
 - **zarimen.ir landing page:** what Zar Imen is, how it works, what owners get, a link to the
   blog (to be specified), live plans, and direct contact links (phone / WhatsApp / Telegram).
+- **Manual card check («استعلام دستی»):** owners run CardMatch for any national code + birth date +
+  card from the customers page, paid at the card-check price. Every answered check is kept (full
+  card number) and listed under the customers; the admin sees the same list on the shop view.
 - **Customers ↔ shops:** many-to-many. Each shop owner sees the customers linked to their shop.
 
 ## Known building blocks

@@ -28,3 +28,6 @@ export type SignupTicketPayload = {
 	birthDate: string
 	shopId: string
 }
+
+/** Rows per page of the owner's «استعلام دستی» history. */
+export const MANUAL_CARD_CHECKS_PAGE_SIZE = 20

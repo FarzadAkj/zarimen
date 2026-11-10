@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { CreateImageUploadInput, CreateImageUploadOutput, CreateShopInput, MySubscriptionModel, UpdateShopInput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel } from "@/api/Api"
+import type { CreateImageUploadInput, CreateImageUploadOutput, CreateShopInput, MySubscriptionModel, UpdateShopInput, ReadManualCardChecksOutput, ReadWalletTransactionsOutput, ShopCustomerCardModel, ShopCustomerModel, ShopModel } from "@/api/Api"
 import { revalidatePath } from "next/cache"
 import { takeApi } from "@/lib/take-api"
 import { toErrorOutput } from "@/lib/errors"
@@ -118,6 +118,18 @@ export async function readShopWalletTransactions(shopId: string, page: number): 
     const api = await takeApi()
     try {
         const { data } = await api.shop.readShopWalletTransactions({ shopId, page })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** A shop owner's «استعلام دستی» history, newest first. */
+export async function readShopManualCardChecks(shopId: string, page: number): Promise<ServerResponse<ReadManualCardChecksOutput>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.shop.readShopManualCardChecks({ shopId, page })
         return { data }
     }
     catch (error: any) {

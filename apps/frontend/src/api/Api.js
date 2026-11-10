@@ -520,7 +520,7 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
-     * @description Manual inquiry: CardMatch for a national code + birth date + card, paid from the shop's wallet. Nothing is saved but the wallet charge.
+     * @description Manual inquiry: CardMatch for a national code + birth date + card, paid from the shop's wallet. Kept in the shop's manual-check history.
      *
      * @tags ShopCustomers
      * @name CheckCardManually
@@ -530,6 +530,24 @@ export class Api extends HttpClient {
     checkCardManually: (data, params = {}) =>
       this.request({
         path: `/shop-panel/checkCardManually`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description The owner's «استعلام دستی» history, newest first.
+     *
+     * @tags ShopCustomers
+     * @name ReadMyManualCardChecks
+     * @request POST:/shop-panel/readMyManualCardChecks
+     * @secure
+     */
+    readMyManualCardChecks: (data, params = {}) =>
+      this.request({
+        path: `/shop-panel/readMyManualCardChecks`,
         method: "POST",
         body: data,
         secure: true,
@@ -884,6 +902,24 @@ export class Api extends HttpClient {
     readShopCustomerCards: (data, params = {}) =>
       this.request({
         path: `/shop/readShopCustomerCards`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description A shop owner's «استعلام دستی» history, newest first.
+     *
+     * @tags AdminShopCustomers
+     * @name ReadShopManualCardChecks
+     * @request POST:/shop/readShopManualCardChecks
+     * @secure
+     */
+    readShopManualCardChecks: (data, params = {}) =>
+      this.request({
+        path: `/shop/readShopManualCardChecks`,
         method: "POST",
         body: data,
         secure: true,

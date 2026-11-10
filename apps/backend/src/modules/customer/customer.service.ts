@@ -3,7 +3,7 @@ import type { Bill } from "../wallet/wallet.service"
 import type { CustomerJwtPayload, SignupTicketPayload } from "./constants/customer.constants"
 import type { CustomerCardModel, CustomerCardsModel } from "./model/customer-card.model"
 import type { CustomerTokenModel } from "./model/customer-token.model"
-import type { ManualCardCheckModel } from "./model/manual-card-check.model"
+import type { ManualCardCheckModel, ReadManualCardChecksOutput } from "./model/manual-card-check.model"
 import type { ShopCustomerCardModel, ShopCustomerModel } from "./model/shop-customer.model"
 import type { SignupStartedModel } from "./model/signup-started.model"
 import { Injectable } from "@nestjs/common"
@@ -20,7 +20,7 @@ import { hasActiveSubscription } from "../subscription/constants/subscription"
 import { WalletService } from "../wallet/wallet.service"
 import { getBankName } from "./constants/bank-prefixes"
 import { maskCardNumber, toCardMatchDate } from "./constants/card"
-import { CUSTOMER_ROLE, CUSTOMER_TOKEN_TTL_SECONDS, SIGNUP_TICKET_TTL_SECONDS } from "./constants/customer.constants"
+import { CUSTOMER_ROLE, CUSTOMER_TOKEN_TTL_SECONDS, MANUAL_CARD_CHECKS_PAGE_SIZE, SIGNUP_TICKET_TTL_SECONDS } from "./constants/customer.constants"
 import { CustomerErrors } from "./constants/customer.errors"
 
 type SignupDetails = { ssn: string, phoneNumber: string, birthDate: string }
@@ -170,7 +170,24 @@ export class CustomerService {
 			birthDate: toCardMatchDate(details.birthDate),
 			cardNumber: details.cardNumber,
 		}))
+		await this.prisma.manualCardCheck.create({ data: { shopId, ...details, matched } })
 		return { matched, bankName: getBankName(details.cardNumber) }
+	}
+
+	/** The shop's «استعلام دستی» history, newest first (owner: own shop only; admin: any shop). */
+	async readManualCardChecks(shopId: string, page = 1): Promise<ReadManualCardChecksOutput> {
+		const { data, count } = await this.prisma.manualCardCheck.findManyAndCount({
+			where: { shopId },
+			orderBy: { createdAt: "desc" },
+			skip: (page - 1) * MANUAL_CARD_CHECKS_PAGE_SIZE,
+			take: MANUAL_CARD_CHECKS_PAGE_SIZE,
+			select: { id: true, ssn: true, birthDate: true, cardNumber: true, matched: true, createdAt: true },
+		})
+		return {
+			data: data.map(row => ({ ...row, bankName: getBankName(row.cardNumber) })),
+			count,
+			pageSize: MANUAL_CARD_CHECKS_PAGE_SIZE,
+		}
 	}
 
 	/**

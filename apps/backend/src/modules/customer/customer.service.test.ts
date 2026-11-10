@@ -14,6 +14,7 @@ const CARD = "6037997599999993"
 type Customer = { id: string, ssn: string, phoneNumber: string, birthDate: string, updatedAt: Date }
 type Card = { id: string, customerId: string, cardNumber: string, createdAt: Date }
 type Link = { customerId: string, shopId: string, lastSeenAt: Date }
+type ManualCheck = { id: string, shopId: string, ssn: string, birthDate: string, cardNumber: string, matched: boolean, createdAt: Date }
 
 /** In-memory stand-in for the Prisma calls CustomerService makes. */
 function createPrisma() {
@@ -28,6 +29,7 @@ function createPrisma() {
 	const customers: Customer[] = []
 	const cards: Card[] = []
 	const links: Link[] = []
+	const manualChecks: ManualCheck[] = []
 	const match = (row: Record<string, unknown>, where: Record<string, unknown>) =>
 		Object.entries(where).every(([k, v]) => row[k] === v)
 
@@ -35,6 +37,17 @@ function createPrisma() {
 		customers,
 		cards,
 		links,
+		manualChecks,
+		manualCardCheck: {
+			create: async ({ data }: { data: Omit<ManualCheck, "id" | "createdAt"> }) => {
+				// one ms apart, so "newest first" is well defined
+				manualChecks.push({ id: `check-${manualChecks.length + 1}`, createdAt: new Date(Date.now() + manualChecks.length), ...data })
+			},
+			findManyAndCount: async ({ where, skip, take }: { where: { shopId: string }, skip: number, take: number }) => {
+				const rows = manualChecks.filter(c => c.shopId === where.shopId).sort((a, b) => +b.createdAt - +a.createdAt)
+				return { data: rows.slice(skip, skip + take).map(({ shopId: _, ...row }) => row), count: rows.length }
+			},
+		},
 		shop: {
 			findUnique: async ({ where }: { where: Record<string, unknown> }) => shops.find(s => match(s, where)) ?? null,
 		},
@@ -283,12 +296,34 @@ describe("customerService", () => {
 	describe("owner's manual card check", () => {
 		const details = { ssn: SSN, birthDate: BIRTH, cardNumber: CARD }
 
-		it("asks CardMatch, bills the card price to the owner's shop and saves nothing", async () => {
+		it("asks CardMatch, bills the card price to the owner's shop and saves no customer or card", async () => {
 			expect(await service.checkCardManually("shop-1", details)).toEqual({ matched: true, bankName: "بانک ملی ایران" })
 			expect(shahkar.verifyCardMatch).toHaveBeenCalledWith({ nationalCode: SSN, birthDate: "1370/1/5", cardNumber: CARD })
 			expect(wallet.charge).toHaveBeenCalledWith({ shopId: "shop-1", customerSsn: SSN }, "CARD_MATCH", expect.any(Function))
 			expect(prisma.customers).toHaveLength(0)
 			expect(prisma.cards).toHaveLength(0)
+		})
+
+		it("keeps every answered check, matched or not, in the shop's own history, newest first", async () => {
+			await service.checkCardManually("shop-1", details)
+			shahkar.verifyCardMatch.mockResolvedValueOnce({ matched: false })
+			await service.checkCardManually("shop-1", { ...details, ssn: "0012345678" })
+
+			const history = await service.readManualCardChecks("shop-1")
+			expect(history).toMatchObject({ count: 2, pageSize: 20 })
+			expect(history.data).toEqual([
+				expect.objectContaining({ ssn: "0012345678", birthDate: BIRTH, cardNumber: CARD, matched: false, bankName: "بانک ملی ایران" }),
+				expect.objectContaining({ ssn: SSN, matched: true }),
+			])
+			expect(await service.readManualCardChecks("shop-2")).toMatchObject({ data: [], count: 0 })
+		})
+
+		it("keeps no history row for a check that was not paid or not answered", async () => {
+			wallet.charge.mockRejectedValueOnce(new GlobalError({ module: "WalletModule", message: "InsufficientBalance" }))
+			await errorCode(service.checkCardManually("shop-1", details))
+			shahkar.verifyCardMatch.mockRejectedValueOnce(new Error("down"))
+			await errorCode(service.checkCardManually("shop-1", details))
+			expect(prisma.manualChecks).toHaveLength(0)
 		})
 
 		it("returns a mismatch as a result, not an error", async () => {

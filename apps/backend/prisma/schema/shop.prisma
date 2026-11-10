@@ -25,6 +25,7 @@ model Shop {
   customers             CustomerShop[]
   subscriptionPurchases SubscriptionPurchase[]
   tickets               Ticket[]
+  manualCardChecks      ManualCardCheck[]
 }
 
 /// The shop owner's wallet. What moves money in and out is decided in a later step.

@@ -8,29 +8,35 @@ import { ShopLogo } from "@/components/shop/ShopLogo"
 import { SubscriptionEndDialog } from "@/components/panel/SubscriptionEndDialog"
 import { SubscriptionStatus } from "@/components/shared/SubscriptionStatus"
 import { CustomersBrowser } from "@/components/shop-panel/CustomersBrowser"
+import { ManualCardChecksTable } from "@/components/shop-panel/ManualCardChecksTable"
 import { parsePage, WalletTransactionsTable } from "@/components/shop-panel/WalletTransactionsTable"
 import { formatAmount } from "@/lib/format"
-import { readShopBySubdomain, readShopCustomerCards, readShopCustomers, readShopWalletTransactions } from "../../shops/actions"
+import { readShopBySubdomain, readShopCustomerCards, readShopCustomers, readShopManualCardChecks, readShopWalletTransactions } from "../../shops/actions"
 
 type Props = {
     params: Promise<{ subdomain: string }>
-    searchParams: Promise<{ page?: string }>
+    searchParams: Promise<{ page?: string, checks?: string }>
 }
 
 /**
  * zarimen.ir/panel/customers/<subdomain> — the admin's view of one shop's panel:
- * the shop, its customers (search + cards) and its wallet history.
+ * the shop, its customers (search + cards), its «استعلام دستی» history (`?checks=`) and its
+ * wallet history (`?page=`).
  */
 export default async function AdminShopPage({ params, searchParams }: Props) {
     const { subdomain } = await params
-    const page = parsePage((await searchParams).page)
+    const query = await searchParams
+    const page = parsePage(query.page)
+    const checksPage = parsePage(query.checks)
+    const href = (pages: { page: number, checks: number }) => `/panel/customers/${subdomain}?page=${pages.page}&checks=${pages.checks}`
 
     const { data: shop, error } = await readShopBySubdomain(subdomain)
     if (error?.message === "NotFound") notFound()
     if (!shop) return <p className="text-destructive">{error?.translation}</p>
 
-    const [customers, transactions] = await Promise.all([
+    const [customers, manualChecks, transactions] = await Promise.all([
         readShopCustomers(shop.id, ""),
+        readShopManualCardChecks(shop.id, checksPage),
         readShopWalletTransactions(shop.id, page),
     ])
 
@@ -89,11 +95,22 @@ export default async function AdminShopPage({ params, searchParams }: Props) {
 
             <Card>
                 <CardHeader>
+                    <CardTitle>سابقه استعلام‌های دستی</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {manualChecks.data
+                        ? <ManualCardChecksTable result={manualChecks.data} page={checksPage} pageHref={p => href({ page, checks: p })} />
+                        : <p className="text-destructive">{manualChecks.error?.translation}</p>}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <CardTitle>تراکنش‌های کیف پول</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {transactions.data
-                        ? <WalletTransactionsTable result={transactions.data} page={page} pageHref={p => `/panel/customers/${shop.subdomain}?page=${p}`} />
+                        ? <WalletTransactionsTable result={transactions.data} page={page} pageHref={p => href({ page: p, checks: checksPage })} />
                         : <p className="text-destructive">{transactions.error?.translation}</p>}
                 </CardContent>
             </Card>
