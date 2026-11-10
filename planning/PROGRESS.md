@@ -772,3 +772,17 @@ charges 55,000 Tomans (550,000 Rials); a 10,000,000 plan → 1,000,000 VAT.
 - Not changed: transaction / purchase history still shows the pre-VAT amounts (vatAmount is stored
   if it should be shown later).
 - 2 backend tests (top-up: gateway 55,000, wallet +50,000; purchase: gateway 2,200,000).
+
+### Step 15 — Terms on the signup page (2026-11-10)
+
+Asked for: a terms-of-use checkbox on zarimen.ir/signup like Darik's `SignupInnerSection`
+(`TermsModal`); without it checked the request cannot be sent.
+
+- `components/site/signup-terms.ts` (`SIGNUP_TERMS`) + `components/site/TermsModal.tsx` (dialog
+  opened from «قوانین و مقررات» in the checkbox label). The text is a **draft** written for Zar Imen
+  (Darik's terms are about Darik's own customers) — the user should review it.
+- `ShopForm` got `requireTerms`; `acceptTerms` in its zod schema must be true, so submitting
+  unchecked shows «پذیرش قوانین و مقررات الزامی است.» and nothing is sent. Admin forms start it
+  as true and show no checkbox. Only `ShopRequestForm` passes `requireTerms`.
+- Native checkbox (no shadcn checkbox / new dependency). «ارسال درخواست» stays disabled until it is checked.
+- Not done: the backend does not record the acceptance (no field in `submitTobeShop`).

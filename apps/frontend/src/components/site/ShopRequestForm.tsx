@@ -45,5 +45,5 @@ export function ShopRequestForm({ rootDomain }: { rootDomain: string }) {
         )
     }
 
-    return <ShopForm rootDomain={rootDomain} signLogoUpload={createTobeShopLogoUpload} submitLabel="ارسال درخواست" onSubmit={onSubmit} />
+    return <ShopForm rootDomain={rootDomain} requireTerms signLogoUpload={createTobeShopLogoUpload} submitLabel="ارسال درخواست" onSubmit={onSubmit} />
 }

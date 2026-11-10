@@ -12,6 +12,7 @@ import { Button } from "@/components/shad/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/shad/form"
 import { Input } from "@/components/shad/input"
 import { Spinner } from "@/components/shad/spinner"
+import { TermsModal } from "@/components/site/TermsModal"
 import { toLatinDigits } from "@/lib/format"
 import { uploadImage } from "@/lib/upload-image"
 
@@ -30,6 +31,8 @@ const schema = z.object({
     ownerPhoneNumber: z.string().refine(isValidPhoneNumber, { message: "شماره موبایل را با فرمت ۰۹xxxxxxxxx وارد کنید." }),
     ownerNationalCode: z.string().refine(isValidNationalCode, { message: "کد ملی معتبر نیست." }),
     initialWalletBalance: optional(z.string().regex(/^\d{1,18}$/, "مبلغ را به تومان و بدون اعشار وارد کنید.")),
+    /** Starts true when the form has no terms checkbox (admin forms). */
+    acceptTerms: z.boolean().refine(v => v, { message: "پذیرش قوانین و مقررات الزامی است." }),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -59,7 +62,10 @@ export const TAKEN_MESSAGES = {
 /** Fields whose value is a number typed by hand: Persian digits are converted while typing. */
 const NUMERIC_FIELDS = new Set<ShopFormField>(["landline", "ownerPhoneNumber", "ownerNationalCode", "initialWalletBalance"])
 
-const FIELDS: { name: ShopFormField, label: string, required?: boolean, placeholder?: string, description?: string, ltr?: boolean }[] = [
+/** The text inputs: every field but the terms checkbox. */
+type TextField = Exclude<ShopFormField, "acceptTerms">
+
+const FIELDS: { name: TextField, label: string, required?: boolean, placeholder?: string, description?: string, ltr?: boolean }[] = [
     { name: "name", label: "نام فروشگاه", required: true },
     { name: "brandName", label: "نام برند", required: true },
     { name: "subdomain", label: "زیردامنه", required: true, placeholder: "darik", ltr: true },
@@ -86,12 +92,14 @@ const LOCKED_WHEN_EDITING = new Set<ShopFormField>(["subdomain", "ownerPhoneNumb
  * `shop` (editing): prefilled; the subdomain and the owner's mobile and national code read-only.
  * `onSubmit` returns messages for fields the server refused (e.g. a taken subdomain), or nothing.
  */
-export function ShopForm({ rootDomain, shop, withWalletBalance, signLogoUpload, submitLabel, onSubmit, onCancel }: {
+export function ShopForm({ rootDomain, shop, withWalletBalance, requireTerms, signLogoUpload, submitLabel, onSubmit, onCancel }: {
     rootDomain: string
     /** The shop being edited; absent for a new one. */
     shop?: ShopModel
     /** Admin only: the new shop's starting wallet balance. */
     withWalletBalance?: boolean
+    /** zarimen.ir/signup: the owner must accept the terms before sending. */
+    requireTerms?: boolean
     signLogoUpload: SignImageUpload
     submitLabel: string
     onSubmit: (values: ShopFormValues) => Promise<Partial<Record<ShopFormField, string>> | void>
@@ -113,9 +121,11 @@ export function ShopForm({ rootDomain, shop, withWalletBalance, signLogoUpload, 
             ownerPhoneNumber: shop?.ownerPhoneNumber ?? "",
             ownerNationalCode: shop?.ownerNationalCode ?? "",
             initialWalletBalance: "",
+            acceptTerms: !requireTerms,
         },
     })
     const subdomain = form.watch("subdomain")
+    const termsAccepted = form.watch("acceptTerms")
 
     async function onLogoSelected(file: File | undefined) {
         if (!file) return
@@ -220,9 +230,39 @@ export function ShopForm({ rootDomain, shop, withWalletBalance, signLogoUpload, 
                     <span className="text-destructive">*</span> پر کردن این موارد الزامی است.
                 </p>
 
+                {requireTerms && (
+                    <FormField
+                        control={form.control}
+                        name="acceptTerms"
+                        render={({ field }) => (
+                            <FormItem>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <FormControl>
+                                        <input
+                                            type="checkbox"
+                                            className="size-4 accent-primary cursor-pointer"
+                                            checked={field.value}
+                                            onChange={e => field.onChange(e.target.checked)}
+                                            onBlur={field.onBlur}
+                                            ref={field.ref}
+                                        />
+                                    </FormControl>
+                                    <span>
+                                        <TermsModal>
+                                            <button type="button" className="text-primary underline underline-offset-4 cursor-pointer">قوانین و مقررات</button>
+                                        </TermsModal>
+                                        {" "}زر ایمن را مطالعه کرده‌ام و می‌پذیرم.
+                                    </span>
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+
                 <div className="flex gap-2 justify-end">
                     {onCancel && <Button type="button" variant="outline" onClick={onCancel}>انصراف</Button>}
-                    <Button type="submit" disabled={form.formState.isSubmitting || uploading}>
+                    <Button type="submit" disabled={form.formState.isSubmitting || uploading || !termsAccepted}>
                         {form.formState.isSubmitting && <Spinner />}
                         {submitLabel}
                     </Button>
