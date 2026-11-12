@@ -20,7 +20,7 @@ export class WalletTransactionModel {
 	@ApiProperty({ type: String, nullable: true })
 	customerSsn!: string | null
 
-	/** TOP_UP only: Zarinpal reference number. */
+	/** TOP_UP only: gateway reference number. */
 	@ApiProperty({ type: String, nullable: true })
 	refId!: string | null
 

@@ -81,9 +81,14 @@ function errorCode(promise: Promise<unknown>) {
 	)
 }
 
+/** What SePal posts to the callback url: 1 paid, 0 not paid. */
+function callback(paymentNumber: string, invoiceNumber: string, status = 1) {
+	return { status, paymentNumber, invoiceNumber }
+}
+
 describe("walletService", () => {
 	let prisma: ReturnType<typeof createPrisma>
-	let zarinpal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
+	let sepal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
 	let wallet: WalletService
 
 	function setup(balance: number, shahkarCost: number, smsCost: number, cardMatchCost = 700, vatPercent = 0) {
@@ -91,13 +96,13 @@ describe("walletService", () => {
 		const costs = Object.assign(new ServiceCostSettingsModel(), { shahkarCost, smsCost, cardMatchCost })
 		const vat = Object.assign(new VatSettingsModel(), { vatPercent })
 		const settings = { getSetting: async (key: string) => key === VAT_SETTINGS_KEY ? vat : costs }
-		zarinpal = {
-			requestPayment: vi.fn(async () => ({ ok: true, authority: "A0001" })),
-			verifyPayment: vi.fn(async () => ({ ok: true, code: 100, refId: "777", cardPan: "6037**1234" })),
-			gatewayUrl: (authority: string) => `https://sandbox.zarinpal.com/pg/StartPay/${authority}`,
+		sepal = {
+			requestPayment: vi.fn(async () => ({ ok: true, paymentNumber: "A0001" })),
+			verifyPayment: vi.fn(async () => ({ ok: true, refId: "777", cardPan: "6037**1234" })),
+			gatewayUrl: (paymentNumber: string) => `https://payment.sepal.ir/api/payment/${paymentNumber}/`,
 		}
 		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010", backendUrl: "http://127.0.0.1:8010" })
-		wallet = new WalletService(prisma as never, settings as never, zarinpal as never, config, new ErrorService())
+		wallet = new WalletService(prisma as never, settings as never, sepal as never, config, new ErrorService())
 	}
 
 	beforeEach(() => setup(5000, 1000, 200))
@@ -157,15 +162,15 @@ describe("walletService", () => {
 	})
 
 	describe("top-up", () => {
-		it("credits the wallet once Zarinpal verifies, and sends the owner back to their shop", async () => {
-			expect(await wallet.startTopUp("shop-1", 50_000)).toEqual({ url: "https://sandbox.zarinpal.com/pg/StartPay/A0001" })
+		it("credits the wallet once SePal verifies, and sends the owner back to their shop", async () => {
+			expect(await wallet.startTopUp("shop-1", 50_000)).toEqual({ url: "https://payment.sepal.ir/api/payment/A0001/" })
 			expect(prisma.rows[0]).toMatchObject({ type: "TOP_UP", status: "PENDING", authority: "A0001" })
-			expect(zarinpal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 50_000, callbackUrl: "http://127.0.0.1:8010/wallet/topUpCallback" }))
+			expect(sepal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 50_000, callbackUrl: "http://127.0.0.1:8010/wallet/topUpCallback" }))
 			expect(prisma.wallet.balance).toBe(5000)
 
-			const url = await wallet.handleTopUpCallback("A0001", "OK")
+			const url = await wallet.handleTopUpCallback(callback("A0001", "tx-1"))
 			expect(url).toBe("http://setoode.localhost:3010/panel/wallet?topUp=success&amount=50000&refId=777")
-			expect(zarinpal.verifyPayment).toHaveBeenCalledWith({ amount: 50_000, authority: "A0001" })
+			expect(sepal.verifyPayment).toHaveBeenCalledWith({ paymentNumber: "A0001", invoiceNumber: "tx-1", amount: 50_000 })
 			expect(prisma.wallet.balance).toBe(55_000)
 			expect(prisma.rows[0]).toMatchObject({ status: "SUCCESS", refId: "777" })
 		})
@@ -173,54 +178,57 @@ describe("walletService", () => {
 		it("charges the VAT on top at the gateway, but credits only the amount", async () => {
 			setup(5000, 1000, 200, 700, 10)
 			await wallet.startTopUp("shop-1", 50_000)
-			expect(zarinpal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 55_000 }))
+			expect(sepal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 55_000 }))
 			expect(prisma.rows[0]).toMatchObject({ vatAmount: 5_000 })
 			expect(prisma.rows[0]!.amount.toNumber()).toBe(50_000)
 
-			expect(await wallet.handleTopUpCallback("A0001", "OK")).toContain("amount=50000")
-			expect(zarinpal.verifyPayment).toHaveBeenCalledWith({ amount: 55_000, authority: "A0001" })
+			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1"))).toContain("amount=50000")
+			expect(sepal.verifyPayment).toHaveBeenCalledWith({ paymentNumber: "A0001", invoiceNumber: "tx-1", amount: 55_000 })
 			expect(prisma.wallet.balance).toBe(55_000)
 		})
 
 		it("credits only once when the callback comes twice", async () => {
 			await wallet.startTopUp("shop-1", 50_000)
-			await wallet.handleTopUpCallback("A0001", "OK")
-			expect(await wallet.handleTopUpCallback("A0001", "OK")).toContain("topUp=success")
+			await wallet.handleTopUpCallback(callback("A0001", "tx-1"))
+			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1"))).toContain("topUp=success")
 			expect(prisma.wallet.balance).toBe(55_000)
-			expect(zarinpal.verifyPayment).toHaveBeenCalledTimes(1)
+			expect(sepal.verifyPayment).toHaveBeenCalledTimes(1)
 		})
 
 		it("credits nothing when the owner cancels at the gateway", async () => {
 			await wallet.startTopUp("shop-1", 50_000)
-			expect(await wallet.handleTopUpCallback("A0001", "NOK")).toBe("http://setoode.localhost:3010/panel/wallet?topUp=failed&reason=Canceled")
-			expect(zarinpal.verifyPayment).not.toHaveBeenCalled()
+			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1", 0))).toBe("http://setoode.localhost:3010/panel/wallet?topUp=failed&reason=Canceled")
+			expect(sepal.verifyPayment).not.toHaveBeenCalled()
 			expect(prisma.wallet.balance).toBe(5000)
 			expect(prisma.rows[0]!.status).toBe("FAILED")
 		})
 
-		it("credits nothing when Zarinpal does not verify the payment", async () => {
-			zarinpal.verifyPayment.mockResolvedValueOnce({ ok: false, code: -51, message: "Zarinpal -51: unpaid" })
+		it("credits nothing when SePal does not verify the payment", async () => {
+			sepal.verifyPayment.mockResolvedValueOnce({ ok: false, message: "SePal verify: unpaid" })
 			await wallet.startTopUp("shop-1", 50_000)
-			expect(await wallet.handleTopUpCallback("A0001", "OK")).toContain("topUp=failed")
+			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1"))).toContain("topUp=failed")
 			expect(prisma.wallet.balance).toBe(5000)
 		})
 
-		it("leaves the top-up pending (nothing credited) when verification cannot reach Zarinpal", async () => {
-			zarinpal.verifyPayment.mockRejectedValueOnce(new Error("timeout"))
+		it("leaves the top-up pending (nothing credited) when verification cannot reach SePal", async () => {
+			sepal.verifyPayment.mockRejectedValueOnce(new Error("timeout"))
 			await wallet.startTopUp("shop-1", 50_000)
-			expect(await wallet.handleTopUpCallback("A0001", "OK")).toContain("reason=GatewayUnavailable")
+			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1"))).toContain("reason=GatewayUnavailable")
 			expect(prisma.rows[0]!.status).toBe("PENDING")
 			expect(prisma.wallet.balance).toBe(5000)
 		})
 
-		it("marks the top-up failed when Zarinpal refuses the payment request", async () => {
-			zarinpal.requestPayment.mockResolvedValueOnce({ ok: false, code: -9, message: "Zarinpal -9: validation" })
+		it("marks the top-up failed when SePal refuses the payment request", async () => {
+			sepal.requestPayment.mockResolvedValueOnce({ ok: false, message: "SePal request: invalid" })
 			expect(await errorCode(wallet.startTopUp("shop-1", 50_000))).toBe("GatewayError")
 			expect(prisma.rows[0]!.status).toBe("FAILED")
 		})
 
-		it("refuses a callback for an unknown authority", async () => {
-			expect(await errorCode(wallet.handleTopUpCallback("nope", "OK"))).toBe("TopUpNotFound")
+		it("refuses a callback for an unknown payment, or one whose invoice number is not that payment's", async () => {
+			expect(await errorCode(wallet.handleTopUpCallback(callback("nope", "tx-1")))).toBe("TopUpNotFound")
+			await wallet.startTopUp("shop-1", 50_000)
+			expect(await errorCode(wallet.handleTopUpCallback(callback("A0001", "tx-9")))).toBe("TopUpNotFound")
+			expect(sepal.verifyPayment).not.toHaveBeenCalled()
 		})
 	})
 
@@ -229,11 +237,11 @@ describe("walletService", () => {
 
 		it("cancels only top-ups still pending after 20 minutes", async () => {
 			await wallet.startTopUp("shop-1", 10_000) // tx-1: pending, 21 min old
-			zarinpal.requestPayment.mockResolvedValueOnce({ ok: true, authority: "A0002" })
+			sepal.requestPayment.mockResolvedValueOnce({ ok: true, paymentNumber: "A0002" })
 			await wallet.startTopUp("shop-1", 20_000) // tx-2: pending, 5 min old
-			zarinpal.requestPayment.mockResolvedValueOnce({ ok: true, authority: "A0003" })
+			sepal.requestPayment.mockResolvedValueOnce({ ok: true, paymentNumber: "A0003" })
 			await wallet.startTopUp("shop-1", 30_000) // tx-3: paid, 30 min old
-			await wallet.handleTopUpCallback("A0003", "OK")
+			await wallet.handleTopUpCallback(callback("A0003", "tx-3"))
 			prisma.rows[0]!.createdAt = minutesAgo(21)
 			prisma.rows[1]!.createdAt = minutesAgo(5)
 			prisma.rows[2]!.createdAt = minutesAgo(30)
@@ -247,8 +255,8 @@ describe("walletService", () => {
 			prisma.rows[0]!.createdAt = minutesAgo(25)
 			await wallet.cancelStaleTopUps()
 
-			expect(await wallet.handleTopUpCallback("A0001", "OK")).toBe("http://setoode.localhost:3010/panel/wallet?topUp=failed&reason=Expired")
-			expect(zarinpal.verifyPayment).not.toHaveBeenCalled()
+			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1"))).toBe("http://setoode.localhost:3010/panel/wallet?topUp=failed&reason=Expired")
+			expect(sepal.verifyPayment).not.toHaveBeenCalled()
 			expect(prisma.wallet.balance).toBe(5000)
 		})
 	})

@@ -23,8 +23,8 @@ export function SubscriptionPlansSection({ plans }: { plans: SubscriptionPlanMod
 
     async function add(e: React.FormEvent) {
         e.preventDefault()
-        if (!title.trim() || Number(price) < 1000 || Number(days) < 1) {
-            toast.error("عنوان، قیمت (حداقل ۱٬۰۰۰ تومان) و مدت (روز) را وارد کنید.")
+        if (!title.trim() || Number(price) < 10_000 || Number(days) < 1) {
+            toast.error("عنوان، قیمت (حداقل ۱۰٬۰۰۰ تومان) و مدت (روز) را وارد کنید.")
             return
         }
         setLoading(true)
@@ -50,7 +50,7 @@ export function SubscriptionPlansSection({ plans }: { plans: SubscriptionPlanMod
             <CardHeader>
                 <CardTitle>طرح‌های اشتراک</CardTitle>
                 <CardDescription>
-                    فروشگاه‌ها با خرید یکی از این طرح‌ها (پرداخت با زرین‌پال) می‌توانند از خدمات استفاده کنند. خرید جدید به انتهای اشتراک فعلی اضافه می‌شود.
+                    فروشگاه‌ها با خرید یکی از این طرح‌ها (پرداخت آنلاین با سپال) می‌توانند از خدمات استفاده کنند. خرید جدید به انتهای اشتراک فعلی اضافه می‌شود.
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">

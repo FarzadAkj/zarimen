@@ -8,14 +8,14 @@ import { Spinner } from "@/components/shad/spinner"
 import { formatAmount, formatRials } from "@/lib/format"
 
 /**
- * `NEXT_PUBLIC_ZARINPAL_ENABLED=true` turns online payment on. Until the Zarinpal account is
- * registered it is off: the dialog shows the amounts and sends the owner to a support ticket
+ * `NEXT_PUBLIC_PAYMENT_ENABLED=true` turns online payment (SePal) on. Until the SePal account
+ * works it is off: the dialog shows the amounts and sends the owner to a support ticket
  * (subject and amounts prefilled) instead of the gateway.
  */
-const ZARINPAL_ENABLED = process.env.NEXT_PUBLIC_ZARINPAL_ENABLED === "true"
+const PAYMENT_ENABLED = process.env.NEXT_PUBLIC_PAYMENT_ENABLED === "true"
 
 /**
- * Shown before the owner goes to Zarinpal: the amount, the VAT added on top of it (the admin's
+ * Shown before the owner goes to SePal: the amount, the VAT added on top of it (the admin's
  * percent, computed like the backend does) and the total charged at the gateway.
  */
 export function PaymentConfirmDialog({ open, onOpenChange, title, amountLabel, amount, vatPercent, pending, onConfirm }: {
@@ -43,11 +43,11 @@ export function PaymentConfirmDialog({ open, onOpenChange, title, amountLabel, a
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
-                        {!ZARINPAL_ENABLED
+                        {!PAYMENT_ENABLED
                             ? "پرداخت آنلاین فعلاً فعال نیست. برای پرداخت، از طریق تیکت با پشتیبانی در ارتباط باشید."
                             : vatPercent > 0
                                 ? `${vatPercent.toLocaleString("fa-IR")}٪ مالیات بر ارزش افزوده به این مبلغ اضافه می‌شود.`
-                                : "مبلغ زیر در درگاه زرین‌پال از شما دریافت می‌شود."}
+                                : "مبلغ زیر در درگاه سپال از شما دریافت می‌شود."}
                     </DialogDescription>
                 </DialogHeader>
                 <dl className="grid gap-2 text-sm">
@@ -63,17 +63,17 @@ export function PaymentConfirmDialog({ open, onOpenChange, title, amountLabel, a
                         <dt>مبلغ قابل پرداخت</dt>
                         <dd className="text-primary">{formatAmount(String(total))}</dd>
                     </div>
-                    {ZARINPAL_ENABLED && (
+                    {PAYMENT_ENABLED && (
                         <p className="text-xs text-muted-foreground">
                             در درگاه پرداخت: {formatRials(total)}
                         </p>
                     )}
                 </dl>
-                {ZARINPAL_ENABLED
+                {PAYMENT_ENABLED
                     ? (
                         <Button onClick={onConfirm} disabled={pending} size="lg">
                             {pending && <Spinner />}
-                            پرداخت با زرین‌پال
+                            پرداخت با سپال
                         </Button>
                     )
                     : (

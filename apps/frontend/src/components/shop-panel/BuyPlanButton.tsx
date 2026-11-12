@@ -6,8 +6,8 @@ import { Button } from "@/components/shad/button"
 import { PaymentConfirmDialog } from "@/components/shop-panel/PaymentConfirmDialog"
 
 /**
- * Shows the plan's price + VAT, then sends the owner to Zarinpal for the total;
- * Zarinpal comes back through the backend to /panel/subscription?purchase=…
+ * Shows the plan's price + VAT, then sends the owner to SePal for the total;
+ * SePal posts the result back through the backend to /panel/subscription?purchase=…
  */
 export function BuyPlanButton({ planId, planTitle, price, vatPercent }: { planId: string, planTitle: string, price: number, vatPercent: number }) {
     const [open, setOpen] = useState(false)
@@ -28,7 +28,7 @@ export function BuyPlanButton({ planId, planTitle, price, vatPercent }: { planId
     return (
         <>
             <Button onClick={() => setOpen(true)} className="w-full">
-                خرید با زرین‌پال
+                خرید با سپال
             </Button>
             <PaymentConfirmDialog
                 open={open}

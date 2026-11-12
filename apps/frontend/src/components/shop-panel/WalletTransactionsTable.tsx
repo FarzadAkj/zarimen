@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 function describe(row: WalletTransactionModel) {
     switch (row.type) {
-        case "TOP_UP": return "افزایش موجودی (زرین‌پال)"
+        case "TOP_UP": return "افزایش موجودی (پرداخت آنلاین)"
         case "ADMIN_ADJUSTMENT": return "تنظیم موجودی توسط مدیر"
         case "SERVICE_CHARGE":
             switch (row.service) {

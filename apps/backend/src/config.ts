@@ -1,4 +1,4 @@
-import { IsEnum, IsIn, IsOptional, IsString, IsUrl, Matches, MinLength } from "class-validator"
+import { IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, Matches, MinLength } from "class-validator"
 
 export enum NodeEnvType {
 	Production = "production",
@@ -122,25 +122,26 @@ export class Config {
 	/**
 	 * A shop's site, with `{subdomain}` where its subdomain goes:
 	 * "https://{subdomain}.zarimen.ir" (production), "http://{subdomain}.localhost:3010" (dev).
-	 * The backend sends owners back here after a Zarinpal payment.
+	 * The backend sends owners back here after a SePal payment.
 	 */
 	@Matches(/^https?:\/\/.*\{subdomain\}/, { message: "shopSiteUrl must be a URL containing {subdomain}" })
 	public shopSiteUrl!: string
 
-	// ---- Zarinpal (shop wallet top-ups)
+	// ---- SePal (wallet top-ups and subscription purchases)
 
 	@IsString()
-	public zarinPalMerchantId!: string
+	@IsNotEmpty()
+	public sepalApiKey!: string
 
 	/**
-	 * Public base URL of this backend, e.g. https://api.zarimen.ir. Zarinpal sends payers back
+	 * Public base URL of this backend, e.g. https://api.zarimen.ir. SePal posts payment results
 	 * to callbacks under it (/wallet/topUpCallback, /subscription/purchaseCallback).
 	 */
 	@IsUrl({ require_tld: false, protocols: ["https", "http"] })
 	public backendUrl!: string
 
-	/** Leave empty for production; https://sandbox.zarinpal.com to test without real money. */
+	/** Leave empty for https://payment.sepal.ir. */
 	@IsOptional()
 	@IsString()
-	public zarinpalBaseUrl?: string
+	public sepalBaseUrl?: string
 }

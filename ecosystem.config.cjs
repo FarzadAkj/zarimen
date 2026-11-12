@@ -1,7 +1,7 @@
 /**
  * PM2 processes for production (see docs/DEPLOY.md):
  *   pm2 start ecosystem.config.cjs && pm2 save
- * One backend instance only: the Zarinpal clean-up timers (@Cron) run inside it.
+ * One backend instance only: the payment clean-up timers (@Cron) run inside it.
  */
 module.exports = {
 	apps: [

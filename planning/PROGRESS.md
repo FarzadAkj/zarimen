@@ -37,6 +37,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 15  | Terms checkbox on zarimen.ir/signup | done |
 | 16  | «استعلام دستی» history (owner customers page + admin shop view) | done — `db push` applied to the dev DB |
 | 17  | Zarinpal off for now: payment dialogs point owners to a support ticket | done |
+| 18  | Payment gateway Zarinpal → SePal (still switched off in the frontend) | done — no schema change; needs `sepalApiKey` |
 
 ## Step log
 
@@ -833,3 +834,46 @@ show a modal that sends owners to support through tickets.
 - Backend unchanged: the start-payment endpoints still work if called directly.
 - Payment then happens outside the app; the admin credits the wallet (wallet pencil) or moves the
   subscription end date by hand.
+
+### Step 18 — Zarinpal → SePal (2026-11-12)
+
+Asked for: replace Zarinpal with SePal (request → payment page → callback → verify; amounts in
+Rials, at least 100,000; the payment page needs our Origin / Referer). User's answers: **keep one
+callback per payment kind** (SePal's "/payment/{n}/callback/" was only SePal's own wording);
+**minimum top-up and plan price 10,000 Tomans**; the frontend flag is **renamed and stays off**.
+
+Backend:
+- `libs/zarinpal` → `libs/sepal` (`SepalService`): `requestPayment` (amount in Tomans, sent ×10 as
+  Rials, `callbackMethod: "post"`, `invoiceNumber` = our row id, `payerMobile` = owner),
+  `gatewayUrl` = `https://payment.sepal.ir/api/payment/<paymentNumber>/`, `verifyPayment`
+  (`status` true **and** `amount` exactly the expected Rials; `alreadyVerified` counts as paid).
+  5 tests with a stubbed `fetch`.
+- Config `zarinPalMerchantId` / `zarinpalBaseUrl` → `sepalApiKey` (required) / `sepalBaseUrl`
+  (empty = payment.sepal.ir), in `.env`, `.env.example`, DEPLOY.md. **The local `.env` has a
+  placeholder key**; put the real one in before testing a payment.
+- Callbacks are now `POST /wallet/topUpCallback` and `POST /subscription/purchaseCallback` with
+  `PaymentCallbackInput` (status 0/1, paymentNumber, invoiceNumber, amount?, cardNumber?,
+  referenceNumber?). Form-encoded and JSON bodies both parse (checked live on a temporary backend).
+  The row is found by paymentNumber (stored in the existing `authority` column) and its id must equal
+  invoiceNumber, else TopUpNotFound / PurchaseNotFound. status 0 → FAILED («Canceled» on the page);
+  status 1 → verify. The callback's amount / card / reference are not trusted (verify asks SePal).
+- No schema change: `authority` keeps SePal's paymentNumber, `gatewayCode` is no longer written
+  (Zarinpal rows keep theirs). Only comments changed in the .prisma files.
+- `MIN_WALLET_TOP_UP` 2,000 → 10,000, `MIN_PLAN_PRICE` 1,000 → 10,000 Tomans (frontend checks too).
+  Existing plans under 10,000 Tomans would be refused by SePal; none expected.
+- Wallet / subscription tests ported (17 + 9), plus a callback whose invoiceNumber does not match.
+
+Frontend:
+- `NEXT_PUBLIC_ZARINPAL_ENABLED` → `NEXT_PUBLIC_PAYMENT_ENABLED` (still `false`; `.env`,
+  `.env.example`, DEPLOY.md). **Rename it on the server too** before turning payments on.
+- Texts «زرین‌پال» → «سپال» (buttons, dialog, landing page, admin plans card); wallet history label
+  «افزایش موجودی (پرداخت آنلاین)» (old rows were Zarinpal, new ones SePal).
+- Gateway: still `window.location.assign(url)`, a navigation from `<sub>.zarimen.ir`, so the browser
+  sends the Referer SePal checks (default `strict-origin-when-cross-origin` → origin only).
+- `src/api` regenerated from a temporary backend on :8011.
+
+Open:
+- Not tested against the real SePal (no key). Unknown: whether SePal accepts a Referer from shop
+  **subdomains** (`<sub>.zarimen.ir`) when the registered site is `zarimen.ir`; whether a 36-char UUID
+  is accepted as `invoiceNumber`; whether "more than 100,000" is strict (10,000 Tomans with 0% VAT is
+  exactly 100,000 Rials).

@@ -1,10 +1,10 @@
 import type { ShopOwnerRequest } from "../auth/guards/is-shop-owner.guard"
-import { Body, Controller, Get, Post, Query, Redirect, Req, UseGuards } from "@nestjs/common"
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse } from "@nestjs/swagger"
+import { Body, Controller, Post, Redirect, Req, UseGuards } from "@nestjs/common"
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from "@nestjs/swagger"
 import { IsAdmin } from "../auth/guards/is-admin.guard"
 import { IsShopOwner } from "../auth/guards/is-shop-owner.guard"
+import { PaymentCallbackInput } from "../wallet/dto/payment-callback.input"
 import { ReadWalletTransactionsInput } from "../wallet/dto/read-wallet-transactions.input"
-import { TopUpCallbackQuery } from "../wallet/dto/top-up-callback.query"
 import { SetShopSubscriptionEndInput } from "./dto/set-subscription-end.input"
 import { CreateSubscriptionPlanInput, SetSubscriptionPlanActiveInput, StartSubscriptionPurchaseInput } from "./dto/subscription-plan.input"
 import { MySubscriptionModel, ReadSubscriptionPurchasesOutput, SubscriptionPlanModel, SubscriptionPurchaseStartedModel } from "./model/subscription.model"
@@ -87,7 +87,7 @@ export class ShopSubscriptionController {
 	}
 
 	@Post("startSubscriptionPurchase")
-	@ApiOperation({ operationId: "startSubscriptionPurchase", description: "Returns the Zarinpal url to pay for the plan." })
+	@ApiOperation({ operationId: "startSubscriptionPurchase", description: "Returns the SePal url to pay for the plan." })
 	@ApiBody({ type: StartSubscriptionPurchaseInput })
 	@ApiResponse({ type: SubscriptionPurchaseStartedModel, status: 200 })
 	startSubscriptionPurchase(@Req() request: ShopOwnerRequest, @Body() input: StartSubscriptionPurchaseInput): Promise<SubscriptionPurchaseStartedModel> {
@@ -95,7 +95,7 @@ export class ShopSubscriptionController {
 	}
 }
 
-/** Zarinpal's return url for subscription payments (the owner's browser lands here), and the public plan list. */
+/** SePal's callbackUrl for subscription payments (posted from the owner's browser, which lands here), and the public plan list. */
 @Controller("subscription")
 export class SubscriptionCallbackController {
 	constructor(private subscription: SubscriptionService) { }
@@ -107,13 +107,12 @@ export class SubscriptionCallbackController {
 		return this.subscription.readPlans(true)
 	}
 
-	@Get("purchaseCallback")
+	@Post("purchaseCallback")
 	@Redirect()
 	@ApiOperation({ operationId: "subscriptionPurchaseCallback", description: "Verifies the payment, extends the subscription, then 302s to <shopSiteUrl>/panel/subscription?purchase=success&plan=&endsAt=&refId= or ?purchase=failed&reason=" })
-	@ApiQuery({ name: "Authority", type: String })
-	@ApiQuery({ name: "Status", type: String, required: false, enum: ["OK", "NOK"] })
+	@ApiBody({ type: PaymentCallbackInput })
 	@ApiResponse({ status: 302, description: "Redirect to the shop's subscription page" })
-	async purchaseCallback(@Query() query: TopUpCallbackQuery) {
-		return { url: await this.subscription.handlePurchaseCallback(query.Authority, query.Status), statusCode: 302 }
+	async purchaseCallback(@Body() input: PaymentCallbackInput) {
+		return { url: await this.subscription.handlePurchaseCallback(input), statusCode: 302 }
 	}
 }

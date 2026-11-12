@@ -7,7 +7,7 @@ export function toLatinDigits(value: string) {
 
 const numberFormat = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 })
 
-/** Tomans → "۵۵۰٬۰۰۰ ریال" (what Zarinpal's page shows). */
+/** Tomans → "۵۵۰٬۰۰۰ ریال" (what the gateway charges: SePal works in Rials). */
 export function formatRials(tomans: number) {
     return `${numberFormat.format(tomans * 10)} ریال`
 }

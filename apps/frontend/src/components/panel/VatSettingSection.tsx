@@ -13,7 +13,7 @@ import { formatAmount, toLatinDigits } from "@/lib/format"
 
 const EXAMPLE_AMOUNT = 50_000
 
-/** VAT percent added on top of every Zarinpal payment (wallet top-ups and subscriptions). */
+/** VAT percent added on top of every SePal payment (wallet top-ups and subscriptions). */
 export function VatSettingSection({ data }: { data: VatSettingsModel }) {
     const [value, setValue] = useState(String(data.vatPercent))
     const [loading, setLoading] = useState(false)

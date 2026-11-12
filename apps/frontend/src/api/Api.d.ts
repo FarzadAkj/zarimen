@@ -47,10 +47,21 @@ export interface VatSettingsModel {
   /** Whole percent added to the amount the owner pays (10 → 50,000 + 5,000 Tomans). */
   vatPercent: number;
 }
+export interface PaymentCallbackInput {
+  /** 1 paid, 0 not paid */
+  status: PaymentCallbackInputStatusEnum;
+  paymentNumber: string;
+  /** Our payment row id */
+  invoiceNumber: string;
+  /** Rials */
+  amount?: number;
+  cardNumber?: string;
+  referenceNumber?: string;
+}
 export interface StartWalletTopUpInput {
   /**
    * Tomans to add to the wallet
-   * @min 2000
+   * @min 10000
    * @max 200000000
    */
   amount: number;
@@ -557,13 +568,10 @@ export interface SendTobeShopSmsInput {
   id: string;
   value: string;
 }
-export declare enum WalletTopUpCallbackParamsStatusEnum {
-  OK = "OK",
-  NOK = "NOK",
-}
-export declare enum SubscriptionPurchaseCallbackParamsStatusEnum {
-  OK = "OK",
-  NOK = "NOK",
+/** 1 paid, 0 not paid */
+export declare enum PaymentCallbackInputStatusEnum {
+  Value0 = 0,
+  Value1 = 1,
 }
 export type QueryParamsType = Record<string | number, any>;
 export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
@@ -770,7 +778,7 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<VatSettingsModel, any>>;
     /**
-     * @description Returns the Zarinpal url to add `amount` Tomans to the owner's wallet.
+     * @description Returns the SePal url to add `amount` Tomans to the owner's wallet.
      *
      * @tags ShopWallet
      * @name StartWalletTopUp
@@ -898,7 +906,7 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<ReadSubscriptionPurchasesOutput, any>>;
     /**
-     * @description Returns the Zarinpal url to pay for the plan.
+     * @description Returns the SePal url to pay for the plan.
      *
      * @tags ShopSubscription
      * @name StartSubscriptionPurchase
@@ -988,13 +996,10 @@ export declare class Api<
      *
      * @tags WalletCallback
      * @name WalletTopUpCallback
-     * @request GET:/wallet/topUpCallback
+     * @request POST:/wallet/topUpCallback
      */
     walletTopUpCallback: (
-      query: {
-        Authority: string;
-        Status?: WalletTopUpCallbackParamsStatusEnum;
-      },
+      data: PaymentCallbackInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<any, void>>;
   };
@@ -1271,13 +1276,10 @@ export declare class Api<
      *
      * @tags SubscriptionCallback
      * @name SubscriptionPurchaseCallback
-     * @request GET:/subscription/purchaseCallback
+     * @request POST:/subscription/purchaseCallback
      */
     subscriptionPurchaseCallback: (
-      query: {
-        Authority: string;
-        Status?: SubscriptionPurchaseCallbackParamsStatusEnum;
-      },
+      data: PaymentCallbackInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<any, void>>;
   };

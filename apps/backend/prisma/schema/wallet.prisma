@@ -8,7 +8,7 @@ model WalletTransaction {
   /// Only top-ups are ever PENDING / FAILED / CANCELED; charges and adjustments are written as SUCCESS.
   status   WalletTransactionStatus @default(SUCCESS)
   amount   Decimal                 @db.Decimal(20, 0)
-  /// TOP_UP: VAT paid on top of `amount` (whole Tomans). Zarinpal charged amount + vatAmount;
+  /// TOP_UP: VAT paid on top of `amount` (whole Tomans). the gateway charged amount + vatAmount;
   /// only `amount` goes into the wallet.
   vatAmount Decimal                @default(0) @db.Decimal(20, 0)
 
@@ -16,10 +16,11 @@ model WalletTransaction {
   service     PaidService?
   customerSsn String?
 
-  /// TOP_UP: Zarinpal authority of the payment request, and what verification returned.
+  /// TOP_UP: the gateway's id for the payment (SePal paymentNumber; Zarinpal authority on old rows),
+  /// and what verification returned. gatewayCode: Zarinpal only (SePal has no code).
   authority   String? @unique
   refId       String?
-  /// Masked card the owner paid with, as reported by Zarinpal.
+  /// Masked card the owner paid with, as reported by the gateway.
   cardPan     String?
   gatewayCode Int?
   description String?
@@ -31,7 +32,7 @@ model WalletTransaction {
 }
 
 enum WalletTransactionType {
-  /// Owner paid through Zarinpal (+).
+  /// Owner paid through the gateway (+).
   TOP_UP
   /// A customer's Shahkar check or SMS (-).
   SERVICE_CHARGE
@@ -43,7 +44,7 @@ enum WalletTransactionStatus {
   PENDING
   SUCCESS
   FAILED
-  /// A top-up left PENDING too long (owner never came back from Zarinpal); see WalletService.cancelStaleTopUps.
+  /// A top-up left PENDING too long (owner never came back from the gateway); see WalletService.cancelStaleTopUps.
   CANCELED
 }
 

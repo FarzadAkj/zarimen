@@ -10,13 +10,13 @@ import { formatAmount, toLatinDigits } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 /** Same bounds as the backend's StartWalletTopUpInput. */
-const MIN_TOP_UP = 2000
+const MIN_TOP_UP = 10_000
 const MAX_TOP_UP = 200_000_000
 const QUICK_AMOUNTS = [100_000, 500_000, 1_000_000, 5_000_000]
 
 /**
- * Amount + "pay" → a dialog with the amount + VAT → Zarinpal for the total (only the amount reaches
- * the wallet); Zarinpal comes back through the backend to /panel/wallet?topUp=…
+ * Amount + "pay" → a dialog with the amount + VAT → SePal for the total (only the amount reaches
+ * the wallet); SePal posts the result back through the backend to /panel/wallet?topUp=…
  */
 export function WalletTopUpForm({ vatPercent }: { vatPercent: number }) {
     const [amount, setAmount] = useState("")
@@ -77,7 +77,7 @@ export function WalletTopUpForm({ vatPercent }: { vatPercent: number }) {
                     </div>
                 </div>
                 <Button type="submit" size="lg">
-                    پرداخت با زرین‌پال
+                    پرداخت با سپال
                 </Button>
             </form>
             <PaymentConfirmDialog

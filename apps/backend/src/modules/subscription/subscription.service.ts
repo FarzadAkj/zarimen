@@ -1,4 +1,5 @@
 import type { SubscriptionPlan, SubscriptionPurchase } from "@prisma/client"
+import type { PaymentCallbackInput } from "../wallet/dto/payment-callback.input"
 import type { CreateSubscriptionPlanInput } from "./dto/subscription-plan.input"
 import type { MySubscriptionModel, ReadSubscriptionPurchasesOutput, SubscriptionPlanModel, SubscriptionPurchaseModel, SubscriptionPurchaseStartedModel } from "./model/subscription.model"
 import { Injectable } from "@nestjs/common"
@@ -10,18 +11,18 @@ import { Config } from "~/config"
 import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
-import { ZarinpalService } from "~/libs/zarinpal/zarinpal.service"
+import { SepalService } from "~/libs/sepal/sepal.service"
 import { VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
 import { VatSettingsModel } from "../setting/model/vat-settings.model"
 import { SettingService } from "../setting/setting.service"
 import { ADMIN_EXTENSION_TITLE, adminExtension, extendSubscription, hasActiveSubscription, PENDING_PURCHASE_TTL_MINUTES, SUBSCRIPTION_PURCHASES_PAGE_SIZE } from "./constants/subscription"
 import { SubscriptionErrors } from "./constants/subscription.errors"
 
-/** Where the owner lands after Zarinpal: their shop's /panel/subscription, with the outcome in the query string. */
+/** Where the owner lands after SePal: their shop's /panel/subscription, with the outcome in the query string. */
 type PurchaseOutcome = { success: true, planTitle: string, endsAt: Date, refId: string } | { success: false, reason: string }
 
 /**
- * Subscription plans (defined by the admin) and shops buying them through Zarinpal.
+ * Subscription plans (defined by the admin) and shops buying them through SePal.
  * A shop's customers can use its pages until `Shop.subscriptionEndsAt`; each purchase
  * extends it from the current end (or from now, if it already ended).
  */
@@ -29,7 +30,7 @@ type PurchaseOutcome = { success: true, planTitle: string, endsAt: Date, refId: 
 export class SubscriptionService {
 	constructor(
 		private prisma: PrismaService,
-		private zarinpal: ZarinpalService,
+		private sepal: SepalService,
 		private settings: SettingService,
 		private config: Config,
 		private error: ErrorService,
@@ -84,7 +85,7 @@ export class SubscriptionService {
 		return { data: data.map(row => this.toPurchaseModel(row)), count, pageSize: SUBSCRIPTION_PURCHASES_PAGE_SIZE }
 	}
 
-	/** Starts a Zarinpal payment for an active plan, plus the admin's VAT; verified by `GET /subscription/purchaseCallback`. */
+	/** Starts a SePal payment for an active plan, plus the admin's VAT; verified by `POST /subscription/purchaseCallback`. */
 	async startPurchase(shopId: string, planId: string): Promise<SubscriptionPurchaseStartedModel> {
 		const plan = await this.prisma.subscriptionPlan.findUnique({ where: { id: planId } })
 		if (!plan?.isActive)
@@ -99,41 +100,41 @@ export class SubscriptionService {
 			data: { shopId, planId, planTitle: plan.title, price: plan.price, vatAmount, durationDays: plan.durationDays },
 		})
 
-		let request: Awaited<ReturnType<ZarinpalService["requestPayment"]>>
+		let request: Awaited<ReturnType<SepalService["requestPayment"]>>
 		try {
-			request = await this.zarinpal.requestPayment({
+			request = await this.sepal.requestPayment({
 				amount: price + vatAmount,
 				description: `${SoftwareName} - ${plan.title} - ${shop.subdomain}`,
-				orderId: purchase.id,
+				invoiceNumber: purchase.id,
 				callbackUrl: new URL("/subscription/purchaseCallback", this.config.backendUrl).toString(),
-				mobile: shop.ownerPhoneNumber,
+				payerMobile: shop.ownerPhoneNumber,
 			})
 		}
 		catch (e) {
-			await this.failPurchase(purchase.id, null, "Zarinpal could not be reached")
+			await this.failPurchase(purchase.id, "SePal could not be reached")
 			throw this.error.throwErrorToClient(SubscriptionErrors.GatewayUnavailable, e as Error)
 		}
 
 		if (!request.ok) {
 			logger.error(`[subscription] purchase request refused for shop ${shopId}: ${request.message}`)
-			await this.failPurchase(purchase.id, request.code, request.message)
+			await this.failPurchase(purchase.id, request.message)
 			throw this.error.throwErrorToClient(SubscriptionErrors.GatewayError, new Error(request.message))
 		}
 
-		await this.prisma.subscriptionPurchase.update({ where: { id: purchase.id }, data: { authority: request.authority } })
-		return { url: this.zarinpal.gatewayUrl(request.authority) }
+		await this.prisma.subscriptionPurchase.update({ where: { id: purchase.id }, data: { authority: request.paymentNumber } })
+		return { url: this.sepal.gatewayUrl(request.paymentNumber) }
 	}
 
 	/**
-	 * Zarinpal sends the owner back here. Verifies the payment, extends the shop's subscription
+	 * SePal posts the result here from the owner's browser. Verifies the payment, extends the shop's subscription
 	 * and returns where to redirect the owner. Idempotent: a repeated callback extends nothing.
 	 */
-	async handlePurchaseCallback(authority: string, status?: string): Promise<string> {
+	async handlePurchaseCallback(callback: Pick<PaymentCallbackInput, "status" | "paymentNumber" | "invoiceNumber">): Promise<string> {
 		const purchase = await this.prisma.subscriptionPurchase.findUnique({
-			where: { authority },
+			where: { authority: callback.paymentNumber },
 			include: { shop: { select: { subdomain: true } } },
 		})
-		if (!purchase)
+		if (!purchase || purchase.id !== callback.invoiceNumber)
 			throw this.error.throwErrorToClient(SubscriptionErrors.PurchaseNotFound)
 
 		const back = (outcome: PurchaseOutcome) => this.resultUrl(purchase.shop.subdomain, outcome)
@@ -142,27 +143,32 @@ export class SubscriptionService {
 			return back({ success: true, planTitle: purchase.planTitle, endsAt: purchase.endsAt!, refId: purchase.refId ?? "" })
 		if (purchase.status === SubscriptionPurchaseStatus.FAILED)
 			return back({ success: false, reason: "Failed" })
-		// Too late: cancelStalePurchases gave up on it. Unverified, so Zarinpal returns the money to the payer.
+		// Too late: cancelStalePurchases gave up on it. Never verified, so the payment is not settled to us.
 		if (purchase.status === SubscriptionPurchaseStatus.CANCELED)
 			return back({ success: false, reason: "Expired" })
 
-		if (status === "NOK") {
-			await this.failPurchase(purchase.id, null, "Canceled by the payer")
+		if (callback.status !== 1) {
+			await this.failPurchase(purchase.id, "Not paid (SePal status 0)")
 			return back({ success: false, reason: "Canceled" })
 		}
 
-		let verification: Awaited<ReturnType<ZarinpalService["verifyPayment"]>>
+		let verification: Awaited<ReturnType<SepalService["verifyPayment"]>>
 		try {
-			verification = await this.zarinpal.verifyPayment({ amount: purchase.price.add(purchase.vatAmount).toNumber(), authority })
+			verification = await this.sepal.verifyPayment({
+				paymentNumber: callback.paymentNumber,
+				invoiceNumber: purchase.id,
+				amount: purchase.price.add(purchase.vatAmount).toNumber(),
+			})
 		}
 		catch (e) {
-			// Stays PENDING: Zarinpal reverses unverified payments, and nothing was extended.
-			logger.error(`[subscription] verify failed for ${authority}`, e)
+			// Stays PENDING: nothing was extended, and an unverified payment is not settled to us.
+			logger.error(`[subscription] verify failed for ${callback.paymentNumber}`, e)
 			return back({ success: false, reason: "GatewayUnavailable" })
 		}
 
 		if (!verification.ok) {
-			await this.failPurchase(purchase.id, verification.code, verification.message)
+			logger.error(`[subscription] purchase ${purchase.id} not verified: ${verification.message}`)
+			await this.failPurchase(purchase.id, verification.message)
 			return back({ success: false, reason: "Failed" })
 		}
 
@@ -213,7 +219,7 @@ export class SubscriptionService {
 	 * Marks the purchase paid and extends the shop's subscription, once. The shop row is locked
 	 * while the new end date is computed, so two purchases verified at the same time both count.
 	 */
-	private async completePurchase(purchase: SubscriptionPurchase, verification: { code: number, refId: string, cardPan: string | null }) {
+	private async completePurchase(purchase: SubscriptionPurchase, verification: { refId: string, cardPan: string | null }) {
 		return this.prisma.$transaction(async (tx) => {
 			const { count } = await tx.subscriptionPurchase.updateMany({
 				where: { id: purchase.id, status: SubscriptionPurchaseStatus.PENDING },
@@ -221,7 +227,6 @@ export class SubscriptionService {
 					status: SubscriptionPurchaseStatus.SUCCESS,
 					refId: verification.refId,
 					cardPan: verification.cardPan,
-					gatewayCode: verification.code,
 				},
 			})
 			// A concurrent callback already completed it.
@@ -238,10 +243,10 @@ export class SubscriptionService {
 		})
 	}
 
-	private async failPurchase(id: string, gatewayCode: number | null, description: string) {
+	private async failPurchase(id: string, description: string) {
 		await this.prisma.subscriptionPurchase.update({
 			where: { id },
-			data: { status: SubscriptionPurchaseStatus.FAILED, gatewayCode, description },
+			data: { status: SubscriptionPurchaseStatus.FAILED, description },
 		})
 	}
 

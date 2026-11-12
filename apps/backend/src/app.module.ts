@@ -5,9 +5,9 @@ import { ConfigModule } from "./libs/config/config.module"
 import { ErrorModule } from "./libs/error/error.module"
 import { ImageBucketModule } from "./libs/image-bucket/image-bucket.module"
 import { PrismaModule } from "./libs/prisma/prisma.module"
+import { SepalModule } from "./libs/sepal/sepal.module"
 import { ShahkarModule } from "./libs/shahkar/shahkar.module"
 import { SmsIrModule } from "./libs/sms-ir/sms-ir.module"
-import { ZarinpalModule } from "./libs/zarinpal/zarinpal.module"
 import { AuthModule } from "./modules/auth/auth.module"
 import { CustomerModule } from "./modules/customer/customer.module"
 import { ImageUploadModule } from "./modules/image-upload/image-upload.module"
@@ -40,11 +40,11 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 			}),
 		}),
 		ShahkarModule,
-		ZarinpalModule.registerAsync({
+		SepalModule.registerAsync({
 			inject: [Config],
 			useFactory: (config: Config) => ({
-				merchantId: config.zarinPalMerchantId,
-				baseUrl: config.zarinpalBaseUrl || undefined,
+				apiKey: config.sepalApiKey,
+				baseUrl: config.sepalBaseUrl || undefined,
 			}),
 		}),
 		ImageBucketModule,

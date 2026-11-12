@@ -35,14 +35,14 @@ The customer is identified by three things, and all three matter:
 - **Service costs:** the admin sets a Toman price for Shahkar checks and for SMS on
   zarimen.ir/panel/settings. Each one a shop's customers trigger is taken from that shop's
   wallet; with too little balance the request does not run.
-- **Wallet top-up:** owners pay through Zarinpal on <sub>.zarimen.ir/panel/wallet.
+- **Wallet top-up:** owners pay through SePal on <sub>.zarimen.ir/panel/wallet (at least 10,000 Tomans).
 - **Wallet history:** <sub>.zarimen.ir/panel/transactions — increases (top-ups, admin
   changes) with Jalali date/time and amount; decreases also with the service (SMS / Shahkar)
   and the customer's national code.
 - **Admin view of a shop:** zarimen.ir/panel/customers/<subdomain> — the shop, its customers
   and its wallet history.
 - **Subscriptions:** the admin defines plans (price in Tomans + length in days) on the
-  settings page. Owners buy them through Zarinpal on <sub>.zarimen.ir/panel/subscription; a
+  settings page. Owners buy them through SePal on <sub>.zarimen.ir/panel/subscription; a
   purchase is added to the end of a running subscription. Without a running subscription the
   shop's customers cannot verify and the owner cannot see customer data (the rest of the
   owner panel stays open). The admin can move a shop's end date later (never earlier than the

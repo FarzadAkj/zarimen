@@ -5,9 +5,9 @@ import { defineErrorList } from "~/libs/error/classes/global-error"
 export const WalletErrors = defineErrorList(ModuleNames.WalletModule, {
 	/** The shop's wallet cannot pay for the request; nothing was run. */
 	InsufficientBalance: { statusCode: HttpStatus.PAYMENT_REQUIRED },
-	/** Zarinpal refused the payment request. */
+	/** SePal refused the payment request. */
 	GatewayError: { statusCode: HttpStatus.BAD_GATEWAY },
-	/** Zarinpal could not be reached. */
+	/** SePal could not be reached. */
 	GatewayUnavailable: { statusCode: HttpStatus.SERVICE_UNAVAILABLE },
 	/** The callback named a payment this app never started. */
 	TopUpNotFound: { statusCode: HttpStatus.NOT_FOUND },

@@ -40,22 +40,16 @@ export var WalletTransactionType;
   WalletTransactionType["SERVICE_CHARGE"] = "SERVICE_CHARGE";
   WalletTransactionType["ADMIN_ADJUSTMENT"] = "ADMIN_ADJUSTMENT";
 })(WalletTransactionType || (WalletTransactionType = {}));
-export var WalletTopUpCallbackParamsStatusEnum;
-(function (WalletTopUpCallbackParamsStatusEnum) {
-  WalletTopUpCallbackParamsStatusEnum["OK"] = "OK";
-  WalletTopUpCallbackParamsStatusEnum["NOK"] = "NOK";
-})(
-  WalletTopUpCallbackParamsStatusEnum ||
-    (WalletTopUpCallbackParamsStatusEnum = {}),
-);
-export var SubscriptionPurchaseCallbackParamsStatusEnum;
-(function (SubscriptionPurchaseCallbackParamsStatusEnum) {
-  SubscriptionPurchaseCallbackParamsStatusEnum["OK"] = "OK";
-  SubscriptionPurchaseCallbackParamsStatusEnum["NOK"] = "NOK";
-})(
-  SubscriptionPurchaseCallbackParamsStatusEnum ||
-    (SubscriptionPurchaseCallbackParamsStatusEnum = {}),
-);
+/** 1 paid, 0 not paid */
+export var PaymentCallbackInputStatusEnum;
+(function (PaymentCallbackInputStatusEnum) {
+  PaymentCallbackInputStatusEnum[
+    (PaymentCallbackInputStatusEnum["Value0"] = 0)
+  ] = "Value0";
+  PaymentCallbackInputStatusEnum[
+    (PaymentCallbackInputStatusEnum["Value1"] = 1)
+  ] = "Value1";
+})(PaymentCallbackInputStatusEnum || (PaymentCallbackInputStatusEnum = {}));
 export var ContentType;
 (function (ContentType) {
   ContentType["Json"] = "application/json";
@@ -416,7 +410,7 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
-     * @description Returns the Zarinpal url to add `amount` Tomans to the owner's wallet.
+     * @description Returns the SePal url to add `amount` Tomans to the owner's wallet.
      *
      * @tags ShopWallet
      * @name StartWalletTopUp
@@ -606,7 +600,7 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
-     * @description Returns the Zarinpal url to pay for the plan.
+     * @description Returns the SePal url to pay for the plan.
      *
      * @tags ShopSubscription
      * @name StartSubscriptionPurchase
@@ -738,13 +732,14 @@ export class Api extends HttpClient {
      *
      * @tags WalletCallback
      * @name WalletTopUpCallback
-     * @request GET:/wallet/topUpCallback
+     * @request POST:/wallet/topUpCallback
      */
-    walletTopUpCallback: (query, params = {}) =>
+    walletTopUpCallback: (data, params = {}) =>
       this.request({
         path: `/wallet/topUpCallback`,
-        method: "GET",
-        query: query,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         ...params,
       }),
   };
@@ -1148,13 +1143,14 @@ export class Api extends HttpClient {
      *
      * @tags SubscriptionCallback
      * @name SubscriptionPurchaseCallback
-     * @request GET:/subscription/purchaseCallback
+     * @request POST:/subscription/purchaseCallback
      */
-    subscriptionPurchaseCallback: (query, params = {}) =>
+    subscriptionPurchaseCallback: (data, params = {}) =>
       this.request({
         path: `/subscription/purchaseCallback`,
-        method: "GET",
-        query: query,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         ...params,
       }),
   };

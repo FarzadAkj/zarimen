@@ -15,7 +15,7 @@ const FAILURE_REASONS: Record<string, string> = {
 }
 
 /**
- * <subdomain>.zarimen.ir/panel/wallet — balance and top-up. Zarinpal returns here through the
+ * <subdomain>.zarimen.ir/panel/wallet — balance and top-up. SePal returns here through the
  * backend with ?topUp=success&amount=&refId= or ?topUp=failed&reason=.
  */
 export default async function ShopWalletPage({ searchParams }: { searchParams: Promise<Params> }) {

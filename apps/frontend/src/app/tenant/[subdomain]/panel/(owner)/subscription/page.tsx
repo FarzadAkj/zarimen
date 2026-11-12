@@ -18,7 +18,7 @@ const FAILURE_REASONS: Record<string, string> = {
 
 /**
  * <subdomain>.zarimen.ir/panel/subscription — current subscription, plans to buy and past purchases.
- * Zarinpal returns here through the backend with ?purchase=success&plan=&endsAt=&refId= or ?purchase=failed&reason=.
+ * SePal returns here through the backend with ?purchase=success&plan=&endsAt=&refId= or ?purchase=failed&reason=.
  */
 export default async function ShopSubscriptionPage({ searchParams }: { searchParams: Promise<Params> }) {
     const params = await searchParams

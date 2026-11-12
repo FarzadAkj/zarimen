@@ -134,12 +134,12 @@ arvanRegion = "default"
 arvanAccessKey = "..."
 arvanSecretKey = "..."
 
-# ---- shop sites + Zarinpal
+# ---- shop sites + SePal
 shopSiteUrl = "https://{subdomain}.zarimen.ir"
-zarinPalMerchantId = "your-real-merchant-id"
+sepalApiKey = "your-real-sepal-api-key"
 backendUrl = "https://api.zarimen.ir"
-# empty = real Zarinpal (no sandbox)
-zarinpalBaseUrl =
+# empty = https://payment.sepal.ir
+sepalBaseUrl =
 ```
 
 Check before you go live:
@@ -147,7 +147,7 @@ Check before you go live:
 - `NODE_ENV = production` turns Swagger off, so `/api` and `/api-docs` are not public.
 - `sendSms = true` and `identityCheck = true`; with `false`, codes are only printed and
   Shahkar is skipped.
-- `zarinpalBaseUrl` is **empty**, so payments use the real Zarinpal and not the sandbox.
+- `sepalApiKey` is the real key from the SePal panel and `sepalBaseUrl` is empty.
 - The api.zarimen.ir nginx block sets `X-Real-IP $remote_addr`: the public shop-request form
   is limited per IP using it (without it every visitor would share one limit).
 
@@ -157,11 +157,10 @@ Check before you go live:
 NEXT_PUBLIC_SERVER_ADDRESS = https://api.zarimen.ir
 NEXT_PUBLIC_SWAGGER_API_DOC_PATH = /api-docs
 ROOT_DOMAIN = zarimen.ir
-NEXT_PUBLIC_ZARINPAL_ENABLED = false
+NEXT_PUBLIC_PAYMENT_ENABLED = false
 ```
 
-`NEXT_PUBLIC_ZARINPAL_ENABLED`: leave `false` (or out) until the Zarinpal merchant account is
-registered; the wallet top-up and plan purchase dialogs then show the amounts and a «ثبت تیکت به
+`NEXT_PUBLIC_PAYMENT_ENABLED`: leave `false` (or out) until the SePal account works; the wallet top-up and plan purchase dialogs then show the amounts and a «ثبت تیکت به
 پشتیبانی» button instead of going to the gateway. Set `true` and rebuild to turn payments on.
 
 `NEXT_PUBLIC_*` values are built **into** the frontend bundle. After changing one, rebuild
@@ -199,7 +198,7 @@ pm2 logs zar-imen-backend --lines 50   # expect: ✔ Listening on :8010
 (Without PM2, `pnpm start` runs the same two built apps in the foreground, which is handy for a
 quick test. It does not restart them after a crash or reboot.)
 
-Keep **one** backend instance. The jobs that cancel abandoned Zarinpal payments every 10
+Keep **one** backend instance. The jobs that cancel abandoned SePal payments every 10
 minutes run inside it.
 
 Local check before nginx:
@@ -310,7 +309,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 | Service | What to set |
 | ------- | ----------- |
-| **Zarinpal** (merchant panel) | The site's domain must be `zarimen.ir`. Payments return to `https://api.zarimen.ir/wallet/topUpCallback` and `/subscription/purchaseCallback`, both on that domain. |
+| **SePal** (merchant panel) | An API key → `sepalApiKey`. The site must be `zarimen.ir`: owners open the gateway from `https://<subdomain>.zarimen.ir/panel/…` and SePal checks that Origin / Referer, so shop subdomains must be accepted. SePal POSTs results to `https://api.zarimen.ir/wallet/topUpCallback` and `/subscription/purchaseCallback`. Amounts go in Rials, at least 100,000 (the app's minimum top-up / plan price is 10,000 Tomans). |
 | **sms.ir** | A "verify" template with one parameter named **`CODE`**; its id → `smsIrOtpTemplate`. Template 449513 (`SUBDOMAIN`, `SSN`; text links to `https://#SUBDOMAIN#.zarimen.ir/panel/customers?ssn=#SSN#`) → `smsIrCardAddedTemplate`. Template 144151 (`SUBDOMAIN`, `UUID`; links to `https://#SUBDOMAIN#.zarimen.ir/panel/tickets/#UUID#`) → `smsIrTicketAnsweredTemplate`. A line with enough credit. |
 | **api.ir** | A token with Shahkar and CardMatch enabled and credit. |
 | **ArvanCloud bucket** | The panel uploads logos **from the browser** straight to the bucket, so the bucket's CORS must allow `PUT` from `https://zarimen.ir` (headers: `content-type`, `x-amz-acl`). Without it, logo upload fails in the browser. |
@@ -325,7 +324,7 @@ sudo nginx -t && sudo systemctl reload nginx
    set the service prices on «تنظیمات».
 4. `https://<subdomain>.zarimen.ir`: the shop's landing page with the big button.
 5. `https://<subdomain>.zarimen.ir/panel`: owner login, then «کیف پول»: top up a small
-   amount. You go to Zarinpal and come back with a success banner; the amount is in
+   amount. You go to SePal and come back with a success banner; the amount is in
    «تراکنش‌ها».
 6. `https://<subdomain>.zarimen.ir/verify`: sign up as a customer (real Shahkar + SMS) and add
    a card (real CardMatch). The owner's «مشتریان» shows it, and the wallet history shows the
@@ -382,6 +381,7 @@ lives on the same disk is lost with it.
 | Backend exits right after start | A `.env` value is missing or wrong; `pm2 logs zar-imen-backend` names it (`Config validation failed`). |
 | Every shop subdomain shows the main site / 404 | nginx is not passing `Host` (`proxy_set_header Host $host;`), or `ROOT_DOMAIN` is not `zarimen.ir`. |
 | Certificate error on shop subdomains | The certificate has no `*.zarimen.ir` (step 8). |
-| After paying, Zarinpal shows an error page | `backendUrl` is wrong or not public, or the domain is not registered in Zarinpal. |
+| SePal refuses to open the payment page | The Referer is not a registered domain (shop subdomains of `zarimen.ir` must be allowed in SePal). |
+| After paying, the owner sees an error / 404 on api.zarimen.ir | `backendUrl` is wrong or not public. |
 | "Argument … is missing" after an update | The backend was not restarted after the schema / client changed: `pm2 restart zar-imen-backend`. |
 | Logo upload fails in the browser | ArvanCloud bucket CORS (step 10). |

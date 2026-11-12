@@ -5,8 +5,8 @@ export const PENDING_PURCHASE_TTL_MINUTES = 20
 
 export const SUBSCRIPTION_PURCHASES_PAGE_SIZE = 20
 
-/** Plan price bounds in Tomans (Zarinpal takes at least 1,000). */
-export const MIN_PLAN_PRICE = 1000
+/** Plan price bounds in Tomans (SePal takes at least 100,000 Rials). */
+export const MIN_PLAN_PRICE = 10_000
 export const MAX_PLAN_PRICE = 200_000_000
 
 /**

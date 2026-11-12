@@ -51,7 +51,7 @@ export class SubscriptionPurchaseModel {
 	@ApiProperty({ type: String, format: "date-time" })
 	endsAt!: Date
 
-	/** Zarinpal reference number. */
+	/** Gateway reference number. */
 	@ApiProperty({ type: String, nullable: true })
 	refId!: string | null
 
@@ -72,7 +72,7 @@ export class ReadSubscriptionPurchasesOutput {
 }
 
 export class SubscriptionPurchaseStartedModel {
-	/** Zarinpal page to send the owner's browser to. */
+	/** SePal page to send the owner's browser to (a navigation from our site: SePal checks the Referer). */
 	@ApiProperty({ type: String })
 	url!: string
 }

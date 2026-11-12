@@ -1,28 +1,27 @@
 import type { ShopOwnerRequest } from "../auth/guards/is-shop-owner.guard"
-import { Body, Controller, Get, Post, Query, Redirect, Req, UseGuards } from "@nestjs/common"
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse } from "@nestjs/swagger"
+import { Body, Controller, Post, Redirect, Req, UseGuards } from "@nestjs/common"
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from "@nestjs/swagger"
 import { IsAdmin } from "../auth/guards/is-admin.guard"
 import { IsShopOwner } from "../auth/guards/is-shop-owner.guard"
+import { PaymentCallbackInput } from "./dto/payment-callback.input"
 import { ReadShopWalletTransactionsInput, ReadWalletTransactionsInput } from "./dto/read-wallet-transactions.input"
 import { StartWalletTopUpInput } from "./dto/start-wallet-top-up.input"
-import { TopUpCallbackQuery } from "./dto/top-up-callback.query"
 import { WalletTopUpModel } from "./model/wallet-top-up.model"
 import { ReadWalletTransactionsOutput } from "./model/wallet-transaction.model"
 import { WalletService } from "./wallet.service"
 
-/** Zarinpal's return url (`zarinpalCallbackUrl`). The owner's browser lands here, not on the frontend. */
+/** SePal's callbackUrl for top-ups. SePal POSTs the result from the owner's browser, so the owner lands here, not on the frontend. */
 @Controller("wallet")
 export class WalletCallbackController {
 	constructor(private wallet: WalletService) { }
 
-	@Get("topUpCallback")
+	@Post("topUpCallback")
 	@Redirect()
 	@ApiOperation({ operationId: "walletTopUpCallback", description: "Verifies the top-up, credits the wallet, then 302s to <shopSiteUrl>/panel/wallet?topUp=success&amount=&refId= or ?topUp=failed&reason=" })
-	@ApiQuery({ name: "Authority", type: String })
-	@ApiQuery({ name: "Status", type: String, required: false, enum: ["OK", "NOK"] })
+	@ApiBody({ type: PaymentCallbackInput })
 	@ApiResponse({ status: 302, description: "Redirect to the shop's wallet page" })
-	async topUpCallback(@Query() query: TopUpCallbackQuery) {
-		return { url: await this.wallet.handleTopUpCallback(query.Authority, query.Status), statusCode: 302 }
+	async topUpCallback(@Body() input: PaymentCallbackInput) {
+		return { url: await this.wallet.handleTopUpCallback(input), statusCode: 302 }
 	}
 }
 
@@ -34,7 +33,7 @@ export class ShopWalletController {
 	constructor(private wallet: WalletService) { }
 
 	@Post("startWalletTopUp")
-	@ApiOperation({ operationId: "startWalletTopUp", description: "Returns the Zarinpal url to add `amount` Tomans to the owner's wallet." })
+	@ApiOperation({ operationId: "startWalletTopUp", description: "Returns the SePal url to add `amount` Tomans to the owner's wallet." })
 	@ApiBody({ type: StartWalletTopUpInput })
 	@ApiResponse({ type: WalletTopUpModel, status: 200 })
 	startWalletTopUp(@Req() request: ShopOwnerRequest, @Body() input: StartWalletTopUpInput): Promise<WalletTopUpModel> {

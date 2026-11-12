@@ -1,4 +1,5 @@
 import type { PaidService, WalletTransaction } from "@prisma/client"
+import type { PaymentCallbackInput } from "./dto/payment-callback.input"
 import type { WalletTopUpModel } from "./model/wallet-top-up.model"
 import type { ReadWalletTransactionsOutput, WalletTransactionModel } from "./model/wallet-transaction.model"
 import { Injectable } from "@nestjs/common"
@@ -10,7 +11,7 @@ import { Config } from "~/config"
 import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
-import { ZarinpalService } from "~/libs/zarinpal/zarinpal.service"
+import { SepalService } from "~/libs/sepal/sepal.service"
 import { SERVICE_COST_SETTINGS_KEY, VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
 import { ServiceCostSettingsModel } from "../setting/model/service-cost-settings.model"
 import { VatSettingsModel } from "../setting/model/vat-settings.model"
@@ -21,13 +22,13 @@ import { WalletErrors } from "./constants/wallet.errors"
 /** Who pays for a customer's request: the shop, on behalf of the customer (shown in its history). */
 export type Bill = { shopId: string, customerSsn: string }
 
-/** Where the owner lands after Zarinpal: their shop's /panel/wallet, with the outcome in the query string. */
+/** Where the owner lands after SePal: their shop's /panel/wallet, with the outcome in the query string. */
 type TopUpOutcome = { success: true, amount: string, refId: string } | { success: false, reason: string }
 
 /**
  * Shop wallets: every change is a WalletTransaction row (the owner's history).
  * - charge: customers' Shahkar checks / SMS, priced on the admin's settings page (-)
- * - top-ups through Zarinpal (+)
+ * - top-ups through SePal (+)
  * - admin adjustments are recorded by ShopService (+/-)
  */
 @Injectable()
@@ -35,7 +36,7 @@ export class WalletService {
 	constructor(
 		private prisma: PrismaService,
 		private settings: SettingService,
-		private zarinpal: ZarinpalService,
+		private sepal: SepalService,
 		private config: Config,
 		private error: ErrorService,
 	) { }
@@ -103,8 +104,8 @@ export class WalletService {
 	}
 
 	/**
-	 * Starts a Zarinpal payment of `amount` Tomans plus the admin's VAT; once verified by
-	 * `GET /wallet/topUpCallback`, `amount` (without the VAT) is added to the shop's wallet.
+	 * Starts a SePal payment of `amount` Tomans plus the admin's VAT; once verified by
+	 * `POST /wallet/topUpCallback`, `amount` (without the VAT) is added to the shop's wallet.
 	 */
 	async startTopUp(shopId: string, amount: number): Promise<WalletTopUpModel> {
 		const { vatPercent } = await this.settings.getSetting(VAT_SETTINGS_KEY, VatSettingsModel)
@@ -124,42 +125,41 @@ export class WalletService {
 			},
 		})
 
-		let request: Awaited<ReturnType<ZarinpalService["requestPayment"]>>
+		let request: Awaited<ReturnType<SepalService["requestPayment"]>>
 		try {
-			request = await this.zarinpal.requestPayment({
+			request = await this.sepal.requestPayment({
 				amount: amount + vatAmount,
 				description: `${SoftwareName} - شارژ کیف پول ${shop.subdomain}`,
-				orderId: topUp.id,
+				invoiceNumber: topUp.id,
 				callbackUrl: new URL("/wallet/topUpCallback", this.config.backendUrl).toString(),
-				mobile: shop.ownerPhoneNumber,
+				payerMobile: shop.ownerPhoneNumber,
 			})
 		}
 		catch (e) {
-			await this.failTopUp(topUp.id, null, "Zarinpal could not be reached")
+			await this.failTopUp(topUp.id, "SePal could not be reached")
 			throw this.error.throwErrorToClient(WalletErrors.GatewayUnavailable, e as Error)
 		}
 
 		if (!request.ok) {
 			logger.error(`[wallet] top-up request refused for shop ${shopId}: ${request.message}`)
-			await this.failTopUp(topUp.id, request.code, request.message)
+			await this.failTopUp(topUp.id, request.message)
 			throw this.error.throwErrorToClient(WalletErrors.GatewayError, new Error(request.message))
 		}
 
-		await this.prisma.walletTransaction.update({ where: { id: topUp.id }, data: { authority: request.authority } })
-		return { url: this.zarinpal.gatewayUrl(request.authority) }
+		await this.prisma.walletTransaction.update({ where: { id: topUp.id }, data: { authority: request.paymentNumber } })
+		return { url: this.sepal.gatewayUrl(request.paymentNumber) }
 	}
 
 	/**
-	 * Zarinpal sends the owner's browser back here with `Authority` / `Status`. Verifies the
-	 * payment, credits the wallet and returns where to redirect the owner (their shop's
+	 * SePal posts the result here from the owner's browser. Verifies the payment, credits the wallet and returns where to redirect the owner (their shop's
 	 * /panel/wallet). Idempotent: a second callback for a verified payment credits nothing.
 	 */
-	async handleTopUpCallback(authority: string, status?: string): Promise<string> {
+	async handleTopUpCallback(callback: Pick<PaymentCallbackInput, "status" | "paymentNumber" | "invoiceNumber">): Promise<string> {
 		const topUp = await this.prisma.walletTransaction.findUnique({
-			where: { authority },
+			where: { authority: callback.paymentNumber },
 			include: { wallet: { select: { shop: { select: { subdomain: true } } } } },
 		})
-		if (!topUp || topUp.type !== WalletTransactionType.TOP_UP)
+		if (!topUp || topUp.type !== WalletTransactionType.TOP_UP || topUp.id !== callback.invoiceNumber)
 			throw this.error.throwErrorToClient(WalletErrors.TopUpNotFound)
 
 		const back = (outcome: TopUpOutcome) => this.resultUrl(topUp.wallet.shop.subdomain, outcome)
@@ -169,27 +169,32 @@ export class WalletService {
 			return back({ success: true, amount, refId: topUp.refId ?? "" })
 		if (topUp.status === WalletTransactionStatus.FAILED)
 			return back({ success: false, reason: "Failed" })
-		// Too late: cancelStaleTopUps gave up on it. Unverified, so Zarinpal returns the money to the payer.
+		// Too late: cancelStaleTopUps gave up on it. Never verified, so the payment is not settled to us.
 		if (topUp.status === WalletTransactionStatus.CANCELED)
 			return back({ success: false, reason: "Expired" })
 
-		if (status === "NOK") {
-			await this.failTopUp(topUp.id, null, "Canceled by the payer")
+		if (callback.status !== 1) {
+			await this.failTopUp(topUp.id, "Not paid (SePal status 0)")
 			return back({ success: false, reason: "Canceled" })
 		}
 
-		let verification: Awaited<ReturnType<ZarinpalService["verifyPayment"]>>
+		let verification: Awaited<ReturnType<SepalService["verifyPayment"]>>
 		try {
-			verification = await this.zarinpal.verifyPayment({ amount: topUp.amount.add(topUp.vatAmount).toNumber(), authority })
+			verification = await this.sepal.verifyPayment({
+				paymentNumber: callback.paymentNumber,
+				invoiceNumber: topUp.id,
+				amount: topUp.amount.add(topUp.vatAmount).toNumber(),
+			})
 		}
 		catch (e) {
-			// Stays PENDING: Zarinpal reverses unverified payments, and nothing was credited.
-			logger.error(`[wallet] top-up verify failed for ${authority}`, e)
+			// Stays PENDING: nothing was credited, and an unverified payment is not settled to us.
+			logger.error(`[wallet] top-up verify failed for ${callback.paymentNumber}`, e)
 			return back({ success: false, reason: "GatewayUnavailable" })
 		}
 
 		if (!verification.ok) {
-			await this.failTopUp(topUp.id, verification.code, verification.message)
+			logger.error(`[wallet] top-up ${topUp.id} not verified: ${verification.message}`)
+			await this.failTopUp(topUp.id, verification.message)
 			return back({ success: false, reason: "Failed" })
 		}
 
@@ -199,7 +204,7 @@ export class WalletService {
 
 	/**
 	 * Every 10 minutes: top-ups still PENDING more than PENDING_TOP_UP_TTL_MINUTES after they
-	 * started (the owner never came back from Zarinpal) are canceled. Nothing was credited for
+	 * started (the owner never came back from SePal) are canceled. Nothing was credited for
 	 * them, and a late callback can no longer credit one (crediting needs PENDING).
 	 */
 	@Cron(CronExpression.EVERY_10_MINUTES)
@@ -229,7 +234,7 @@ export class WalletService {
 	}
 
 	/** Marks the top-up paid and credits the wallet, once: a concurrent second callback finds it no longer PENDING. */
-	private async creditTopUp(topUp: WalletTransaction, verification: { code: number, refId: string, cardPan: string | null }) {
+	private async creditTopUp(topUp: WalletTransaction, verification: { refId: string, cardPan: string | null }) {
 		await this.prisma.$transaction(async (tx) => {
 			const { count } = await tx.walletTransaction.updateMany({
 				where: { id: topUp.id, status: WalletTransactionStatus.PENDING },
@@ -237,7 +242,6 @@ export class WalletService {
 					status: WalletTransactionStatus.SUCCESS,
 					refId: verification.refId,
 					cardPan: verification.cardPan,
-					gatewayCode: verification.code,
 				},
 			})
 			if (count === 1)
@@ -245,10 +249,10 @@ export class WalletService {
 		})
 	}
 
-	private async failTopUp(id: string, gatewayCode: number | null, description: string) {
+	private async failTopUp(id: string, description: string) {
 		await this.prisma.walletTransaction.update({
 			where: { id },
-			data: { status: WalletTransactionStatus.FAILED, gatewayCode, description },
+			data: { status: WalletTransactionStatus.FAILED, description },
 		})
 	}
 

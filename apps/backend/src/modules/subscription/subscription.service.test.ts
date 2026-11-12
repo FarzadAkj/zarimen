@@ -76,28 +76,33 @@ function errorCode(promise: Promise<unknown>) {
 	)
 }
 
+/** What SePal posts to the callback url: 1 paid, 0 not paid. */
+function callback(paymentNumber: string, invoiceNumber: string, status = 1) {
+	return { status, paymentNumber, invoiceNumber }
+}
+
 describe("subscriptionService purchase", () => {
 	let prisma: ReturnType<typeof createPrisma>
-	let zarinpal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
+	let sepal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
 	let service: SubscriptionService
 
 	function setup(subscriptionEndsAt: Date | null, vatPercent = 0) {
 		prisma = createPrisma(subscriptionEndsAt)
 		const settings = { getSetting: async () => ({ vatPercent }) }
-		zarinpal = {
-			requestPayment: vi.fn(async () => ({ ok: true, authority: "S0001" })),
-			verifyPayment: vi.fn(async () => ({ ok: true, code: 100, refId: "888", cardPan: null })),
-			gatewayUrl: (authority: string) => `https://sandbox.zarinpal.com/pg/StartPay/${authority}`,
+		sepal = {
+			requestPayment: vi.fn(async () => ({ ok: true, paymentNumber: "S0001" })),
+			verifyPayment: vi.fn(async () => ({ ok: true, refId: "888", cardPan: null })),
+			gatewayUrl: (paymentNumber: string) => `https://payment.sepal.ir/api/payment/${paymentNumber}/`,
 		}
 		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010", backendUrl: "http://127.0.0.1:8010" })
-		service = new SubscriptionService(prisma as never, zarinpal as never, settings as never, config, new ErrorService())
+		service = new SubscriptionService(prisma as never, sepal as never, settings as never, config, new ErrorService())
 	}
 
 	beforeEach(() => setup(null))
 
-	it("charges the plan's price through Zarinpal, with the subscription callback", async () => {
-		expect(await service.startPurchase("shop-1", "month")).toEqual({ url: "https://sandbox.zarinpal.com/pg/StartPay/S0001" })
-		expect(zarinpal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({
+	it("charges the plan's price through SePal, with the subscription callback", async () => {
+		expect(await service.startPurchase("shop-1", "month")).toEqual({ url: "https://payment.sepal.ir/api/payment/S0001/" })
+		expect(sepal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({
 			amount: 2_000_000,
 			callbackUrl: "http://127.0.0.1:8010/subscription/purchaseCallback",
 		}))
@@ -107,17 +112,17 @@ describe("subscriptionService purchase", () => {
 	it("adds the VAT to the plan's price at the gateway and verifies the same total", async () => {
 		setup(null, 10)
 		await service.startPurchase("shop-1", "month")
-		expect(zarinpal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 2_200_000 }))
+		expect(sepal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 2_200_000 }))
 		expect(prisma.purchases[0]).toMatchObject({ vatAmount: 200_000 })
 		expect(prisma.purchases[0]!.price.toNumber()).toBe(2_000_000)
 
-		expect(await service.handlePurchaseCallback("S0001", "OK")).toContain("purchase=success")
-		expect(zarinpal.verifyPayment).toHaveBeenCalledWith({ amount: 2_200_000, authority: "S0001" })
+		expect(await service.handlePurchaseCallback(callback("S0001", "p-1"))).toContain("purchase=success")
+		expect(sepal.verifyPayment).toHaveBeenCalledWith({ paymentNumber: "S0001", invoiceNumber: "p-1", amount: 2_200_000 })
 	})
 
 	it("refuses a disabled plan", async () => {
 		expect(await errorCode(service.startPurchase("shop-1", "old"))).toBe("PlanNotFound")
-		expect(zarinpal.requestPayment).not.toHaveBeenCalled()
+		expect(sepal.requestPayment).not.toHaveBeenCalled()
 	})
 
 	it("adds the plan to the end of a running subscription once paid", async () => {
@@ -125,7 +130,7 @@ describe("subscriptionService purchase", () => {
 		setup(twoWeeks)
 		await service.startPurchase("shop-1", "month")
 
-		const url = new URL(await service.handlePurchaseCallback("S0001", "OK"))
+		const url = new URL(await service.handlePurchaseCallback(callback("S0001", "p-1")))
 		expect(prisma.shop.subscriptionEndsAt!.getTime()).toBe(twoWeeks.getTime() + 30 * DAY)
 		expect(prisma.purchases[0]).toMatchObject({ status: "SUCCESS", refId: "888", startsAt: twoWeeks })
 		expect(url.pathname).toBe("/panel/subscription")
@@ -135,24 +140,24 @@ describe("subscriptionService purchase", () => {
 
 	it("extends only once when the callback comes twice", async () => {
 		await service.startPurchase("shop-1", "month")
-		await service.handlePurchaseCallback("S0001", "OK")
+		await service.handlePurchaseCallback(callback("S0001", "p-1"))
 		const end = prisma.shop.subscriptionEndsAt
-		expect(await service.handlePurchaseCallback("S0001", "OK")).toContain("purchase=success")
+		expect(await service.handlePurchaseCallback(callback("S0001", "p-1"))).toContain("purchase=success")
 		expect(prisma.shop.subscriptionEndsAt).toBe(end)
-		expect(zarinpal.verifyPayment).toHaveBeenCalledTimes(1)
+		expect(sepal.verifyPayment).toHaveBeenCalledTimes(1)
 	})
 
 	it("extends nothing when the owner cancels at the gateway", async () => {
 		await service.startPurchase("shop-1", "month")
-		expect(await service.handlePurchaseCallback("S0001", "NOK")).toContain("purchase=failed&reason=Canceled")
+		expect(await service.handlePurchaseCallback(callback("S0001", "p-1", 0))).toContain("purchase=failed&reason=Canceled")
 		expect(prisma.shop.subscriptionEndsAt).toBeNull()
 		expect(prisma.purchases[0]!.status).toBe("FAILED")
 	})
 
-	it("extends nothing when Zarinpal does not verify the payment", async () => {
-		zarinpal.verifyPayment.mockResolvedValueOnce({ ok: false, code: -51, message: "unpaid" })
+	it("extends nothing when SePal does not verify the payment", async () => {
+		sepal.verifyPayment.mockResolvedValueOnce({ ok: false, message: "unpaid" })
 		await service.startPurchase("shop-1", "month")
-		expect(await service.handlePurchaseCallback("S0001", "OK")).toContain("purchase=failed")
+		expect(await service.handlePurchaseCallback(callback("S0001", "p-1"))).toContain("purchase=failed")
 		expect(prisma.shop.subscriptionEndsAt).toBeNull()
 	})
 

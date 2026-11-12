@@ -96,7 +96,7 @@ export async function readMyManualCardChecks(page: number): Promise<ServerRespon
     }
 }
 
-/** Starts a Zarinpal payment that adds `amount` Tomans to the wallet; returns the gateway url. */
+/** Starts a SePal payment that adds `amount` Tomans to the wallet; returns the gateway url. */
 export async function startWalletTopUp(amount: number): Promise<ServerResponse<WalletTopUpModel>> {
     const api = await takeApi()
     try {
@@ -152,7 +152,7 @@ export async function readMySubscriptionPurchases(page: number): Promise<ServerR
     }
 }
 
-/** Starts the Zarinpal payment for a plan; returns the gateway url. */
+/** Starts the SePal payment for a plan; returns the gateway url. */
 export async function startSubscriptionPurchase(planId: string): Promise<ServerResponse<SubscriptionPurchaseStartedModel>> {
     const api = await takeApi()
     try {

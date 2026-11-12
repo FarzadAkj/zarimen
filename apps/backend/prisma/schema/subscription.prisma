@@ -15,7 +15,7 @@ model SubscriptionPlan {
   purchases SubscriptionPurchase[]
 }
 
-/// A shop buying a plan through Zarinpal, or the admin moving its end date (`planId` null,
+/// A shop buying a plan through SePal, or the admin moving its end date (`planId` null,
 /// price 0, written as SUCCESS). Title, price and duration are copied from the plan at purchase
 /// time, so later plan changes do not rewrite history.
 model SubscriptionPurchase {
@@ -29,13 +29,15 @@ model SubscriptionPurchase {
   price        Decimal                    @db.Decimal(20, 0)
   durationDays Int
   status       SubscriptionPurchaseStatus @default(PENDING)
-  /// VAT paid on top of `price` (whole Tomans); Zarinpal charged price + vatAmount.
+  /// VAT paid on top of `price` (whole Tomans); the gateway charged price + vatAmount.
   vatAmount    Decimal                    @default(0) @db.Decimal(20, 0)
 
   /// The period this purchase added, set when it is paid.
   startsAt DateTime?
   endsAt   DateTime?
 
+  /// The gateway's id for the payment (SePal paymentNumber; Zarinpal authority on old rows).
+  /// gatewayCode: Zarinpal only.
   authority   String? @unique
   refId       String?
   cardPan     String?
@@ -52,6 +54,6 @@ enum SubscriptionPurchaseStatus {
   PENDING
   SUCCESS
   FAILED
-  /// Still PENDING 20 minutes after it started (owner never came back from Zarinpal).
+  /// Still PENDING 20 minutes after it started (owner never came back from the gateway).
   CANCELED
 }

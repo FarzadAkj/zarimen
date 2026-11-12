@@ -57,7 +57,7 @@ apps/backend
   src/common/             constants (ModuleNames, SoftwareName), shared DTOs
   src/libs/               infrastructure: config, error, prisma, logger, helper, validators,
                           sms-ir (OTP SMS), shahkar (Shahkar + CardMatch), image-bucket (Arvan presign),
-                          zarinpal (wallet top-ups)
+                          sepal (SePal payments: top-ups, subscriptions)
   src/modules/<feature>/  Darik module layout:
                             <feature>.module.ts / .controller.ts / .service.ts
                             constants/ (errors, selects)  dto/ (*.input.ts, *.output.ts)  model/
@@ -111,10 +111,13 @@ Anything only one app uses lives in that app, not in `packages/shared`.
   Shahkar/CardMatch/SMS for a customer without it.
 - Every wallet balance change writes a `WalletTransaction` in the same DB transaction.
 - Customer actions go through `CustomerService.findActiveShop` (enabled + subscribed).
-- Zarinpal payments: each kind has its own callback under `backendUrl` and redirects back to
-  `shopSiteUrl`; completion is conditional on PENDING (idempotent); a cron cancels PENDING
-  rows older than 20 minutes. Every payment adds the admin's VAT (`vatOf` from `@zar-imen/shared`,
-  stored as `vatAmount`); Zarinpal charges and verifies amount + vatAmount, the wallet gets `amount`.
+- SePal payments (`SepalService`, amounts passed in Tomans, sent as Rials): each kind has its own
+  POST callback under `backendUrl` (`PaymentCallbackInput`) and redirects back to `shopSiteUrl`;
+  the row id is the `invoiceNumber`, SePal's `paymentNumber` is stored in `authority`. Completion is
+  conditional on PENDING (idempotent); a cron cancels PENDING rows older than 20 minutes. Every
+  payment adds the admin's VAT (`vatOf` from `@zar-imen/shared`, stored as `vatAmount`); SePal
+  charges amount + vatAmount and verify must report exactly that, the wallet gets `amount`.
+  The browser must navigate to the gateway url from our site (SePal checks Origin / Referer).
 - Dates shown to users are Jalali: `formatDate` / `formatDateTime` (`lib/format-date.ts`).
 - Owner and admin views of a shop share components; pass the data loaders as props
   (owner actions, or admin actions bound to the shopId).
