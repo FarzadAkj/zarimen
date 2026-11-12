@@ -39,6 +39,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 17  | Zarinpal off for now: payment dialogs point owners to a support ticket | done |
 | 18  | Payment gateway Zarinpal → SePal (still switched off in the frontend) | done — no schema change; needs `sepalApiKey` |
 | 19  | Admin discount percent on all subscription plans (struck-through price in the UI) | done — no schema change |
+| 20  | Admin notice SMS → sms.ir template 790265 (TITLE) instead of bulk text | done — no schema change; needs `smsIrNoticeTemplate` |
 
 ## Step log
 
@@ -903,3 +904,21 @@ row's `price` is the discounted price (what was paid before VAT), so history sho
   Saving revalidates every page.
 - `src/api` regenerated from a temporary backend on :8011.
 - Not checked in a browser (no dev servers running; needs the DB and an admin login).
+
+### Step 20 — Notice SMS through a template (2026-11-12)
+
+Asked for: when an admin sends a notice with SMS on, use sms.ir template **790265** instead of the bulk
+text; its one parameter `TITLE` is the notice title. New template key in `.env` / `.env.example`.
+
+- Config `smsIrNoticeTemplate` (`.env`, `.env.example`, DEPLOY.md env block + sms.ir row);
+  `SmsIrService.sendNoticeAdded(phone, title)`.
+- `SendNoticeInput.smsText` (free text) → `sendSms` (boolean). Templates take one number per request,
+  so `TicketService` texts each distinct owner phone in turn; a failed number is logged, the others
+  still go out and the notice stays sent. Free (admin action), as before.
+- No schema change: `TicketNotice.smsText` now holds the TITLE that was sent (old rows: the bulk text);
+  the API exposes `smsSent: boolean` instead of the text.
+- Admin UI: the editable SMS textarea is gone; with the switch on the composer says the notice SMS goes
+  to every owner with the current title. The notices list shows «پیامک برای مالکان ارسال شد» / «بدون پیامک».
+- `sendBulkMessage` is still used for the admins' own alerts (new ticket / shop request).
+- 2 tests changed, 1 new (one failed number does not stop the rest). `src/api` regenerated.
+- **Server:** add `smsIrNoticeTemplate = "790265"` to `apps/backend/.env`, or the backend will not start.

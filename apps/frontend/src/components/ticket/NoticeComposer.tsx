@@ -13,15 +13,9 @@ import { Textarea } from "@/components/shad/textarea"
 import { MAX_BODY, MAX_TITLE } from "./TicketComposer"
 import { TicketImagesPicker } from "./TicketImagesPicker"
 
-/** Same limit as the backend's SendNoticeInput.smsText. */
-const MAX_SMS = 500
-
-/** Prefilled owners' SMS; the admin may edit it or not send it. */
-const DEFAULT_SMS = "اطلاعیه جدیدی از زر ایمن در بخش پشتیبانی پنل فروشگاه شما ثبت شد."
-
 /**
  * An admins' notice: title, text and up to 2 photos go to every enabled shop as a CLOSED
- * ticket. The owners' bulk SMS text is shown prefilled and editable, and can be switched off.
+ * ticket. With the SMS switch on, each owner gets the sms.ir notice template with the title.
  */
 export function NoticeComposer() {
     const router = useRouter()
@@ -30,14 +24,12 @@ export function NoticeComposer() {
     const [imageUrls, setImageUrls] = useState<string[]>([])
     const [uploading, setUploading] = useState(false)
     const [withSms, setWithSms] = useState(true)
-    const [smsText, setSmsText] = useState(DEFAULT_SMS)
     const [pending, setPending] = useState(false)
 
     async function submit(e: React.FormEvent) {
         e.preventDefault()
         if (!title.trim()) return toast.error("موضوع اطلاعیه را بنویسید.")
         if (!body.trim()) return toast.error("متن اطلاعیه را بنویسید.")
-        if (withSms && !smsText.trim()) return toast.error("متن پیامک را بنویسید یا ارسال پیامک را خاموش کنید.")
         const confirmText = withSms
             ? "این اطلاعیه برای همه فروشگاه‌های فعال ثبت و پیامک آن برای مالکانشان ارسال می‌شود. ارسال شود؟"
             : "این اطلاعیه برای همه فروشگاه‌های فعال ثبت می‌شود (بدون پیامک). ارسال شود؟"
@@ -48,7 +40,7 @@ export function NoticeComposer() {
             title: title.trim(),
             body: body.trim(),
             imageUrls,
-            smsText: withSms ? smsText.trim() : undefined,
+            sendSms: withSms,
         })
         setPending(false)
         if (!data) return toast.error(error?.translation)
@@ -77,7 +69,15 @@ export function NoticeComposer() {
                     <Switch id="notice-with-sms" checked={withSms} onCheckedChange={setWithSms} />
                 </div>
                 {withSms
-                    ? <Textarea aria-label="متن پیامک" value={smsText} maxLength={MAX_SMS} onChange={e => setSmsText(e.target.value)} />
+                    ? (
+                        <p className="text-sm text-muted-foreground">
+                            پیامک اطلاع‌رسانی (قالب ثابت پیامکی) با موضوع
+                            {" «"}
+                            <span className="font-medium text-foreground">{title.trim() || "…"}</span>
+                            {"» "}
+                            برای مالک هر فروشگاه فعال ارسال می‌شود.
+                        </p>
+                    )
                     : <p className="text-sm text-muted-foreground">پیامکی ارسال نمی‌شود؛ اطلاعیه فقط در بخش پشتیبانی پنل فروشگاه‌ها دیده می‌شود.</p>}
             </div>
 

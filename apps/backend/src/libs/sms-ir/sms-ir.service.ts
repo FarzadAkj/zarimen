@@ -46,6 +46,11 @@ export class SmsIrService {
 		return this.sendTemplate(phoneNumber, this.config.ticketAnsweredTemplate, { SUBDOMAIN: subdomain, UUID: ticketId })
 	}
 
+	/** Tells the shop owner an admins' notice arrived in their tickets; one `TITLE` parameter. */
+	sendNoticeAdded(phoneNumber: string, title: string) {
+		return this.sendTemplate(phoneNumber, this.config.noticeTemplate, { TITLE: title })
+	}
+
 	/**
 	 * sms.ir "verify" send: `template` with its #NAME# parameters. Throws when sms.ir refuses,
 	 * so the caller can tell the user. With `sendSms=false` it is only logged.

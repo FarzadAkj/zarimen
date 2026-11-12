@@ -98,7 +98,7 @@ function errorCode(promise: Promise<unknown>) {
 
 describe("ticketService", () => {
 	let prisma: ReturnType<typeof createPrisma>
-	let sms: { sendBulkMessage: ReturnType<typeof vi.fn>, sendTicketAnswered: ReturnType<typeof vi.fn> }
+	let sms: { sendBulkMessage: ReturnType<typeof vi.fn>, sendTicketAnswered: ReturnType<typeof vi.fn>, sendNoticeAdded: ReturnType<typeof vi.fn> }
 	let service: TicketService
 
 	const owner = { shopId: "shop-1" }
@@ -106,7 +106,7 @@ describe("ticketService", () => {
 
 	beforeEach(() => {
 		prisma = createPrisma()
-		sms = { sendBulkMessage: vi.fn(async () => {}), sendTicketAnswered: vi.fn(async () => {}) }
+		sms = { sendBulkMessage: vi.fn(async () => {}), sendTicketAnswered: vi.fn(async () => {}), sendNoticeAdded: vi.fn(async () => {}) }
 		const images = { isOwnImageUrl: (url: string) => url.startsWith(BUCKET) }
 		const config = { adminPhoneNumberList: () => ADMINS }
 		service = new TicketService(prisma as never, images as never, sms as never, config as never, new ErrorService())
@@ -191,11 +191,11 @@ describe("ticketService", () => {
 	})
 
 	describe("notices", () => {
-		const notice = { title: " تعطیلی نوروز ", body: " پشتیبانی تا ۵ فروردین تعطیل است. ", imageUrls: [`${BUCKET}n.jpg`], smsText: " اطلاعیه جدید " }
+		const notice = { title: " تعطیلی نوروز ", body: " پشتیبانی تا ۵ فروردین تعطیل است. ", imageUrls: [`${BUCKET}n.jpg`], sendSms: true }
 
 		it("gives every enabled shop a CLOSED ticket with the one admin message", async () => {
 			const sent = await service.sendNotice(notice)
-			expect(sent).toMatchObject({ title: "تعطیلی نوروز", body: "پشتیبانی تا ۵ فروردین تعطیل است.", shopCount: 3, smsText: "اطلاعیه جدید" })
+			expect(sent).toMatchObject({ title: "تعطیلی نوروز", body: "پشتیبانی تا ۵ فروردین تعطیل است.", shopCount: 3, smsSent: true })
 			expect(prisma.tickets.map(t => [t.shopId, t.status])).toEqual([["shop-1", "CLOSED"], ["shop-2", "CLOSED"], ["shop-4", "CLOSED"]])
 
 			const copy = (await service.readTickets({ shopId: owner.shopId })).data[0]!
@@ -206,16 +206,23 @@ describe("ticketService", () => {
 			expect(await errorCode(service.sendMessage(copy.id, owner, { body: "سلام" }))).toBe("TicketClosed")
 		})
 
-		it("texts each owner once, with the admin's text", async () => {
+		it("texts each owner once, with the notice template and the title", async () => {
 			await service.sendNotice(notice)
-			expect(sms.sendBulkMessage).toHaveBeenCalledWith(["09350000001", "09350000004"], "اطلاعیه جدید")
+			expect(sms.sendNoticeAdded.mock.calls).toEqual([["09350000001", "تعطیلی نوروز"], ["09350000004", "تعطیلی نوروز"]])
+			expect(sms.sendBulkMessage).not.toHaveBeenCalled()
+		})
+
+		it("still texts the other owners and sends the notice when one SMS fails", async () => {
+			sms.sendNoticeAdded.mockRejectedValueOnce(new Error("sms.ir down"))
+			expect(await service.sendNotice(notice)).toMatchObject({ shopCount: 3, smsSent: true })
+			expect(sms.sendNoticeAdded).toHaveBeenCalledTimes(2)
 		})
 
 		it("sends no SMS when the admin skips it", async () => {
-			await service.sendNotice({ ...notice, smsText: undefined })
-			await service.sendNotice({ ...notice, smsText: "   " })
-			expect(sms.sendBulkMessage).not.toHaveBeenCalled()
-			expect((await service.readNotices()).data.map(n => n.smsText)).toEqual([null, null])
+			await service.sendNotice({ ...notice, sendSms: undefined })
+			await service.sendNotice({ ...notice, sendSms: false })
+			expect(sms.sendNoticeAdded).not.toHaveBeenCalled()
+			expect((await service.readNotices()).data.map(n => n.smsSent)).toEqual([false, false])
 		})
 
 		it("keeps the copies out of the admins' ticket list, which shows the notice once", async () => {

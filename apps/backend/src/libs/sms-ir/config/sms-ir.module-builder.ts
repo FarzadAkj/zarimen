@@ -14,6 +14,8 @@ export type SmsIrConfig = {
 	cardAddedTemplate: string
 	/** Tells a shop owner an admin wrote in one of their tickets. */
 	ticketAnsweredTemplate: string
+	/** Tells a shop owner an admins' notice arrived (TITLE parameter). */
+	noticeTemplate: string
 }
 
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, ASYNC_OPTIONS_TYPE } = new ConfigurableModuleBuilder<SmsIrConfig>()

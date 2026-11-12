@@ -81,9 +81,9 @@ export class TicketNoticeModel {
 	@ApiProperty({ type: Number })
 	shopCount!: number
 
-	/** The owners' SMS text; null when none was sent. */
-	@ApiProperty({ type: String, nullable: true })
-	smsText!: string | null
+	/** Whether the owners were texted about it. */
+	@ApiProperty({ type: Boolean })
+	smsSent!: boolean
 
 	@ApiProperty({ type: String, format: "date-time" })
 	createdAt!: Date

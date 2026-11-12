@@ -87,6 +87,13 @@ export class Config {
 	@IsString()
 	public smsIrTicketAnsweredTemplate!: string
 
+	/**
+	 * sms.ir verify template telling a shop owner an admins' notice arrived in their tickets;
+	 * one `TITLE` parameter (the notice's title).
+	 */
+	@IsString()
+	public smsIrNoticeTemplate!: string
+
 	/** "false" logs the OTP to the console instead of sending it (local development). */
 	@IsIn(["true", "false"])
 	public sendSms!: string

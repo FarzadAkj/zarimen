@@ -39,7 +39,7 @@ export async function answerTicket(ticketId: string, input: { body: string, imag
     }
 }
 
-/** A CLOSED ticket with this message to every enabled shop; `smsText` (if any) is texted to the owners. */
+/** A CLOSED ticket with this message to every enabled shop; with `sendSms` the owners get the notice SMS template (title). */
 export async function sendNotice(input: SendNoticeInput): Promise<ServerResponse<TicketNoticeModel>> {
     const api = await takeApi()
     try {

@@ -438,7 +438,8 @@ export interface SendNoticeInput {
   imageUrls?: string[];
   /** @example "مشکل در شارژ کیف پول" */
   title: string;
-  smsText?: string;
+  /** @default false */
+  sendSms?: boolean;
 }
 export interface TicketNoticeModel {
   id: string;
@@ -446,7 +447,7 @@ export interface TicketNoticeModel {
   body: string;
   imageUrls: string[];
   shopCount: number;
-  smsText: string | null;
+  smsSent: boolean;
   /** @format date-time */
   createdAt: string;
 }

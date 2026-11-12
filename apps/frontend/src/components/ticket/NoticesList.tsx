@@ -40,7 +40,7 @@ export function NoticesList({ result, page, pageHref }: {
                         )}
                         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <MessageSquareText className="size-3.5" />
-                            {notice.smsText ? `پیامک: ${notice.smsText}` : "بدون پیامک"}
+                            {notice.smsSent ? "پیامک برای مالکان ارسال شد" : "بدون پیامک"}
                         </p>
                     </li>
                 ))}

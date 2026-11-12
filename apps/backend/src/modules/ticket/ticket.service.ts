@@ -119,7 +119,7 @@ export class TicketService {
 
 	/**
 	 * Sends a notice: a CLOSED ticket with this one admin message to every enabled shop, all
-	 * written together, then (when `smsText` is given) one bulk SMS to their owners.
+	 * written together, then (when `sendSms`) the notice SMS template, with the title, to each owner.
 	 */
 	async sendNotice(input: SendNoticeInput): Promise<TicketNoticeModel> {
 		const imageUrls = this.checkImages(input.imageUrls)
@@ -129,14 +129,13 @@ export class TicketService {
 
 		const title = input.title.trim()
 		const body = input.body.trim()
-		const smsText = input.smsText?.trim() || null
 		const notice = await this.prisma.ticketNotice.create({
 			data: {
 				title,
 				body,
 				imageUrls,
 				shopCount: shops.length,
-				smsText,
+				smsText: input.sendSms ? title : null,
 				tickets: {
 					create: shops.map(shop => ({
 						shopId: shop.id,
@@ -148,8 +147,8 @@ export class TicketService {
 			},
 		})
 
-		if (smsText)
-			await this.sms.sendBulkMessage([...new Set(shops.map(shop => shop.ownerPhoneNumber))], smsText)
+		if (input.sendSms)
+			await this.textOwners([...new Set(shops.map(shop => shop.ownerPhoneNumber))], title)
 		return this.toNoticeModel(notice)
 	}
 
@@ -195,6 +194,23 @@ export class TicketService {
 		}
 	}
 
+	/**
+	 * The notice SMS to each owner, one sms.ir request per number (templates take one number).
+	 * Free, like every admin-triggered SMS. A failed number is logged and the rest still go out.
+	 */
+	private async textOwners(phoneNumbers: string[], title: string) {
+		let failed = 0
+		for (const phoneNumber of phoneNumbers) {
+			try {
+				await this.sms.sendNoticeAdded(phoneNumber, title)
+			}
+			catch {
+				failed++
+			}
+		}
+		logger.info(`[ticket] notice SMS sent to ${phoneNumbers.length - failed} of ${phoneNumbers.length} owner(s)`)
+	}
+
 	private notifyAdmins(title: string) {
 		return this.sms.sendBulkMessage(this.config.adminPhoneNumberList(), ticketNotice(title))
 	}
@@ -205,7 +221,7 @@ export class TicketService {
 
 	private toNoticeModel(row: { id: string, title: string, body: string, imageUrls: string[], shopCount: number, smsText: string | null, createdAt: Date }): TicketNoticeModel {
 		const { id, title, body, imageUrls, shopCount, smsText, createdAt } = row
-		return { id, title, body, imageUrls, shopCount, smsText, createdAt }
+		return { id, title, body, imageUrls, shopCount, smsSent: smsText !== null, createdAt }
 	}
 
 	private toModel({ messages, ...row }: TicketRow): TicketModel {

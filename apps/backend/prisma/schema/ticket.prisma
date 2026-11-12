@@ -29,7 +29,8 @@ model TicketNotice {
   imageUrls String[]
   /// How many shops got a copy.
   shopCount Int
-  /// The bulk SMS text sent to the owners; null when the admin skipped it.
+  /// The TITLE sent to the owners with smsIrNoticeTemplate (older rows: the bulk SMS text);
+  /// null when the admin skipped the SMS.
   smsText   String?
   tickets   Ticket[]
   createdAt DateTime @default(now())

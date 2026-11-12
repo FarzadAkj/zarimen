@@ -122,6 +122,8 @@ smsIrShopWelcomeTemplate = "your-template-id"
 smsIrCardAddedTemplate = "449513"
 # to the owner when an admin writes in their ticket (SUBDOMAIN + UUID parameters)
 smsIrTicketAnsweredTemplate = "144151"
+# to the owners when an admin sends a notice with SMS on (TITLE parameter)
+smsIrNoticeTemplate = "790265"
 sendSms = true
 
 # ---- api.ir (Shahkar + CardMatch)
@@ -310,7 +312,7 @@ sudo nginx -t && sudo systemctl reload nginx
 | Service | What to set |
 | ------- | ----------- |
 | **SePal** (merchant panel) | An API key → `sepalApiKey`. The site must be `zarimen.ir`: owners open the gateway from `https://<subdomain>.zarimen.ir/panel/…` and SePal checks that Origin / Referer, so shop subdomains must be accepted. SePal POSTs results to `https://api.zarimen.ir/wallet/topUpCallback` and `/subscription/purchaseCallback`. Amounts go in Rials, at least 100,000 (the app's minimum top-up / plan price is 10,000 Tomans). |
-| **sms.ir** | A "verify" template with one parameter named **`CODE`**; its id → `smsIrOtpTemplate`. Template 449513 (`SUBDOMAIN`, `SSN`; text links to `https://#SUBDOMAIN#.zarimen.ir/panel/customers?ssn=#SSN#`) → `smsIrCardAddedTemplate`. Template 144151 (`SUBDOMAIN`, `UUID`; links to `https://#SUBDOMAIN#.zarimen.ir/panel/tickets/#UUID#`) → `smsIrTicketAnsweredTemplate`. A line with enough credit. |
+| **sms.ir** | A "verify" template with one parameter named **`CODE`**; its id → `smsIrOtpTemplate`. Template 449513 (`SUBDOMAIN`, `SSN`; text links to `https://#SUBDOMAIN#.zarimen.ir/panel/customers?ssn=#SSN#`) → `smsIrCardAddedTemplate`. Template 144151 (`SUBDOMAIN`, `UUID`; links to `https://#SUBDOMAIN#.zarimen.ir/panel/tickets/#UUID#`) → `smsIrTicketAnsweredTemplate`. Template 790265 (`TITLE`, the notice title) → `smsIrNoticeTemplate`. A line with enough credit. |
 | **api.ir** | A token with Shahkar and CardMatch enabled and credit. |
 | **ArvanCloud bucket** | The panel uploads logos **from the browser** straight to the bucket, so the bucket's CORS must allow `PUT` from `https://zarimen.ir` (headers: `content-type`, `x-amz-acl`). Without it, logo upload fails in the browser. |
 
