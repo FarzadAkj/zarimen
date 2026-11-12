@@ -252,6 +252,11 @@ export default async function HomePage() {
                             {...{ code: "rzVrOIyDAt9Z8MeaT9GynPG6hb2i9obH" }}
                         />
                     </a>
+
+                    <a href="https://dashboard.sepal.ir/trust/726NIBuRDsHO8SeRDpE3LoelqoJxyQ-IcpWVIXwYa7o" target="_blank" rel="noopener noreferrer" aria-label="پرداخت امن با سپال">
+                        <img src="/images/sepal-trust.svg" alt="پرداخت امن با سپال" width="130" height="auto" className="display:block;width:100%;height:auto;" />
+                    </a>
+                    
                     <span>© {new Date().getFullYear().toLocaleString("fa-IR", { useGrouping: false })} زر ایمن — zarimen.ir</span>
                 </div>
             </footer>
