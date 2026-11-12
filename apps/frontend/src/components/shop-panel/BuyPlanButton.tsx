@@ -1,4 +1,5 @@
 "use client"
+import type { SubscriptionPlanModel } from "@/api/Api"
 import { useState } from "react"
 import { toast } from "sonner"
 import { startSubscriptionPurchase } from "@/app/tenant/[subdomain]/panel/actions"
@@ -6,16 +7,16 @@ import { Button } from "@/components/shad/button"
 import { PaymentConfirmDialog } from "@/components/shop-panel/PaymentConfirmDialog"
 
 /**
- * Shows the plan's price + VAT, then sends the owner to SePal for the total;
+ * Shows the plan's price (after the admin's discount) + VAT, then sends the owner to SePal for the total;
  * SePal posts the result back through the backend to /panel/subscription?purchase=…
  */
-export function BuyPlanButton({ planId, planTitle, price, vatPercent }: { planId: string, planTitle: string, price: number, vatPercent: number }) {
+export function BuyPlanButton({ plan, vatPercent }: { plan: SubscriptionPlanModel, vatPercent: number }) {
     const [open, setOpen] = useState(false)
     const [pending, setPending] = useState(false)
 
     async function buy() {
         setPending(true)
-        const { data, error } = await startSubscriptionPurchase(planId)
+        const { data, error } = await startSubscriptionPurchase(plan.id)
         if (!data) {
             setPending(false)
             toast.error(error?.translation)
@@ -33,9 +34,10 @@ export function BuyPlanButton({ planId, planTitle, price, vatPercent }: { planId
             <PaymentConfirmDialog
                 open={open}
                 onOpenChange={setOpen}
-                title={`خرید «${planTitle}»`}
+                title={`خرید «${plan.title}»`}
                 amountLabel="قیمت اشتراک"
-                amount={price}
+                amount={Number(plan.finalPrice)}
+                discount={plan.discountPercent > 0 ? { fullAmount: Number(plan.price), percent: plan.discountPercent } : undefined}
                 vatPercent={vatPercent}
                 pending={pending}
                 onConfirm={buy}

@@ -38,6 +38,7 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 16  | «استعلام دستی» history (owner customers page + admin shop view) | done — `db push` applied to the dev DB |
 | 17  | Zarinpal off for now: payment dialogs point owners to a support ticket | done |
 | 18  | Payment gateway Zarinpal → SePal (still switched off in the frontend) | done — no schema change; needs `sepalApiKey` |
+| 19  | Admin discount percent on all subscription plans (struck-through price in the UI) | done — no schema change |
 
 ## Step log
 
@@ -877,3 +878,28 @@ Open:
   **subdomains** (`<sub>.zarimen.ir`) when the registered site is `zarimen.ir`; whether a 36-char UUID
   is accepted as `invoiceNumber`; whether "more than 100,000" is strict (10,000 Tomans with 0% VAT is
   exactly 100,000 Rials).
+
+### Step 19 — Discount on subscription plans (2026-11-12)
+
+Asked for: a discount percent in the admin's settings that discounts every purchased plan; when it
+is on, the UI strikes through the normal price and shows the discounted price and the percent.
+Decided without asking (tell the user): VAT is computed on the **discounted** price; the purchase
+row's `price` is the discounted price (what was paid before VAT), so history shows what was paid.
+
+- `packages/shared/src/discount.ts`: `discountedPrice(price, percent)` (discount rounded to a whole
+  Toman), used by the backend to charge and by the settings card's example. 2 tests.
+- Setting `PlanDiscountSettingsModel { discountPercent }` (int 0–99, default 0; 100 would make a free
+  plan the gateway cannot take), key `PLAN_DISCOUNT_SETTINGS_KEY`; admin `setting/readPlanDiscountSettings`
+  + `setting/setPlanDiscountSettings`.
+- `SubscriptionPlanModel` gained `discountPercent` and `finalPrice` (every plan list: admin, owner,
+  public). `startPurchase` charges `finalPrice` + VAT on it. 1 new test (2,000,000, 20% off, 10% VAT →
+  1,760,000 at the gateway, purchase price 1,600,000).
+- `SepalService.requestPayment` refuses amounts under 10,000 Tomans (SePal's 100,000 Rials) without
+  calling SePal → GatewayError. A big discount on a cheap plan hits this. 1 test.
+- Frontend: «تخفیف اشتراک‌ها» card on `/panel/settings` (with an example); `components/shared/PlanPrice`
+  (full price `<del>`, red «٪ تخفیف» badge, discounted price) on the landing page, the owner's
+  subscription page and the admin's plan list; `PaymentConfirmDialog` takes `discount` and shows the
+  struck-through full price above the discounted one (also in the support-ticket text).
+  Saving revalidates every page.
+- `src/api` regenerated from a temporary backend on :8011.
+- Not checked in a browser (no dev servers running; needs the DB and an admin login).

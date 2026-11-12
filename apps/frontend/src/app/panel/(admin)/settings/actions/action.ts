@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { CreateSubscriptionPlanInput, ServiceCostSettingsModel, SubscriptionPlanModel, VatSettingsModel } from "@/api/Api"
+import type { CreateSubscriptionPlanInput, PlanDiscountSettingsModel, ServiceCostSettingsModel, SubscriptionPlanModel, VatSettingsModel } from "@/api/Api"
 import { revalidatePath } from "next/cache"
 import { toErrorOutput } from "@/lib/errors"
 import { takeApi } from "@/lib/take-api"
@@ -46,6 +46,29 @@ export async function updateVatSettings(input: VatSettingsModel): Promise<Server
     try {
         const { data } = await api.setting.setVatSettings(input)
         revalidatePath("/", "layout") // owners' wallet and subscription pages show it before paying
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function readPlanDiscountSettings(): Promise<ServerResponse<PlanDiscountSettingsModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.setting.readPlanDiscountSettings()
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+export async function updatePlanDiscountSettings(input: PlanDiscountSettingsModel): Promise<ServerResponse<PlanDiscountSettingsModel>> {
+    const api = await takeApi()
+    try {
+        const { data } = await api.setting.setPlanDiscountSettings(input)
+        revalidatePath("/", "layout") // plan prices on the landing page, owners' subscription pages and this page
         return { data }
     }
     catch (error: any) {

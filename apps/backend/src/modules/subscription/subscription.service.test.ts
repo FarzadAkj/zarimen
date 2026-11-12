@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Config } from "~/config"
 import { GlobalError } from "~/libs/error/classes/global-error"
 import { ErrorService } from "~/libs/error/error.service"
+import { PLAN_DISCOUNT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
 import { SubscriptionService } from "./subscription.service"
 import "reflect-metadata"
 
@@ -40,8 +41,9 @@ function createPrisma(subscriptionEndsAt: Date | null) {
 			findUnique: async ({ where }: { where: { id: string } }) => plans.find(p => p.id === where.id) ?? null,
 		},
 		subscriptionPurchase: {
-			create: async ({ data }: { data: Omit<Purchase, "id" | "status" | "createdAt"> }) => {
-				const row: Purchase = { id: `p-${purchases.length + 1}`, status: "PENDING", createdAt: new Date(), ...data }
+			create: async ({ data }: { data: Omit<Purchase, "id" | "status" | "createdAt" | "price"> & { price: Prisma.Decimal | number } }) => {
+				// Like Prisma, the price is read back as a Decimal whether it was written as one or as a number.
+				const row: Purchase = { id: `p-${purchases.length + 1}`, status: "PENDING", createdAt: new Date(), ...data, price: new Prisma.Decimal(data.price) }
 				purchases.push(row)
 				return row
 			},
@@ -86,9 +88,9 @@ describe("subscriptionService purchase", () => {
 	let sepal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
 	let service: SubscriptionService
 
-	function setup(subscriptionEndsAt: Date | null, vatPercent = 0) {
+	function setup(subscriptionEndsAt: Date | null, vatPercent = 0, discountPercent = 0) {
 		prisma = createPrisma(subscriptionEndsAt)
-		const settings = { getSetting: async () => ({ vatPercent }) }
+		const settings = { getSetting: async (key: string) => key === PLAN_DISCOUNT_SETTINGS_KEY ? { discountPercent } : { vatPercent } }
 		sepal = {
 			requestPayment: vi.fn(async () => ({ ok: true, paymentNumber: "S0001" })),
 			verifyPayment: vi.fn(async () => ({ ok: true, refId: "888", cardPan: null })),
@@ -114,10 +116,21 @@ describe("subscriptionService purchase", () => {
 		await service.startPurchase("shop-1", "month")
 		expect(sepal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 2_200_000 }))
 		expect(prisma.purchases[0]).toMatchObject({ vatAmount: 200_000 })
-		expect(prisma.purchases[0]!.price.toNumber()).toBe(2_000_000)
+		expect(Number(prisma.purchases[0]!.price)).toBe(2_000_000)
 
 		expect(await service.handlePurchaseCallback(callback("S0001", "p-1"))).toContain("purchase=success")
 		expect(sepal.verifyPayment).toHaveBeenCalledWith({ paymentNumber: "S0001", invoiceNumber: "p-1", amount: 2_200_000 })
+	})
+
+	it("takes the discount off the plan's price, adds VAT on the discounted price, and records what was paid", async () => {
+		setup(null, 10, 20)
+		await service.startPurchase("shop-1", "month")
+		expect(sepal.requestPayment).toHaveBeenCalledWith(expect.objectContaining({ amount: 1_760_000 }))
+		expect(Number(prisma.purchases[0]!.price)).toBe(1_600_000)
+		expect(prisma.purchases[0]).toMatchObject({ vatAmount: 160_000 })
+
+		await service.handlePurchaseCallback(callback("S0001", "p-1"))
+		expect(sepal.verifyPayment).toHaveBeenCalledWith({ paymentNumber: "S0001", invoiceNumber: "p-1", amount: 1_760_000 })
 	})
 
 	it("refuses a disabled plan", async () => {

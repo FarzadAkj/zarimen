@@ -28,9 +28,15 @@ describe("sepalService", () => {
 		expect(sepal.gatewayUrl("123456789012345")).toBe("https://payment.sepal.ir/api/payment/123456789012345/")
 	})
 
+	it("refuses an amount below SePal's minimum without calling it", async () => {
+		const fetchMock = answer({ status: true, paymentNumber: "1" })
+		expect(await sepal.requestPayment({ amount: 9_999, invoiceNumber: "tx-1", callbackUrl: "x", description: "d" })).toMatchObject({ ok: false })
+		expect(fetchMock).not.toHaveBeenCalled()
+	})
+
 	it("reports a refused request", async () => {
 		answer({ status: false, message: "مبلغ نامعتبر" })
-		expect(await sepal.requestPayment({ amount: 1, invoiceNumber: "tx-1", callbackUrl: "x", description: "d" }))
+		expect(await sepal.requestPayment({ amount: 10_000, invoiceNumber: "tx-1", callbackUrl: "x", description: "d" }))
 			.toEqual({ ok: false, message: "SePal request: مبلغ نامعتبر" })
 	})
 

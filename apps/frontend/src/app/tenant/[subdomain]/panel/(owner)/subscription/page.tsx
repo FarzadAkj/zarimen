@@ -4,7 +4,8 @@ import { BuyPlanButton } from "@/components/shop-panel/BuyPlanButton"
 import { SubscriptionPurchasesTable } from "@/components/shop-panel/SubscriptionPurchasesTable"
 import { SubscriptionSummary } from "@/components/shop-panel/SubscriptionSummary"
 import { parsePage } from "@/components/shop-panel/WalletTransactionsTable"
-import { formatAmount, formatDuration } from "@/lib/format"
+import { PlanPrice } from "@/components/shared/PlanPrice"
+import { formatDuration } from "@/lib/format"
 import { formatDate } from "@/lib/format-date"
 import { readAvailablePlans, readMySubscription, readMySubscriptionPurchases, readVat } from "../../actions"
 
@@ -79,8 +80,8 @@ export default async function ShopSubscriptionPage({ searchParams }: { searchPar
                                         <p className="font-bold">{plan.title}</p>
                                         <p className="text-sm text-muted-foreground">{formatDuration(plan.durationDays)}</p>
                                     </div>
-                                    <p className="text-xl font-bold text-primary">{formatAmount(plan.price)}</p>
-                                    <BuyPlanButton planId={plan.id} planTitle={plan.title} price={Number(plan.price)} vatPercent={vat.data!.vatPercent} />
+                                    <PlanPrice plan={plan} className="text-xl font-bold text-primary" />
+                                    <BuyPlanButton plan={plan} vatPercent={vat.data!.vatPercent} />
                                 </div>
                             ))}
                         </div>

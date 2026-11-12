@@ -310,6 +310,40 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
+     * No description
+     *
+     * @tags Setting
+     * @name ReadPlanDiscountSettings
+     * @request POST:/setting/readPlanDiscountSettings
+     * @secure
+     */
+    readPlanDiscountSettings: (params = {}) =>
+      this.request({
+        path: `/setting/readPlanDiscountSettings`,
+        method: "POST",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Applies at once to every plan shown and bought from now on.
+     *
+     * @tags Setting
+     * @name SetPlanDiscountSettings
+     * @request POST:/setting/setPlanDiscountSettings
+     * @secure
+     */
+    setPlanDiscountSettings: (data, params = {}) =>
+      this.request({
+        path: `/setting/setPlanDiscountSettings`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
      * @description Public: what each Shahkar check, card check and SMS costs a shop.
      *
      * @tags PublicServiceCost

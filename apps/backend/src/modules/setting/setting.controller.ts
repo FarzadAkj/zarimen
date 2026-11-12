@@ -2,7 +2,8 @@ import { Body, Controller, Post, UseGuards } from "@nestjs/common"
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from "@nestjs/swagger"
 import { IsAdmin } from "../auth/guards/is-admin.guard"
 import { IsShopOwner } from "../auth/guards/is-shop-owner.guard"
-import { SERVICE_COST_SETTINGS_KEY, VAT_SETTINGS_KEY } from "./constants/settings-constant.keys"
+import { PLAN_DISCOUNT_SETTINGS_KEY, SERVICE_COST_SETTINGS_KEY, VAT_SETTINGS_KEY } from "./constants/settings-constant.keys"
+import { PlanDiscountSettingsModel } from "./model/plan-discount-settings.model"
 import { ServiceCostSettingsModel } from "./model/service-cost-settings.model"
 import { VatSettingsModel } from "./model/vat-settings.model"
 import { SettingService } from "./setting.service"
@@ -42,6 +43,21 @@ export class SettingController {
 	@ApiResponse({ type: VatSettingsModel, status: 200 })
 	setVatSettings(@Body() input: VatSettingsModel): Promise<VatSettingsModel> {
 		return this.settings.setSetting(VAT_SETTINGS_KEY, input)
+	}
+
+	@Post("readPlanDiscountSettings")
+	@ApiOperation({ operationId: "readPlanDiscountSettings" })
+	@ApiResponse({ type: PlanDiscountSettingsModel, status: 200 })
+	readPlanDiscountSettings(): Promise<PlanDiscountSettingsModel> {
+		return this.settings.getSetting(PLAN_DISCOUNT_SETTINGS_KEY, PlanDiscountSettingsModel)
+	}
+
+	@Post("setPlanDiscountSettings")
+	@ApiBody({ type: PlanDiscountSettingsModel })
+	@ApiOperation({ operationId: "setPlanDiscountSettings", description: "Applies at once to every plan shown and bought from now on." })
+	@ApiResponse({ type: PlanDiscountSettingsModel, status: 200 })
+	setPlanDiscountSettings(@Body() input: PlanDiscountSettingsModel): Promise<PlanDiscountSettingsModel> {
+		return this.settings.setSetting(PLAN_DISCOUNT_SETTINGS_KEY, input)
 	}
 }
 

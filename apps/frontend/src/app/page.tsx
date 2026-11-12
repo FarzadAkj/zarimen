@@ -4,6 +4,7 @@ import Link from "next/link"
 import { BadgeCheck, CreditCard, FileSearch, Gift, Globe, MessageSquareText, Newspaper, ShieldCheck, Smartphone, Store, Users, Wallet } from "lucide-react"
 import { Button } from "@/components/shad/button"
 import { LogoMark, SiteLogo } from "@/components/site/SiteLogo"
+import { PlanPrice } from "@/components/shared/PlanPrice"
 import { formatAmount, formatDuration } from "@/lib/format"
 import { publicApi } from "@/lib/public-api"
 
@@ -180,7 +181,7 @@ export default async function HomePage() {
                                                 <h3 className="text-lg font-bold">{plan.title}</h3>
                                                 <p className="text-sm text-muted-foreground">{formatDuration(plan.durationDays)}</p>
                                             </div>
-                                            <p className="text-2xl font-bold text-primary">{formatAmount(plan.price)}</p>
+                                            <PlanPrice plan={plan} centered className="text-2xl font-bold text-primary" />
                                             <Button asChild><Link href="/signup">درخواست راه‌اندازی</Link></Button>
                                         </div>
                                     ))}

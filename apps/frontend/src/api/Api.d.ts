@@ -47,6 +47,10 @@ export interface VatSettingsModel {
   /** Whole percent added to the amount the owner pays (10 → 50,000 + 5,000 Tomans). */
   vatPercent: number;
 }
+export interface PlanDiscountSettingsModel {
+  /** Whole percent, 0 = no discount (20 → a 2,000,000 plan costs 1,600,000 Tomans + VAT). At most 99: a free plan cannot go through the gateway. */
+  discountPercent: number;
+}
 export interface PaymentCallbackInput {
   /** 1 paid, 0 not paid */
   status: PaymentCallbackInputStatusEnum;
@@ -352,6 +356,8 @@ export interface SubscriptionPlanModel {
   id: string;
   title: string;
   price: string;
+  discountPercent: number;
+  finalPrice: string;
   durationDays: number;
   isActive: boolean;
 }
@@ -708,6 +714,29 @@ export declare class Api<
       data: VatSettingsModel,
       params?: RequestParams,
     ) => Promise<HttpResponse<VatSettingsModel, any>>;
+    /**
+     * No description
+     *
+     * @tags Setting
+     * @name ReadPlanDiscountSettings
+     * @request POST:/setting/readPlanDiscountSettings
+     * @secure
+     */
+    readPlanDiscountSettings: (
+      params?: RequestParams,
+    ) => Promise<HttpResponse<PlanDiscountSettingsModel, any>>;
+    /**
+     * @description Applies at once to every plan shown and bought from now on.
+     *
+     * @tags Setting
+     * @name SetPlanDiscountSettings
+     * @request POST:/setting/setPlanDiscountSettings
+     * @secure
+     */
+    setPlanDiscountSettings: (
+      data: PlanDiscountSettingsModel,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<PlanDiscountSettingsModel, any>>;
     /**
      * @description Public: what each Shahkar check, card check and SMS costs a shop.
      *

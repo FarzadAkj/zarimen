@@ -7,9 +7,17 @@ export class SubscriptionPlanModel {
 	@ApiProperty({ type: String })
 	title!: string
 
-	/** Whole Tomans as a string. */
+	/** Whole Tomans as a string, before the discount. */
 	@ApiProperty({ type: String })
 	price!: string
+
+	/** The admin's discount on every plan right now (0 = none). */
+	@ApiProperty({ type: Number })
+	discountPercent!: number
+
+	/** What the plan costs now, before VAT: `price` minus the discount (whole Tomans). */
+	@ApiProperty({ type: String })
+	finalPrice!: string
 
 	@ApiProperty({ type: Number })
 	durationDays!: number

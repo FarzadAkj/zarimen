@@ -48,6 +48,9 @@ The customer is identified by three things, and all three matter:
   owner panel stays open). The admin can move a shop's end date later (never earlier than the
   current end or today); the owner's history shows it as «تمدید توسط مدیر». Owners see current plan + due date
   and their purchase history; the admin sees each shop's due date. All dates are Jalali.
+- **Plan discount:** one admin setting «تخفیف اشتراک‌ها» (0–99%) taken off every plan's price;
+  VAT is added to the discounted price. Plans show the full price struck through, the percent and
+  the discounted price (landing page, owner's subscription page, payment dialog, admin plan list).
 - **zarimen.ir landing page:** what Zar Imen is, how it works, what owners get, a link to the
   blog (to be specified), live plans, and direct contact links (phone / WhatsApp / Telegram).
 - **Manual card check («استعلام دستی»):** owners run CardMatch for any national code + birth date +

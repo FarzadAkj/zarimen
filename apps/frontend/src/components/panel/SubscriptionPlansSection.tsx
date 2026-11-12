@@ -9,6 +9,7 @@ import { Input } from "@/components/shad/input"
 import { Label } from "@/components/shad/label"
 import { Spinner } from "@/components/shad/spinner"
 import { Switch } from "@/components/shad/switch"
+import { PlanPrice } from "@/components/shared/PlanPrice"
 import { DURATION_PRESETS, formatAmount, formatDuration, toLatinDigits } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -61,7 +62,8 @@ export function SubscriptionPlansSection({ plans }: { plans: SubscriptionPlanMod
                                 <li key={plan.id} className={cn("flex items-center gap-3 rounded-lg border p-3", !plan.isActive && "opacity-60")}>
                                     <div className="flex-1 grid">
                                         <span className="font-medium">{plan.title}</span>
-                                        <span className="text-sm text-muted-foreground">{formatAmount(plan.price)} — {formatDuration(plan.durationDays)}</span>
+                                        <span className="text-sm text-muted-foreground">{formatDuration(plan.durationDays)}</span>
+                                        <PlanPrice plan={plan} className="text-sm" />
                                     </div>
                                     <span className="text-xs text-muted-foreground">{plan.isActive ? "فعال" : "غیرفعال"}</span>
                                     <Switch dir="ltr" checked={plan.isActive} onCheckedChange={v => toggle(plan, v)} />

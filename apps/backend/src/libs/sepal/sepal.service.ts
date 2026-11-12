@@ -19,6 +19,9 @@ const DEFAULT_BASE_URL = "https://payment.sepal.ir"
 /** SePal works in Rials; the app in whole Tomans. */
 const RIALS_PER_TOMAN = 10
 
+/** SePal's smallest payment: 100,000 Rials. */
+export const SEPAL_MIN_AMOUNT_TOMANS = 10_000
+
 export type PaymentRequest
 	= | { ok: true, paymentNumber: string }
 		| { ok: false, message: string }
@@ -44,6 +47,9 @@ export class SepalService {
 	 * `callbackUrl`: the backend endpoint SePal posts the result to (one per payment kind).
 	 */
 	async requestPayment(input: { amount: number, invoiceNumber: string, callbackUrl: string, description: string, payerMobile?: string }): Promise<PaymentRequest> {
+		// e.g. a cheap plan after a big discount: SePal would refuse it anyway.
+		if (input.amount < SEPAL_MIN_AMOUNT_TOMANS)
+			return { ok: false, message: `SePal request: ${input.amount} Tomans is below the ${SEPAL_MIN_AMOUNT_TOMANS} minimum` }
 		const output = await this.post<RequestOutput>("/api/request.json", {
 			apiKey: this.config.apiKey,
 			amount: input.amount * RIALS_PER_TOMAN,

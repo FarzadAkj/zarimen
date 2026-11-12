@@ -5,14 +5,15 @@ import type { MySubscriptionModel, ReadSubscriptionPurchasesOutput, Subscription
 import { Injectable } from "@nestjs/common"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { SubscriptionPurchaseStatus } from "@prisma/client"
-import { vatOf } from "@zar-imen/shared"
+import { discountedPrice, vatOf } from "@zar-imen/shared"
 import { SoftwareName } from "~/common/constants"
 import { Config } from "~/config"
 import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { SepalService } from "~/libs/sepal/sepal.service"
-import { VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
+import { PLAN_DISCOUNT_SETTINGS_KEY, VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
+import { PlanDiscountSettingsModel } from "../setting/model/plan-discount-settings.model"
 import { VatSettingsModel } from "../setting/model/vat-settings.model"
 import { SettingService } from "../setting/setting.service"
 import { ADMIN_EXTENSION_TITLE, adminExtension, extendSubscription, hasActiveSubscription, PENDING_PURCHASE_TTL_MINUTES, SUBSCRIPTION_PURCHASES_PAGE_SIZE } from "./constants/subscription"
@@ -39,21 +40,24 @@ export class SubscriptionService {
 	// ---- plans (admin)
 
 	async readPlans(onlyActive: boolean): Promise<SubscriptionPlanModel[]> {
-		const plans = await this.prisma.subscriptionPlan.findMany({
-			where: onlyActive ? { isActive: true } : {},
-			orderBy: [{ durationDays: "asc" }, { price: "asc" }],
-		})
-		return plans.map(plan => this.toPlanModel(plan))
+		const [plans, discountPercent] = await Promise.all([
+			this.prisma.subscriptionPlan.findMany({
+				where: onlyActive ? { isActive: true } : {},
+				orderBy: [{ durationDays: "asc" }, { price: "asc" }],
+			}),
+			this.readDiscountPercent(),
+		])
+		return plans.map(plan => this.toPlanModel(plan, discountPercent))
 	}
 
 	async createPlan(input: CreateSubscriptionPlanInput): Promise<SubscriptionPlanModel> {
-		return this.toPlanModel(await this.prisma.subscriptionPlan.create({ data: input }))
+		return this.toPlanModel(await this.prisma.subscriptionPlan.create({ data: input }), await this.readDiscountPercent())
 	}
 
 	async setPlanActive(id: string, isActive: boolean): Promise<SubscriptionPlanModel> {
 		if (!await this.prisma.subscriptionPlan.exists({ id }))
 			throw this.error.throwErrorToClient(SubscriptionErrors.PlanNotFound)
-		return this.toPlanModel(await this.prisma.subscriptionPlan.update({ where: { id }, data: { isActive } }))
+		return this.toPlanModel(await this.prisma.subscriptionPlan.update({ where: { id }, data: { isActive } }), await this.readDiscountPercent())
 	}
 
 	// ---- a shop's subscription
@@ -85,19 +89,26 @@ export class SubscriptionService {
 		return { data: data.map(row => this.toPurchaseModel(row)), count, pageSize: SUBSCRIPTION_PURCHASES_PAGE_SIZE }
 	}
 
-	/** Starts a SePal payment for an active plan, plus the admin's VAT; verified by `POST /subscription/purchaseCallback`. */
+	/**
+	 * Starts a SePal payment for an active plan: its price minus the admin's discount, plus VAT on
+	 * that. The purchase records the discounted price (what was paid before VAT).
+	 * Verified by `POST /subscription/purchaseCallback`.
+	 */
 	async startPurchase(shopId: string, planId: string): Promise<SubscriptionPurchaseStartedModel> {
 		const plan = await this.prisma.subscriptionPlan.findUnique({ where: { id: planId } })
 		if (!plan?.isActive)
 			throw this.error.throwErrorToClient(SubscriptionErrors.PlanNotFound)
 
-		const { vatPercent } = await this.settings.getSetting(VAT_SETTINGS_KEY, VatSettingsModel)
-		const price = plan.price.toNumber()
+		const [{ vatPercent }, discountPercent] = await Promise.all([
+			this.settings.getSetting(VAT_SETTINGS_KEY, VatSettingsModel),
+			this.readDiscountPercent(),
+		])
+		const price = discountedPrice(plan.price.toNumber(), discountPercent)
 		const vatAmount = vatOf(price, vatPercent)
 
 		const shop = await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId }, select: { ownerPhoneNumber: true, subdomain: true } })
 		const purchase = await this.prisma.subscriptionPurchase.create({
-			data: { shopId, planId, planTitle: plan.title, price: plan.price, vatAmount, durationDays: plan.durationDays },
+			data: { shopId, planId, planTitle: plan.title, price, vatAmount, durationDays: plan.durationDays },
 		})
 
 		let request: Awaited<ReturnType<SepalService["requestPayment"]>>
@@ -264,8 +275,20 @@ export class SubscriptionService {
 		return url.toString()
 	}
 
-	private toPlanModel(plan: SubscriptionPlan): SubscriptionPlanModel {
-		return { id: plan.id, title: plan.title, price: plan.price.toFixed(0), durationDays: plan.durationDays, isActive: plan.isActive }
+	private async readDiscountPercent() {
+		return (await this.settings.getSetting(PLAN_DISCOUNT_SETTINGS_KEY, PlanDiscountSettingsModel)).discountPercent
+	}
+
+	private toPlanModel(plan: SubscriptionPlan, discountPercent: number): SubscriptionPlanModel {
+		return {
+			id: plan.id,
+			title: plan.title,
+			price: plan.price.toFixed(0),
+			discountPercent,
+			finalPrice: String(discountedPrice(plan.price.toNumber(), discountPercent)),
+			durationDays: plan.durationDays,
+			isActive: plan.isActive,
+		}
 	}
 
 	private toPurchaseModel(row: SubscriptionPurchase): SubscriptionPurchaseModel {
