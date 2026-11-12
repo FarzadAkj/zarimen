@@ -8,7 +8,9 @@ import { cn } from "@/lib/utils"
  * the discounted price (what the owner pays before VAT). `className` styles the price that is paid.
  */
 export function PlanPrice({ plan, className, centered }: { plan: Pick<SubscriptionPlanModel, "price" | "finalPrice" | "discountPercent">, className?: string, centered?: boolean }) {
-    if (plan.discountPercent <= 0)
+    // Also covers a backend older than the discount (no field): `next build` prerenders the landing
+    // page against the live API, which may not be restarted yet.
+    if (!plan.discountPercent || plan.discountPercent <= 0)
         return <p className={className}>{formatAmount(plan.price)}</p>
 
     return (
