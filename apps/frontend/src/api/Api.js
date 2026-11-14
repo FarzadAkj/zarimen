@@ -10,6 +10,11 @@
  * ---------------------------------------------------------------
  */
 
+export var PaymentKind;
+(function (PaymentKind) {
+  PaymentKind["TOP_UP"] = "TOP_UP";
+  PaymentKind["SUBSCRIPTION"] = "SUBSCRIPTION";
+})(PaymentKind || (PaymentKind = {}));
 export var TobeShopStatus;
 (function (TobeShopStatus) {
   TobeShopStatus["PENDING"] = "PENDING";
@@ -1398,6 +1403,26 @@ export class Api extends HttpClient {
     createImageUpload: (data, params = {}) =>
       this.request({
         path: `/image-upload/createImageUpload`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  payment = {
+    /**
+     * @description Paid wallet top-ups and plan purchases of every shop, newest first. `amount` includes VAT.
+     *
+     * @tags Payment
+     * @name ReadPayments
+     * @request POST:/payment/readPayments
+     * @secure
+     */
+    readPayments: (data, params = {}) =>
+      this.request({
+        path: `/payment/readPayments`,
         method: "POST",
         body: data,
         secure: true,

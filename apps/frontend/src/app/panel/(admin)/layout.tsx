@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Inbox, LogOut, MessagesSquare, Settings, Store } from "lucide-react"
+import { CreditCard, Inbox, LogOut, MessagesSquare, Settings, Store } from "lucide-react"
 import { redirect } from "next/navigation"
 import { Button } from "@/components/shad/button"
 import { logout } from "../login/actions"
@@ -30,6 +30,10 @@ export default function AdminLayout({ children }: Readonly<{ children: React.Rea
                         <Link href="/panel/tickets" className="flex shrink-0 items-center gap-1.5 py-2 hover:text-primary">
                             <MessagesSquare className="size-4" />
                             تیکت‌ها
+                        </Link>
+                        <Link href="/panel/payments" className="flex shrink-0 items-center gap-1.5 py-2 hover:text-primary">
+                            <CreditCard className="size-4" />
+                            پرداخت‌ها
                         </Link>
                         <Link href="/panel/settings" className="flex shrink-0 items-center gap-1.5 py-2 hover:text-primary">
                             <Settings className="size-4" />

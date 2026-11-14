@@ -10,6 +10,10 @@
  * ---------------------------------------------------------------
  */
 
+export declare enum PaymentKind {
+  TOP_UP = "TOP_UP",
+  SUBSCRIPTION = "SUBSCRIPTION",
+}
 export declare enum TobeShopStatus {
   PENDING = "PENDING",
   REGISTERED = "REGISTERED",
@@ -574,6 +578,26 @@ export interface TobeShopIdInput {
 export interface SendTobeShopSmsInput {
   id: string;
   value: string;
+}
+export interface ReadPaymentsInput {
+  /** @default 1 */
+  page?: number;
+}
+export interface PaymentModel {
+  id: string;
+  kind: PaymentKind;
+  planTitle: string | null;
+  amount: string;
+  shopName: string;
+  subdomain: string;
+  ownerPhoneNumber: string;
+  /** @format date-time */
+  createdAt: string;
+}
+export interface ReadPaymentsOutput {
+  data: PaymentModel[];
+  count: number;
+  pageSize: number;
 }
 /** 1 paid, 0 not paid */
 export declare enum PaymentCallbackInputStatusEnum {
@@ -1460,6 +1484,20 @@ export declare class Api<
       data: CreateImageUploadInput,
       params?: RequestParams,
     ) => Promise<HttpResponse<CreateImageUploadOutput, any>>;
+  };
+  payment: {
+    /**
+     * @description Paid wallet top-ups and plan purchases of every shop, newest first. `amount` includes VAT.
+     *
+     * @tags Payment
+     * @name ReadPayments
+     * @request POST:/payment/readPayments
+     * @secure
+     */
+    readPayments: (
+      data: ReadPaymentsInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<ReadPaymentsOutput, any>>;
   };
 }
 export {};

@@ -938,3 +938,23 @@ is **what the owner paid** (amount + VAT); the purchase SMS names the plan.
   returns `completed`), so a repeated callback texts nothing. A failed SMS is only logged.
 - Tests: SMS text on a paid top-up / purchase, once on a double callback, none on a canceled payment.
 - No config, schema or frontend change.
+
+### Step 22 — Admins' payments report (2026-11-14)
+
+Asked for: a table for the admin of payments (wallet top-ups and plan purchases) with shop name,
+subdomain, owner's phone, amount, wallet or plan, date and time.
+Decided without asking (tell the user): only **paid** payments (no pending / failed / canceled); the
+amount is **what the owner paid, VAT included** (same as the admins' SMS); the date is when the payment
+was started (`createdAt`, as in the owners' histories; the gateway gives up after 20 minutes); admin
+end-date changes, admin balance adjustments and customers' service charges are not payments. No filters
+or totals yet.
+
+- New `modules/payment` (`PaymentService.readPayments`, admin `POST /payment/readPayments`, 20 per page):
+  one raw SQL `UNION ALL` of SUCCESS `TOP_UP` wallet rows and SUCCESS purchases with a plan, joined to
+  the shop, newest first. Checked on the local DB inside a rolled-back transaction (a failed top-up, a
+  service charge and an admin extension were left out; amounts included VAT). No unit test: the logic is
+  the SQL, which a mocked Prisma would not check.
+- Frontend `/panel/payments` («پرداخت‌ها» in the admin nav): table date/time, shop, subdomain (links to
+  `/panel/customers/<subdomain>`), owner's mobile, «شارژ کیف پول» / «اشتراک «<plan>»», amount; `Pager`.
+- `src/api` regenerated from a temporary backend on :8011. No schema or config change.
+- Not checked in a browser (needs an admin login).
