@@ -12,11 +12,12 @@ import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { SepalService } from "~/libs/sepal/sepal.service"
+import { SmsIrService } from "~/libs/sms-ir/sms-ir.service"
 import { PLAN_DISCOUNT_SETTINGS_KEY, VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
 import { PlanDiscountSettingsModel } from "../setting/model/plan-discount-settings.model"
 import { VatSettingsModel } from "../setting/model/vat-settings.model"
 import { SettingService } from "../setting/setting.service"
-import { ADMIN_EXTENSION_TITLE, adminExtension, extendSubscription, hasActiveSubscription, PENDING_PURCHASE_TTL_MINUTES, SUBSCRIPTION_PURCHASES_PAGE_SIZE } from "./constants/subscription"
+import { ADMIN_EXTENSION_TITLE, adminExtension, extendSubscription, hasActiveSubscription, PENDING_PURCHASE_TTL_MINUTES, purchaseNotice, SUBSCRIPTION_PURCHASES_PAGE_SIZE } from "./constants/subscription"
 import { SubscriptionErrors } from "./constants/subscription.errors"
 
 /** Where the owner lands after SePal: their shop's /panel/subscription, with the outcome in the query string. */
@@ -33,6 +34,7 @@ export class SubscriptionService {
 		private prisma: PrismaService,
 		private sepal: SepalService,
 		private settings: SettingService,
+		private sms: SmsIrService,
 		private config: Config,
 		private error: ErrorService,
 	) { }
@@ -183,8 +185,12 @@ export class SubscriptionService {
 			return back({ success: false, reason: "Failed" })
 		}
 
-		const paid = await this.completePurchase(purchase, verification)
-		return back({ success: true, planTitle: purchase.planTitle, endsAt: paid.endsAt, refId: verification.refId })
+		const { endsAt, completed } = await this.completePurchase(purchase, verification)
+		if (completed) {
+			const paid = purchase.price.add(purchase.vatAmount).toNumber()
+			await this.sms.sendBulkMessage(this.config.adminPhoneNumberList(), purchaseNotice(purchase.shop.subdomain, purchase.planTitle, paid))
+		}
+		return back({ success: true, planTitle: purchase.planTitle, endsAt, refId: verification.refId })
 	}
 
 	/**
@@ -229,6 +235,7 @@ export class SubscriptionService {
 	/**
 	 * Marks the purchase paid and extends the shop's subscription, once. The shop row is locked
 	 * while the new end date is computed, so two purchases verified at the same time both count.
+	 * `completed` is false when a concurrent callback already did it.
 	 */
 	private async completePurchase(purchase: SubscriptionPurchase, verification: { refId: string, cardPan: string | null }) {
 		return this.prisma.$transaction(async (tx) => {
@@ -241,8 +248,10 @@ export class SubscriptionService {
 				},
 			})
 			// A concurrent callback already completed it.
-			if (count === 0)
-				return tx.subscriptionPurchase.findUniqueOrThrow({ where: { id: purchase.id } }) as Promise<{ endsAt: Date }>
+			if (count === 0) {
+				const done = await tx.subscriptionPurchase.findUniqueOrThrow({ where: { id: purchase.id } })
+				return { endsAt: done.endsAt!, completed: false }
+			}
 
 			const [shop] = await tx.$queryRaw<{ subscriptionEndsAt: Date | null }[]>`
 				SELECT "subscriptionEndsAt" FROM "Shop" WHERE "id" = ${purchase.shopId}::uuid FOR UPDATE`
@@ -250,7 +259,7 @@ export class SubscriptionService {
 
 			await tx.shop.update({ where: { id: purchase.shopId }, data: { subscriptionEndsAt: period.endsAt } })
 			await tx.subscriptionPurchase.update({ where: { id: purchase.id }, data: period })
-			return period
+			return { endsAt: period.endsAt, completed: true }
 		})
 	}
 

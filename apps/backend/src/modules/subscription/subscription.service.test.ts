@@ -7,6 +7,7 @@ import { PLAN_DISCOUNT_SETTINGS_KEY } from "../setting/constants/settings-consta
 import { SubscriptionService } from "./subscription.service"
 import "reflect-metadata"
 
+const ADMINS = ["09120000001", "09120000002"]
 const DAY = 24 * 60 * 60 * 1000
 
 type Purchase = {
@@ -86,6 +87,7 @@ function callback(paymentNumber: string, invoiceNumber: string, status = 1) {
 describe("subscriptionService purchase", () => {
 	let prisma: ReturnType<typeof createPrisma>
 	let sepal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
+	let sms: { sendBulkMessage: ReturnType<typeof vi.fn> }
 	let service: SubscriptionService
 
 	function setup(subscriptionEndsAt: Date | null, vatPercent = 0, discountPercent = 0) {
@@ -96,8 +98,9 @@ describe("subscriptionService purchase", () => {
 			verifyPayment: vi.fn(async () => ({ ok: true, refId: "888", cardPan: null })),
 			gatewayUrl: (paymentNumber: string) => `https://payment.sepal.ir/api/payment/${paymentNumber}/`,
 		}
-		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010", backendUrl: "http://127.0.0.1:8010" })
-		service = new SubscriptionService(prisma as never, sepal as never, settings as never, config, new ErrorService())
+		sms = { sendBulkMessage: vi.fn(async () => {}) }
+		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010", backendUrl: "http://127.0.0.1:8010", adminPhoneNumbers: ADMINS.join(",") })
+		service = new SubscriptionService(prisma as never, sepal as never, settings as never, sms as never, config, new ErrorService())
 	}
 
 	beforeEach(() => setup(null))
@@ -120,6 +123,7 @@ describe("subscriptionService purchase", () => {
 
 		expect(await service.handlePurchaseCallback(callback("S0001", "p-1"))).toContain("purchase=success")
 		expect(sepal.verifyPayment).toHaveBeenCalledWith({ paymentNumber: "S0001", invoiceNumber: "p-1", amount: 2_200_000 })
+		expect(sms.sendBulkMessage).toHaveBeenCalledWith(ADMINS, "خرید اشتراک «یک‌ماهه» فروشگاه setoode به مبلغ 2,200,000 تومان پرداخت شد.")
 	})
 
 	it("takes the discount off the plan's price, adds VAT on the discounted price, and records what was paid", async () => {
@@ -158,6 +162,7 @@ describe("subscriptionService purchase", () => {
 		expect(await service.handlePurchaseCallback(callback("S0001", "p-1"))).toContain("purchase=success")
 		expect(prisma.shop.subscriptionEndsAt).toBe(end)
 		expect(sepal.verifyPayment).toHaveBeenCalledTimes(1)
+		expect(sms.sendBulkMessage).toHaveBeenCalledTimes(1)
 	})
 
 	it("extends nothing when the owner cancels at the gateway", async () => {
@@ -165,6 +170,7 @@ describe("subscriptionService purchase", () => {
 		expect(await service.handlePurchaseCallback(callback("S0001", "p-1", 0))).toContain("purchase=failed&reason=Canceled")
 		expect(prisma.shop.subscriptionEndsAt).toBeNull()
 		expect(prisma.purchases[0]!.status).toBe("FAILED")
+		expect(sms.sendBulkMessage).not.toHaveBeenCalled()
 	})
 
 	it("extends nothing when SePal does not verify the payment", async () => {

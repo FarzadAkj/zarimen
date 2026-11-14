@@ -36,3 +36,8 @@ export function adminExtension(currentEnd: Date | null, now: Date, newEnd: Date)
 		return null
 	return { startsAt, endsAt: newEnd, durationDays: Math.ceil((newEnd.getTime() - startsAt.getTime()) / DAY_MS) }
 }
+
+/** The admins' SMS when a plan is bought; `paid` is what the owner paid (price + VAT), in Tomans. */
+export function purchaseNotice(subdomain: string, planTitle: string, paid: number) {
+	return `خرید اشتراک «${planTitle}» فروشگاه ${subdomain} به مبلغ ${paid.toLocaleString("en-US")} تومان پرداخت شد.`
+}

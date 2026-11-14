@@ -922,3 +922,19 @@ text; its one parameter `TITLE` is the notice title. New template key in `.env` 
 - `sendBulkMessage` is still used for the admins' own alerts (new ticket / shop request).
 - 2 tests changed, 1 new (one failed number does not stop the rest). `src/api` regenerated.
 - **Server:** add `smsIrNoticeTemplate = "790265"` to `apps/backend/.env`, or the backend will not start.
+
+### Step 21 — Admins' SMS on every payment (2026-11-14)
+
+Asked for: whenever a transaction is made, a bulk SMS to the admins with the amount, the shop's
+subdomain and whether it was a wallet top-up or a plan purchase.
+Decided without asking (tell the user): only **paid SePal payments** count (top-ups and plan
+purchases) — not customers' service charges, admin balance adjustments or admin extensions; the amount
+is **what the owner paid** (amount + VAT); the purchase SMS names the plan.
+
+- `topUpNotice` (wallet constants): «شارژ کیف پول فروشگاه setoode به مبلغ 55,000 تومان پرداخت شد.»
+- `purchaseNotice` (subscription constants): «خرید اشتراک «یک‌ماهه» فروشگاه setoode به مبلغ 2,200,000 تومان پرداخت شد.»
+- Sent with `sendBulkMessage(adminPhoneNumberList())` right after the verified payment is applied, and
+  only by the call that moved it PENDING → SUCCESS (`creditTopUp` returns true / `completePurchase`
+  returns `completed`), so a repeated callback texts nothing. A failed SMS is only logged.
+- Tests: SMS text on a paid top-up / purchase, once on a double callback, none on a canceled payment.
+- No config, schema or frontend change.

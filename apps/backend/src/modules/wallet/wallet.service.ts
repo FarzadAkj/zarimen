@@ -12,11 +12,12 @@ import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
 import { PrismaService } from "~/libs/prisma/prisma.service"
 import { SepalService } from "~/libs/sepal/sepal.service"
+import { SmsIrService } from "~/libs/sms-ir/sms-ir.service"
 import { SERVICE_COST_SETTINGS_KEY, VAT_SETTINGS_KEY } from "../setting/constants/settings-constant.keys"
 import { ServiceCostSettingsModel } from "../setting/model/service-cost-settings.model"
 import { VatSettingsModel } from "../setting/model/vat-settings.model"
 import { SettingService } from "../setting/setting.service"
-import { PENDING_TOP_UP_TTL_MINUTES, WALLET_TRANSACTIONS_PAGE_SIZE } from "./constants/wallet.constants"
+import { PENDING_TOP_UP_TTL_MINUTES, topUpNotice, WALLET_TRANSACTIONS_PAGE_SIZE } from "./constants/wallet.constants"
 import { WalletErrors } from "./constants/wallet.errors"
 
 /** Who pays for a customer's request: the shop, on behalf of the customer (shown in its history). */
@@ -37,6 +38,7 @@ export class WalletService {
 		private prisma: PrismaService,
 		private settings: SettingService,
 		private sepal: SepalService,
+		private sms: SmsIrService,
 		private config: Config,
 		private error: ErrorService,
 	) { }
@@ -198,7 +200,10 @@ export class WalletService {
 			return back({ success: false, reason: "Failed" })
 		}
 
-		await this.creditTopUp(topUp, verification)
+		if (await this.creditTopUp(topUp, verification)) {
+			const paid = topUp.amount.add(topUp.vatAmount).toNumber()
+			await this.sms.sendBulkMessage(this.config.adminPhoneNumberList(), topUpNotice(topUp.wallet.shop.subdomain, paid))
+		}
 		return back({ success: true, amount, refId: verification.refId })
 	}
 
@@ -233,9 +238,12 @@ export class WalletService {
 		return { data: data.map(row => this.toModel(row)), count, pageSize: WALLET_TRANSACTIONS_PAGE_SIZE }
 	}
 
-	/** Marks the top-up paid and credits the wallet, once: a concurrent second callback finds it no longer PENDING. */
+	/**
+	 * Marks the top-up paid and credits the wallet, once: a concurrent second callback finds it
+	 * no longer PENDING. True when this call credited it.
+	 */
 	private async creditTopUp(topUp: WalletTransaction, verification: { refId: string, cardPan: string | null }) {
-		await this.prisma.$transaction(async (tx) => {
+		return this.prisma.$transaction(async (tx) => {
 			const { count } = await tx.walletTransaction.updateMany({
 				where: { id: topUp.id, status: WalletTransactionStatus.PENDING },
 				data: {
@@ -244,8 +252,10 @@ export class WalletService {
 					cardPan: verification.cardPan,
 				},
 			})
-			if (count === 1)
-				await tx.wallet.update({ where: { id: topUp.walletId }, data: { balance: { increment: topUp.amount } } })
+			if (count === 0)
+				return false
+			await tx.wallet.update({ where: { id: topUp.walletId }, data: { balance: { increment: topUp.amount } } })
+			return true
 		})
 	}
 

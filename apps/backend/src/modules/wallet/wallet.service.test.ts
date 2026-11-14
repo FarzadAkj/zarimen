@@ -22,6 +22,7 @@ type Row = {
 	createdAt: Date
 }
 
+const ADMINS = ["09120000001", "09120000002"]
 const BILL = { shopId: "shop-1", customerSsn: "0499370899" }
 
 /** One shop wallet and its history, with the conditional updates Postgres does. */
@@ -89,6 +90,7 @@ function callback(paymentNumber: string, invoiceNumber: string, status = 1) {
 describe("walletService", () => {
 	let prisma: ReturnType<typeof createPrisma>
 	let sepal: { requestPayment: ReturnType<typeof vi.fn>, verifyPayment: ReturnType<typeof vi.fn>, gatewayUrl: (a: string) => string }
+	let sms: { sendBulkMessage: ReturnType<typeof vi.fn> }
 	let wallet: WalletService
 
 	function setup(balance: number, shahkarCost: number, smsCost: number, cardMatchCost = 700, vatPercent = 0) {
@@ -101,8 +103,9 @@ describe("walletService", () => {
 			verifyPayment: vi.fn(async () => ({ ok: true, refId: "777", cardPan: "6037**1234" })),
 			gatewayUrl: (paymentNumber: string) => `https://payment.sepal.ir/api/payment/${paymentNumber}/`,
 		}
-		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010", backendUrl: "http://127.0.0.1:8010" })
-		wallet = new WalletService(prisma as never, settings as never, sepal as never, config, new ErrorService())
+		sms = { sendBulkMessage: vi.fn(async () => {}) }
+		const config = Object.assign(new Config(), { shopSiteUrl: "http://{subdomain}.localhost:3010", backendUrl: "http://127.0.0.1:8010", adminPhoneNumbers: ADMINS.join(",") })
+		wallet = new WalletService(prisma as never, settings as never, sepal as never, sms as never, config, new ErrorService())
 	}
 
 	beforeEach(() => setup(5000, 1000, 200))
@@ -185,6 +188,7 @@ describe("walletService", () => {
 			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1"))).toContain("amount=50000")
 			expect(sepal.verifyPayment).toHaveBeenCalledWith({ paymentNumber: "A0001", invoiceNumber: "tx-1", amount: 55_000 })
 			expect(prisma.wallet.balance).toBe(55_000)
+			expect(sms.sendBulkMessage).toHaveBeenCalledWith(ADMINS, "شارژ کیف پول فروشگاه setoode به مبلغ 55,000 تومان پرداخت شد.")
 		})
 
 		it("credits only once when the callback comes twice", async () => {
@@ -193,11 +197,13 @@ describe("walletService", () => {
 			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1"))).toContain("topUp=success")
 			expect(prisma.wallet.balance).toBe(55_000)
 			expect(sepal.verifyPayment).toHaveBeenCalledTimes(1)
+			expect(sms.sendBulkMessage).toHaveBeenCalledTimes(1)
 		})
 
 		it("credits nothing when the owner cancels at the gateway", async () => {
 			await wallet.startTopUp("shop-1", 50_000)
 			expect(await wallet.handleTopUpCallback(callback("A0001", "tx-1", 0))).toBe("http://setoode.localhost:3010/panel/wallet?topUp=failed&reason=Canceled")
+			expect(sms.sendBulkMessage).not.toHaveBeenCalled()
 			expect(sepal.verifyPayment).not.toHaveBeenCalled()
 			expect(prisma.wallet.balance).toBe(5000)
 			expect(prisma.rows[0]!.status).toBe("FAILED")
