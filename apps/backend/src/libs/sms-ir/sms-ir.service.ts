@@ -23,6 +23,11 @@ export class SmsIrService {
 		await this.sendTemplate(phoneNumber, this.config.otpTemplate, { CODE: code })
 	}
 
+	/** The code a shop owner reads to a customer to approve a paid check (signup / card); one `CODE` parameter. */
+	sendOwnerApproval(phoneNumber: string, code: string) {
+		return this.sendTemplate(phoneNumber, this.config.ownerApprovalTemplate, { CODE: code })
+	}
+
 	/** A canceled shop request (a failed check or the admin's decision); one `INFO` parameter. */
 	sendShopRejected(phoneNumber: string, info: string) {
 		return this.sendTemplate(phoneNumber, this.config.shopRejectedTemplate, { INFO: info })

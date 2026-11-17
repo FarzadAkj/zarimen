@@ -8,18 +8,33 @@ import { Input } from "@/components/shad/input"
 import { Label } from "@/components/shad/label"
 import { Spinner } from "@/components/shad/spinner"
 import { formatCardNumber, toLatinDigits } from "@/lib/format"
+import { CodeStep, ownerCodeMessage } from "./CodeStep"
 
 type Props = {
     data: CustomerCardsModel
     pending: boolean
-    onAdd: (cardNumber: string) => Promise<boolean>
+    /** Texts the owner an approval code for the card; the code's lifetime in seconds, or null on failure. */
+    onRequestCode: (cardNumber: string) => Promise<number | null>
+    /** "retry": wrong owner's code, it may be typed again; "failed": start over from the card number. */
+    onAdd: (cardNumber: string, ownerCode: string) => Promise<"added" | "retry" | "failed">
     onFinish: () => void
 }
 
-/** Phase 3: the customer's verified cards, and adding another (checked by CardMatch). */
-export function CardsStep({ data, pending, onAdd, onFinish }: Props) {
+/** Phase 3: the customer's verified cards, and adding another (the owner's code, then CardMatch). */
+export function CardsStep({ data, pending, onRequestCode, onAdd, onFinish }: Props) {
     const [cardNumber, setCardNumber] = useState("")
     const [error, setError] = useState<string>()
+    /** Lifetime of the owner's code while it is awaited; null while the card number is typed. */
+    const [codeSeconds, setCodeSeconds] = useState<number | null>(null)
+    /** Bumped on every code sent, so CodeStep remounts and its countdown restarts. */
+    const [sendCount, setSendCount] = useState(0)
+
+    async function requestCode() {
+        const seconds = await onRequestCode(cardNumber)
+        if (seconds === null) return
+        setCodeSeconds(seconds)
+        setSendCount(n => n + 1)
+    }
 
     async function submit(e: React.FormEvent) {
         e.preventDefault()
@@ -28,8 +43,15 @@ export function CardsStep({ data, pending, onAdd, onFinish }: Props) {
             return
         }
         setError(undefined)
-        if (await onAdd(cardNumber))
-            setCardNumber("")
+        await requestCode()
+    }
+
+    async function approve(ownerCode: string) {
+        const result = await onAdd(cardNumber, ownerCode)
+        if (result === "retry") return false
+        setCodeSeconds(null)
+        if (result === "added") setCardNumber("")
+        return true
     }
 
     return (
@@ -53,7 +75,25 @@ export function CardsStep({ data, pending, onAdd, onFinish }: Props) {
                     : <p className="text-sm text-muted-foreground rounded-xl border border-dashed p-4 text-center">هنوز کارتی ثبت نکرده‌اید.</p>}
             </section>
 
-            <form onSubmit={submit} className="grid gap-2" noValidate>
+            {codeSeconds !== null && (
+                <section className="grid gap-3 rounded-xl border p-4">
+                    <p className="text-sm text-center">
+                        استعلام کارت <span dir="ltr" className="font-mono">{formatCardNumber(cardNumber)}</span>
+                    </p>
+                    <CodeStep
+                        key={sendCount}
+                        message={ownerCodeMessage}
+                        backLabel="انصراف"
+                        expiresInSeconds={codeSeconds}
+                        pending={pending}
+                        onSubmit={approve}
+                        onResend={requestCode}
+                        onBack={() => setCodeSeconds(null)}
+                    />
+                </section>
+            )}
+
+            {codeSeconds === null && <form onSubmit={submit} className="grid gap-2" noValidate>
                 <Label htmlFor="card">افزودن کارت جدید</Label>
                 <div className="flex gap-2">
                     <Input
@@ -72,8 +112,8 @@ export function CardsStep({ data, pending, onAdd, onFinish }: Props) {
                     </Button>
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                <p className="text-xs text-muted-foreground">کارت باید به نام خودتان باشد؛ با کد ملی و تاریخ تولد شما استعلام می‌شود.</p>
-            </form>
+                <p className="text-xs text-muted-foreground">کارت باید به نام خودتان باشد؛ با کد ملی و تاریخ تولد شما استعلام می‌شود. برای هر کارت، یک کد تأیید به موبایل فروشنده ارسال می‌شود.</p>
+            </form>}
 
             <Button type="button" variant="outline" size="lg" onClick={onFinish}>پایان</Button>
         </div>

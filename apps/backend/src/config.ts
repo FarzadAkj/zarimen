@@ -94,6 +94,13 @@ export class Config {
 	@IsString()
 	public smsIrNoticeTemplate!: string
 
+	/**
+	 * sms.ir verify template sending the shop owner a code that approves a customer's paid check
+	 * (Shahkar on signup, CardMatch on an added card); one `CODE` parameter.
+	 */
+	@IsString()
+	public smsIrOwnerApprovalTemplate!: string
+
 	/** "false" logs the OTP to the console instead of sending it (local development). */
 	@IsIn(["true", "false"])
 	public sendSms!: string

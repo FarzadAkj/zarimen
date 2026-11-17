@@ -31,13 +31,13 @@ function createPrisma() {
 			findUnique: async ({ where }: { where: { subdomain: string } }) => shops.find(s => s.subdomain === where.subdomain) ?? null,
 		},
 		authOtp: {
-			create: async ({ data }: { data: Pick<AuthOtp, "phoneNumber" | "code" | "expireDate"> }) => {
-				const row: AuthOtp = { id: String(rows.length + 1), attempts: 0, isUsed: false, createdAt: new Date(), ...data }
+			create: async ({ data }: { data: Pick<AuthOtp, "phoneNumber" | "purpose" | "code" | "expireDate"> & { customerPhoneNumber?: string } }) => {
+				const row: AuthOtp = { id: String(rows.length + 1), attempts: 0, isUsed: false, createdAt: new Date(), ...data, customerPhoneNumber: data.customerPhoneNumber ?? null }
 				rows.push(row)
 				return row
 			},
-			findFirst: async ({ where }: { where: { phoneNumber: string } }) =>
-				rows.filter(r => r.phoneNumber === where.phoneNumber && !r.isUsed && r.expireDate > new Date()).at(-1) ?? null,
+			findFirst: async ({ where }: { where: { phoneNumber: string, purpose: string, customerPhoneNumber: string | null } }) =>
+				rows.filter(r => r.phoneNumber === where.phoneNumber && r.purpose === where.purpose && r.customerPhoneNumber === where.customerPhoneNumber && !r.isUsed && r.expireDate > new Date()).at(-1) ?? null,
 			update: async ({ where, data }: { where: { id: string }, data: Partial<AuthOtp> }) =>
 				Object.assign(rows.find(r => r.id === where.id)!, data),
 			delete: async ({ where }: { where: { id: string } }) => rows.splice(rows.findIndex(r => r.id === where.id), 1)[0],
@@ -54,16 +54,18 @@ function errorCode(promise: Promise<unknown>) {
 
 describe("authService", () => {
 	let prisma: ReturnType<typeof createPrisma>
-	let sms: { sendOTPMessage: ReturnType<typeof vi.fn> }
+	let sms: { sendOTPMessage: ReturnType<typeof vi.fn>, sendOwnerApproval: ReturnType<typeof vi.fn> }
+	let otp: OtpService
 	let auth: AuthService
 
 	beforeEach(() => {
 		prisma = createPrisma()
-		sms = { sendOTPMessage: vi.fn(async () => {}) }
+		sms = { sendOTPMessage: vi.fn(async () => {}), sendOwnerApproval: vi.fn(async () => {}) }
 		const config = Object.assign(new Config(), { adminPhoneNumbers: `${ADMIN}, ${OTHER_ADMIN}` })
 		const jwt = new JwtService({ secret: "x".repeat(32) })
 		const error = new ErrorService()
-		auth = new AuthService(prisma as never, new OtpService(prisma as never, sms as never, freeWallet as never, error), jwt, config, error)
+		otp = new OtpService(prisma as never, sms as never, freeWallet as never, error)
+		auth = new AuthService(prisma as never, otp, jwt, config, error)
 	})
 
 	const sentCode = () => sms.sendOTPMessage.mock.calls.at(-1)![1] as string
@@ -148,5 +150,47 @@ describe("authService", () => {
 		expect(await errorCode(otp.send("09121111111", { shopId: "shop-1", customerSsn: "0499370899" }))).toBe("InsufficientBalance")
 		expect(prisma.rows).toHaveLength(0)
 		expect(sms.sendOTPMessage).not.toHaveBeenCalled()
+	})
+
+	describe("owner approval codes", () => {
+		const bill = { shopId: "shop-1", customerSsn: "0499370899" }
+		const signupOf = (customerPhoneNumber: string) => ({ purpose: "SIGNUP_APPROVAL" as const, customerPhoneNumber })
+		const CUSTOMER_A = "09122222222"
+		const CUSTOMER_B = "09123333333"
+		const approvalCode = () => sms.sendOwnerApproval.mock.calls.at(-1)![1] as string
+
+		it("go out with the approval template and never log the owner in", async () => {
+			await otp.send(OWNER, bill, signupOf(CUSTOMER_A))
+			expect(sms.sendOTPMessage).not.toHaveBeenCalled()
+			expect(await errorCode(auth.exchangeShopOtp("setoode", OWNER, approvalCode()))).toBe("OtpIsNotValid")
+			expect(await errorCode(otp.consume(OWNER, approvalCode(), signupOf(CUSTOMER_A)))).toBe("resolved")
+		})
+
+		it("do not block the owner's login code", async () => {
+			await otp.send(OWNER, bill, { purpose: "CARD_APPROVAL", customerPhoneNumber: CUSTOMER_A })
+			expect(await errorCode(auth.sendShopOtp("setoode", OWNER))).toBe("resolved")
+		})
+
+		it("approve only their own purpose", async () => {
+			await otp.send(OWNER, bill, signupOf(CUSTOMER_A))
+			expect(await errorCode(otp.consume(OWNER, approvalCode(), { purpose: "CARD_APPROVAL", customerPhoneNumber: CUSTOMER_A }))).toBe("OtpIsNotValid")
+			expect(await errorCode(otp.consume(OWNER, approvalCode(), signupOf(CUSTOMER_A)))).toBe("resolved")
+		})
+
+		it("are kept per customer: two customers wait at once, the same customer twice is refused", async () => {
+			await otp.send(OWNER, bill, signupOf(CUSTOMER_A))
+			const codeA = approvalCode()
+			expect(await errorCode(otp.send(OWNER, bill, signupOf(CUSTOMER_B)))).toBe("resolved")
+			const codeB = approvalCode()
+			expect(await errorCode(otp.send(OWNER, bill, signupOf(CUSTOMER_A)))).toBe("OtpAlreadySent")
+
+			expect(await errorCode(otp.consume(OWNER, codeB, signupOf(CUSTOMER_B)))).toBe("resolved")
+			expect(await errorCode(otp.consume(OWNER, codeA, signupOf(CUSTOMER_A)))).toBe("resolved")
+		})
+
+		it("only approve the customer they were sent for", async () => {
+			await otp.send(OWNER, bill, signupOf(CUSTOMER_A))
+			expect(await errorCode(otp.consume(OWNER, approvalCode(), signupOf(CUSTOMER_B)))).toBe("OtpIsNotValid")
+		})
 	})
 })

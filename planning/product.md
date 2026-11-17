@@ -27,11 +27,15 @@ The customer is identified by three things, and all three matter:
 
 - **Landing page** `<sub>.zarimen.ir`: logo, shop info, a big «احراز هویت مشتری» button.
 - **Customer verification** `<sub>.zarimen.ir/verify`, 3 phases with a step indicator:
-  1. national code + mobile + Jalali birth date → Shahkar (phone ↔ national code); skipped
-     when exactly these three are already saved for one customer
+  1. national code + mobile + Jalali birth date → a code is texted to the **shop owner**, who gives
+     it to the customer → Shahkar (phone ↔ national code); both skipped when exactly these three
+     are already saved for one customer
   2. SMS code to that mobile → customer saved (unique by national code), linked to the shop
-  3. the customer's cards; adding a card → CardMatch (card ↔ national code + birth date)
+  3. the customer's cards; adding a card → another owner's code → CardMatch (card ↔ national
+     code + birth date)
   Returning customers log in with mobile + SMS code and go straight to phase 3.
+  The owner's code stops a customer from emptying the owner's wallet with repeated paid checks;
+  its SMS is paid from the wallet at the SMS price.
 - **Service costs:** the admin sets a Toman price for Shahkar checks and for SMS on
   zarimen.ir/panel/settings. Each one a shop's customers trigger is taken from that shop's
   wallet; with too little balance the request does not run.

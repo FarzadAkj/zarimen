@@ -1,14 +1,16 @@
 import type { OtpSentModel } from "../auth/model/otp-sent.model"
+import type { OwnerApproval } from "../auth/otp.service"
 import type { Bill } from "../wallet/wallet.service"
 import type { CustomerJwtPayload, SignupTicketPayload } from "./constants/customer.constants"
 import type { CustomerCardModel, CustomerCardsModel } from "./model/customer-card.model"
 import type { CustomerTokenModel } from "./model/customer-token.model"
 import type { ManualCardCheckModel, ReadManualCardChecksOutput } from "./model/manual-card-check.model"
+import type { OwnerApprovalModel } from "./model/owner-approval.model"
 import type { ShopCustomerCardModel, ShopCustomerModel } from "./model/shop-customer.model"
 import type { SignupStartedModel } from "./model/signup-started.model"
 import { Injectable } from "@nestjs/common"
 import { JwtService } from "@nestjs/jwt"
-import { PaidService } from "@prisma/client"
+import { OtpPurpose, PaidService } from "@prisma/client"
 import { GlobalError } from "~/libs/error/classes/global-error"
 import { ErrorService } from "~/libs/error/error.service"
 import { logger } from "~/libs/logger"
@@ -27,11 +29,16 @@ type SignupDetails = { ssn: string, phoneNumber: string, birthDate: string }
 
 /**
  * Customer verification on a shop's /verify page:
- * 1. startSignup: Shahkar (phone ↔ national code), then an SMS code. Skips Shahkar when the
- *    national code + birth date + phone are already saved together.
+ * 1. requestSignupApproval: texts the shop owner a code (unless Shahkar will be skipped), then
+ *    startSignup with that code: Shahkar (phone ↔ national code), then an SMS code to the customer.
+ *    Skips Shahkar (and the owner's code) when the national code + birth date + phone are already
+ *    saved together.
  * 2. completeSignup: the code → customer saved (unique by national code) + linked to the shop
- * 3. readMyCards / addCard: cards confirmed by CardMatch (card ↔ national code + birth date);
- *    each added card texts the shop owner a link to that customer's cards
+ * 3. readMyCards / requestCardApproval + addCard: cards confirmed by CardMatch (card ↔ national
+ *    code + birth date) once the owner's code is entered; each added card texts the owner a link
+ *    to that customer's cards
+ * The owner's approval code keeps a customer from draining the wallet with repeated paid checks:
+ * every Shahkar / CardMatch call needs a fresh one, read out by the owner.
  * Returning customers skip 1-2 with startLogin / completeLogin (phone + SMS code).
  * Every Shahkar / CardMatch call and every SMS is paid from the shop's wallet (WalletService).
  */
@@ -47,21 +54,29 @@ export class CustomerService {
 		private error: ErrorService,
 	) { }
 
-	async startSignup(subdomain: string, details: SignupDetails): Promise<SignupStartedModel> {
+	/**
+	 * Texts the shop owner the code that lets this signup run Shahkar (the SMS paid by the shop).
+	 * `approvalRequired: false` when Shahkar will be skipped: go straight to startSignup.
+	 */
+	async requestSignupApproval(subdomain: string, details: SignupDetails): Promise<OwnerApprovalModel> {
+		const shop = await this.findActiveShop({ subdomain })
+		if (await this.isAlreadyVerified(details))
+			return { approvalRequired: false, expiresInSeconds: 0 }
+
+		// owner's SMS + Shahkar + the customer's SMS: refuse before paying for the first
+		await this.wallet.assertCanAfford(shop.id, [PaidService.SMS, PaidService.SHAHKAR, PaidService.SMS])
+		return this.sendOwnerApproval(shop, details.ssn, { purpose: OtpPurpose.SIGNUP_APPROVAL, customerPhoneNumber: details.phoneNumber })
+	}
+
+	/** `ownerCode` (from requestSignupApproval) is needed whenever Shahkar runs. */
+	async startSignup(subdomain: string, details: SignupDetails, ownerCode?: string): Promise<SignupStartedModel> {
 		const shop = await this.findActiveShop({ subdomain })
 
-		const existing = await this.prisma.customer.findUnique({ where: { ssn: details.ssn }, select: { birthDate: true, phoneNumber: true } })
-		if (existing && existing.birthDate !== details.birthDate)
-			throw this.error.throwErrorToClient(CustomerErrors.BirthDateMismatch)
-
-		// Saved with exactly this national code + birth date + phone: Shahkar already confirmed
-		// that phone, so only the SMS is needed (and paid for).
-		const alreadyVerified = existing?.phoneNumber === details.phoneNumber
-
-		if (alreadyVerified) {
+		if (await this.isAlreadyVerified(details)) {
 			await this.wallet.assertCanAfford(shop.id, [PaidService.SMS])
 		}
 		else {
+			await this.consumeOwnerApproval(shop, ownerCode, { purpose: OtpPurpose.SIGNUP_APPROVAL, customerPhoneNumber: details.phoneNumber })
 			// Shahkar and the SMS are paid separately; check the wallet covers both before paying for either.
 			await this.wallet.assertCanAfford(shop.id, [PaidService.SHAHKAR, PaidService.SMS])
 			await this.verify({ shopId: shop.id, customerSsn: details.ssn }, PaidService.SHAHKAR, () => this.shahkar.verifyMobileNationalCode({ mobile: details.phoneNumber, nationalCode: details.ssn }), CustomerErrors.PhoneNationalCodeMismatch)
@@ -121,16 +136,31 @@ export class CustomerService {
 		return { phoneNumber: customer.phoneNumber, cards: customer.cards.map(card => this.toCardModel(card)) }
 	}
 
-	/**
-	 * Adds the card once CardMatch confirms it belongs to the customer's national code +
-	 * birth date. The check is paid by `shopId`, the shop the customer's session is on.
-	 */
-	async addCard(customerId: string, shopId: string, cardNumber: string): Promise<CustomerCardsModel> {
+	/** Texts the shop owner the code that lets addCard run CardMatch for `cardNumber` (the SMS paid by the shop). */
+	async requestCardApproval(customerId: string, shopId: string, cardNumber: string): Promise<OwnerApprovalModel> {
 		const shop = await this.findActiveShop({ id: shopId })
 		const customer = await this.prisma.customer.findUniqueOrThrow({ where: { id: customerId } })
 
 		if (await this.prisma.customerCard.exists({ customerId, cardNumber }))
 			throw this.error.throwErrorToClient(CustomerErrors.CardAlreadyAdded)
+
+		await this.wallet.assertCanAfford(shop.id, [PaidService.SMS, PaidService.CARD_MATCH])
+		return this.sendOwnerApproval(shop, customer.ssn, { purpose: OtpPurpose.CARD_APPROVAL, customerPhoneNumber: customer.phoneNumber })
+	}
+
+	/**
+	 * Adds the card once the owner's code (requestCardApproval) is right and CardMatch confirms it
+	 * belongs to the customer's national code + birth date. The check is paid by `shopId`, the shop
+	 * the customer's session is on.
+	 */
+	async addCard(customerId: string, shopId: string, cardNumber: string, ownerCode: string): Promise<CustomerCardsModel> {
+		const shop = await this.findActiveShop({ id: shopId })
+		const customer = await this.prisma.customer.findUniqueOrThrow({ where: { id: customerId } })
+
+		if (await this.prisma.customerCard.exists({ customerId, cardNumber }))
+			throw this.error.throwErrorToClient(CustomerErrors.CardAlreadyAdded)
+
+		await this.consumeOwnerApproval(shop, ownerCode, { purpose: OtpPurpose.CARD_APPROVAL, customerPhoneNumber: customer.phoneNumber })
 
 		await this.verify({ shopId, customerSsn: customer.ssn }, PaidService.CARD_MATCH, () => this.shahkar.verifyCardMatch({
 			nationalCode: customer.ssn,
@@ -262,6 +292,37 @@ export class CustomerService {
 		if (!hasActiveSubscription(shop.subscriptionEndsAt))
 			throw this.error.throwErrorToClient(CustomerErrors.SubscriptionInactive)
 		return shop
+	}
+
+	/**
+	 * Saved with exactly this national code + birth date + phone: Shahkar already confirmed that
+	 * phone, so it is skipped. A saved national code with another birth date is refused.
+	 */
+	private async isAlreadyVerified(details: SignupDetails) {
+		const existing = await this.prisma.customer.findUnique({ where: { ssn: details.ssn }, select: { birthDate: true, phoneNumber: true } })
+		if (existing && existing.birthDate !== details.birthDate)
+			throw this.error.throwErrorToClient(CustomerErrors.BirthDateMismatch)
+		return existing?.phoneNumber === details.phoneNumber
+	}
+
+	/**
+	 * The owner's approval code by SMS (smsIrOwnerApprovalTemplate), paid from the shop's wallet.
+	 * Kept per customer phone: other customers can get their own codes meanwhile; the same phone
+	 * asking again while its code is live gets OtpAlreadySent.
+	 */
+	private async sendOwnerApproval(shop: { id: string, ownerPhoneNumber: string }, customerSsn: string, approval: OwnerApproval): Promise<OwnerApprovalModel> {
+		const { expiresInSeconds } = await this.otp.send(shop.ownerPhoneNumber, { shopId: shop.id, customerSsn }, approval)
+		return { approvalRequired: true, expiresInSeconds }
+	}
+
+	/**
+	 * Burns the owner's approval code sent for this customer phone; a wrong one (or another
+	 * customer's) counts as a wrong guess (OtpIsNotValid).
+	 */
+	private async consumeOwnerApproval(shop: { ownerPhoneNumber: string }, ownerCode: string | undefined, approval: OwnerApproval) {
+		if (!ownerCode)
+			throw this.error.throwErrorToClient(CustomerErrors.OwnerApprovalRequired)
+		await this.otp.consume(shop.ownerPhoneNumber, ownerCode, approval)
 	}
 
 	/** The phone may once have belonged to someone else; the latest verified owner wins. */

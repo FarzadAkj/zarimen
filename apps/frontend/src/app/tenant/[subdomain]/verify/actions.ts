@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 import type { ServerResponse } from "@/app/types"
-import type { CustomerCardsModel, CustomerTokenModel, OtpSentModel, SignupStartedModel } from "@/api/Api"
+import type { CustomerCardsModel, CustomerTokenModel, OtpSentModel, OwnerApprovalModel, SignupStartedModel } from "@/api/Api"
 import { currentSubdomain } from "@/lib/current-shop"
 import { toErrorOutput } from "@/lib/errors"
 import { CUSTOMER_TOKEN_COOKIE, clearToken, hasToken, saveToken } from "@/lib/session"
@@ -17,11 +17,23 @@ async function openSession({ token, expiresInSeconds }: CustomerTokenModel) {
     await saveToken(token, CUSTOMER_TOKEN_COOKIE, expiresInSeconds)
 }
 
-/** Phase 1: Shahkar check + SMS code. The returned ticket goes back with the code. */
-export async function startSignup(details: SignupDetails): Promise<ServerResponse<SignupStartedModel>> {
+/** Phase 1: texts the shop owner the code that approves the Shahkar check (unless it is skipped). */
+export async function requestSignupApproval(details: SignupDetails): Promise<ServerResponse<OwnerApprovalModel>> {
     const api = await customerApi()
     try {
-        const { data } = await api.customer.startSignup({ subdomain: await currentSubdomain(), ...details })
+        const { data } = await api.customer.requestSignupApproval({ subdomain: await currentSubdomain(), ...details })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** Phase 1: the owner's code, Shahkar check + SMS code. The returned ticket goes back with the code. */
+export async function startSignup(details: SignupDetails, ownerCode?: string): Promise<ServerResponse<SignupStartedModel>> {
+    const api = await customerApi()
+    try {
+        const { data } = await api.customer.startSignup({ subdomain: await currentSubdomain(), ...details, ownerCode })
         return { data }
     }
     catch (error: any) {
@@ -81,11 +93,23 @@ export async function readMyCards(): Promise<ServerResponse<CustomerCardsModel>>
     }
 }
 
-/** Phase 3: CardMatch check, then the card joins the list. */
-export async function addCard(cardNumber: string): Promise<ServerResponse<CustomerCardsModel>> {
+/** Phase 3: texts the shop owner the code that approves the CardMatch check of `cardNumber`. */
+export async function requestCardApproval(cardNumber: string): Promise<ServerResponse<OwnerApprovalModel>> {
     const api = await customerApi()
     try {
-        const { data } = await api.customer.addCard({ cardNumber })
+        const { data } = await api.customer.requestCardApproval({ cardNumber })
+        return { data }
+    }
+    catch (error: any) {
+        return { error: toErrorOutput(error) }
+    }
+}
+
+/** Phase 3: the owner's code, CardMatch check, then the card joins the list. */
+export async function addCard(cardNumber: string, ownerCode: string): Promise<ServerResponse<CustomerCardsModel>> {
+    const api = await customerApi()
+    try {
+        const { data } = await api.customer.addCard({ cardNumber, ownerCode })
         return { data }
     }
     catch (error: any) {

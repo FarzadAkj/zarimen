@@ -16,6 +16,8 @@ export type SmsIrConfig = {
 	ticketAnsweredTemplate: string
 	/** Tells a shop owner an admins' notice arrived (TITLE parameter). */
 	noticeTemplate: string
+	/** Sends the shop owner the code that approves a customer's paid check (CODE parameter). */
+	ownerApprovalTemplate: string
 }
 
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, ASYNC_OPTIONS_TYPE } = new ConfigurableModuleBuilder<SmsIrConfig>()

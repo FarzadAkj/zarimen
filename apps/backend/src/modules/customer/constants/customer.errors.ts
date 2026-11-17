@@ -19,6 +19,8 @@ export const CustomerErrors = defineErrorList(ModuleNames.CustomerModule, {
 	/** Login with a phone no customer has. */
 	NotRegistered: { statusCode: HttpStatus.NOT_FOUND },
 	CardAlreadyAdded: { statusCode: HttpStatus.CONFLICT },
+	/** A paid check (Shahkar on signup, CardMatch) without the shop owner's approval code. */
+	OwnerApprovalRequired: { statusCode: HttpStatus.BAD_REQUEST },
 	/** No such customer among the shop's customers. */
 	CustomerNotFound: { statusCode: HttpStatus.NOT_FOUND },
 })

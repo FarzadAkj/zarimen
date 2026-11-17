@@ -39,6 +39,7 @@ import { WalletModule } from "./modules/wallet/wallet.module"
 				cardAddedTemplate: config.smsIrCardAddedTemplate,
 				ticketAnsweredTemplate: config.smsIrTicketAnsweredTemplate,
 				noticeTemplate: config.smsIrNoticeTemplate,
+				ownerApprovalTemplate: config.smsIrOwnerApprovalTemplate,
 			}),
 		}),
 		ShahkarModule,

@@ -10,6 +10,8 @@ const SSN = "0499370899"
 const PHONE = "09121111111"
 const BIRTH = "1370/01/05"
 const CARD = "6037997599999993"
+const OWNER_PHONE = "09350000001"
+const OWNER_CODE = "654321"
 
 type Customer = { id: string, ssn: string, phoneNumber: string, birthDate: string, updatedAt: Date }
 type Card = { id: string, customerId: string, cardNumber: string, createdAt: Date }
@@ -20,8 +22,8 @@ type ManualCheck = { id: string, shopId: string, ssn: string, birthDate: string,
 function createPrisma() {
 	const subscribed = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 	const shops = [
-		{ id: "shop-1", subdomain: "setoode", ownerPhoneNumber: "09350000001", isActive: true, subscriptionEndsAt: subscribed },
-		{ id: "shop-2", subdomain: "rahimi", isActive: true, subscriptionEndsAt: subscribed },
+		{ id: "shop-1", subdomain: "setoode", ownerPhoneNumber: OWNER_PHONE, isActive: true, subscriptionEndsAt: subscribed },
+		{ id: "shop-2", subdomain: "rahimi", ownerPhoneNumber: "09350000002", isActive: true, subscriptionEndsAt: subscribed },
 		{ id: "shop-3", subdomain: "closed", isActive: false, subscriptionEndsAt: subscribed },
 		{ id: "shop-4", subdomain: "expired", isActive: true, subscriptionEndsAt: new Date(Date.now() - 1000) },
 		{ id: "shop-5", subdomain: "never", isActive: true, subscriptionEndsAt: null },
@@ -125,32 +127,32 @@ describe("customerService", () => {
 	})
 
 	const signup = async (subdomain = "setoode", details = { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }) => {
-		const { ticket } = await service.startSignup(subdomain, details)
+		const { ticket } = await service.startSignup(subdomain, details, OWNER_CODE)
 		return service.completeSignup(ticket, "123456")
 	}
 
 	describe("signup", () => {
 		it("sends no SMS when Shahkar says the phone is not the national code's", async () => {
 			shahkar.verifyMobileNationalCode.mockResolvedValueOnce({ matched: false })
-			expect(await errorCode(service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("PhoneNationalCodeMismatch")
+			expect(await errorCode(service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }, OWNER_CODE))).toBe("PhoneNationalCodeMismatch")
 			expect(otp.send).not.toHaveBeenCalled()
 		})
 
 		it("reports an unreachable Shahkar as unavailable, not as a mismatch", async () => {
 			shahkar.verifyMobileNationalCode.mockRejectedValueOnce(new Error("api.ir down"))
-			expect(await errorCode(service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("IdentityServiceUnavailable")
+			expect(await errorCode(service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }, OWNER_CODE))).toBe("IdentityServiceUnavailable")
 		})
 
 		it("refuses shops whose subscription ended or never started, before any paid call", async () => {
-			expect(await errorCode(service.startSignup("expired", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("SubscriptionInactive")
+			expect(await errorCode(service.startSignup("expired", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }, OWNER_CODE))).toBe("SubscriptionInactive")
 			expect(await errorCode(service.startLogin("never", PHONE))).toBe("SubscriptionInactive")
 			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
 			expect(otp.send).not.toHaveBeenCalled()
 		})
 
 		it("refuses disabled and unknown shops", async () => {
-			expect(await errorCode(service.startSignup("closed", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("ShopDisabled")
-			expect(await errorCode(service.startSignup("nope", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("ShopNotFound")
+			expect(await errorCode(service.startSignup("closed", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }, OWNER_CODE))).toBe("ShopDisabled")
+			expect(await errorCode(service.startSignup("nope", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }, OWNER_CODE))).toBe("ShopNotFound")
 		})
 
 		it("creates the customer, links the shop and opens a session", async () => {
@@ -173,6 +175,7 @@ describe("customerService", () => {
 			shahkar.verifyMobileNationalCode.mockClear()
 			wallet.assertCanAfford.mockClear()
 
+			// no owner code: Shahkar is skipped, so nothing needs approving
 			await service.startSignup("rahimi", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH })
 			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
 			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-2", ["SMS"])
@@ -182,13 +185,13 @@ describe("customerService", () => {
 		it("still asks Shahkar when a saved customer signs up with a different phone", async () => {
 			await signup("setoode")
 			shahkar.verifyMobileNationalCode.mockClear()
-			await service.startSignup("setoode", { ssn: SSN, phoneNumber: "09122222222", birthDate: BIRTH })
+			await service.startSignup("setoode", { ssn: SSN, phoneNumber: "09122222222", birthDate: BIRTH }, OWNER_CODE)
 			expect(shahkar.verifyMobileNationalCode).toHaveBeenCalledWith({ mobile: "09122222222", nationalCode: SSN })
 		})
 
 		it("refuses a known national code with a different birth date", async () => {
 			await signup()
-			expect(await errorCode(service.startSignup("rahimi", { ssn: SSN, phoneNumber: PHONE, birthDate: "1371/01/05" }))).toBe("BirthDateMismatch")
+			expect(await errorCode(service.startSignup("rahimi", { ssn: SSN, phoneNumber: PHONE, birthDate: "1371/01/05" }, OWNER_CODE))).toBe("BirthDateMismatch")
 		})
 
 		it("refuses a forged or foreign ticket", async () => {
@@ -201,7 +204,7 @@ describe("customerService", () => {
 		})
 
 		it("saves nothing when the SMS code is wrong", async () => {
-			const { ticket } = await service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH })
+			const { ticket } = await service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }, OWNER_CODE)
 			otp.consume.mockRejectedValueOnce(new Error("OtpIsNotValid"))
 			await errorCode(service.completeSignup(ticket, "000000"))
 			expect(prisma.customers).toHaveLength(0)
@@ -229,23 +232,23 @@ describe("customerService", () => {
 		})
 
 		it("sends CardMatch the national code and the unpadded Jalali birth date", async () => {
-			await service.addCard("customer-1", "shop-1", CARD)
+			await service.addCard("customer-1", "shop-1", CARD, OWNER_CODE)
 			expect(shahkar.verifyCardMatch).toHaveBeenCalledWith({ nationalCode: SSN, birthDate: "1370/1/5", cardNumber: CARD })
 		})
 
 		it("returns the card masked, with its bank", async () => {
-			const { cards } = await service.addCard("customer-1", "shop-1", CARD)
+			const { cards } = await service.addCard("customer-1", "shop-1", CARD, OWNER_CODE)
 			expect(cards).toEqual([expect.objectContaining({ maskedNumber: "6037-99**-****-9993", bankName: "بانک ملی ایران" })])
 		})
 
 		it("does not save a card CardMatch rejects", async () => {
 			shahkar.verifyCardMatch.mockResolvedValueOnce({ matched: false })
-			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD))).toBe("CardNotOwned")
+			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD, OWNER_CODE))).toBe("CardNotOwned")
 			expect(prisma.cards).toHaveLength(0)
 		})
 
 		it("texts the owner the shop's subdomain and the customer's national code, billed as an SMS", async () => {
-			await service.addCard("customer-1", "shop-1", CARD)
+			await service.addCard("customer-1", "shop-1", CARD, OWNER_CODE)
 			expect(sms.sendCardAdded).toHaveBeenCalledWith("09350000001", "setoode", SSN)
 			expect(wallet.charge).toHaveBeenLastCalledWith({ shopId: "shop-1", customerSsn: SSN }, "SMS", expect.any(Function))
 		})
@@ -254,24 +257,24 @@ describe("customerService", () => {
 			wallet.charge
 				.mockImplementationOnce((_bill: unknown, _service: string, run: () => Promise<unknown>) => run())
 				.mockRejectedValueOnce(new GlobalError({ module: "WalletModule", message: "InsufficientBalance" }))
-			const { cards } = await service.addCard("customer-1", "shop-1", CARD)
+			const { cards } = await service.addCard("customer-1", "shop-1", CARD, OWNER_CODE)
 			expect(cards).toHaveLength(1)
 			expect(sms.sendCardAdded).not.toHaveBeenCalled()
 
 			sms.sendCardAdded.mockRejectedValueOnce(new Error("sms.ir down"))
-			const second = await service.addCard("customer-1", "shop-1", "6037991899999999")
+			const second = await service.addCard("customer-1", "shop-1", "6037991899999999", OWNER_CODE)
 			expect(second.cards).toHaveLength(2)
 		})
 
 		it("does not text the owner about a card CardMatch rejects", async () => {
 			shahkar.verifyCardMatch.mockResolvedValueOnce({ matched: false })
-			await errorCode(service.addCard("customer-1", "shop-1", CARD))
+			await errorCode(service.addCard("customer-1", "shop-1", CARD, OWNER_CODE))
 			expect(sms.sendCardAdded).not.toHaveBeenCalled()
 		})
 
 		it("refuses the same card twice without asking CardMatch again", async () => {
-			await service.addCard("customer-1", "shop-1", CARD)
-			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD))).toBe("CardAlreadyAdded")
+			await service.addCard("customer-1", "shop-1", CARD, OWNER_CODE)
+			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD, OWNER_CODE))).toBe("CardAlreadyAdded")
 			expect(shahkar.verifyCardMatch).toHaveBeenCalledTimes(1)
 		})
 	})
@@ -279,7 +282,7 @@ describe("customerService", () => {
 	describe("shop owner's view of cards", () => {
 		beforeEach(async () => {
 			await signup("setoode")
-			await service.addCard("customer-1", "shop-1", CARD)
+			await service.addCard("customer-1", "shop-1", CARD, OWNER_CODE)
 		})
 
 		it("gives the owner the full card numbers of their own customer", async () => {
@@ -348,7 +351,7 @@ describe("customerService", () => {
 		const insufficient = () => new GlobalError({ module: "WalletModule", message: "InsufficientBalance" })
 
 		it("checks the wallet covers Shahkar + SMS before running Shahkar, and bills both to the shop", async () => {
-			await service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH })
+			await service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }, OWNER_CODE)
 			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-1", ["SHAHKAR", "SMS"])
 			expect(wallet.charge).toHaveBeenCalledWith({ shopId: "shop-1", customerSsn: SSN }, "SHAHKAR", expect.any(Function))
 			expect(otp.send).toHaveBeenCalledWith(PHONE, { shopId: "shop-1", customerSsn: SSN })
@@ -356,21 +359,21 @@ describe("customerService", () => {
 
 		it("runs no Shahkar check and sends no SMS when the wallet cannot pay", async () => {
 			wallet.assertCanAfford.mockRejectedValueOnce(insufficient())
-			expect(await errorCode(service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }))).toBe("InsufficientBalance")
+			expect(await errorCode(service.startSignup("setoode", { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }, OWNER_CODE))).toBe("InsufficientBalance")
 			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
 			expect(otp.send).not.toHaveBeenCalled()
 		})
 
 		it("bills a card check at the card price, not the Shahkar price", async () => {
 			await signup()
-			await service.addCard("customer-1", "shop-1", CARD)
+			await service.addCard("customer-1", "shop-1", CARD, OWNER_CODE)
 			expect(wallet.charge).toHaveBeenCalledWith({ shopId: "shop-1", customerSsn: SSN }, "CARD_MATCH", expect.any(Function))
 		})
 
 		it("reports an unpaid CardMatch as InsufficientBalance, not as the identity service being down", async () => {
 			await signup()
 			wallet.charge.mockRejectedValueOnce(insufficient())
-			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD))).toBe("InsufficientBalance")
+			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD, OWNER_CODE))).toBe("InsufficientBalance")
 			expect(prisma.cards).toHaveLength(0)
 		})
 
@@ -378,6 +381,69 @@ describe("customerService", () => {
 			await signup("setoode")
 			await service.startLogin("rahimi", PHONE)
 			expect(otp.send).toHaveBeenLastCalledWith(PHONE, { shopId: "shop-2", customerSsn: SSN })
+		})
+	})
+
+	describe("owner approval", () => {
+		const details = { ssn: SSN, phoneNumber: PHONE, birthDate: BIRTH }
+
+		it("texts the owner a signup code, billed as an SMS, once the wallet covers it + Shahkar + the customer's SMS", async () => {
+			expect(await service.requestSignupApproval("setoode", details)).toEqual({ approvalRequired: true, expiresInSeconds: 120 })
+			expect(wallet.assertCanAfford).toHaveBeenCalledWith("shop-1", ["SMS", "SHAHKAR", "SMS"])
+			expect(otp.send).toHaveBeenCalledWith(OWNER_PHONE, { shopId: "shop-1", customerSsn: SSN }, { purpose: "SIGNUP_APPROVAL", customerPhoneNumber: PHONE })
+			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
+		})
+
+		it("texts no one when the wallet cannot pay", async () => {
+			wallet.assertCanAfford.mockRejectedValueOnce(new GlobalError({ module: "WalletModule", message: "InsufficientBalance" }))
+			expect(await errorCode(service.requestSignupApproval("setoode", details))).toBe("InsufficientBalance")
+			expect(otp.send).not.toHaveBeenCalled()
+		})
+
+		it("needs no code when Shahkar will be skipped", async () => {
+			await signup("setoode")
+			otp.send.mockClear()
+			expect(await service.requestSignupApproval("rahimi", details)).toEqual({ approvalRequired: false, expiresInSeconds: 0 })
+			expect(otp.send).not.toHaveBeenCalled()
+		})
+
+		it("runs no Shahkar check without the owner's code", async () => {
+			expect(await errorCode(service.startSignup("setoode", details))).toBe("OwnerApprovalRequired")
+			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
+			expect(wallet.charge).not.toHaveBeenCalled()
+		})
+
+		it("runs no Shahkar check with a wrong owner's code, checked against the owner's phone and the customer's", async () => {
+			otp.consume.mockRejectedValueOnce(new GlobalError({ module: "AuthModule", message: "OtpIsNotValid" }))
+			expect(await errorCode(service.startSignup("setoode", details, "000000"))).toBe("OtpIsNotValid")
+			expect(otp.consume).toHaveBeenCalledWith(OWNER_PHONE, "000000", { purpose: "SIGNUP_APPROVAL", customerPhoneNumber: PHONE })
+			expect(shahkar.verifyMobileNationalCode).not.toHaveBeenCalled()
+			expect(wallet.charge).not.toHaveBeenCalled()
+		})
+
+		it("texts the owner a card code, billed as an SMS, once the wallet covers it + CardMatch", async () => {
+			await signup()
+			otp.send.mockClear()
+			expect(await service.requestCardApproval("customer-1", "shop-1", CARD)).toEqual({ approvalRequired: true, expiresInSeconds: 120 })
+			expect(wallet.assertCanAfford).toHaveBeenLastCalledWith("shop-1", ["SMS", "CARD_MATCH"])
+			expect(otp.send).toHaveBeenCalledWith(OWNER_PHONE, { shopId: "shop-1", customerSsn: SSN }, { purpose: "CARD_APPROVAL", customerPhoneNumber: PHONE })
+		})
+
+		it("sends no card code for a card already added", async () => {
+			await signup()
+			await service.addCard("customer-1", "shop-1", CARD, OWNER_CODE)
+			otp.send.mockClear()
+			expect(await errorCode(service.requestCardApproval("customer-1", "shop-1", CARD))).toBe("CardAlreadyAdded")
+			expect(otp.send).not.toHaveBeenCalled()
+		})
+
+		it("runs no CardMatch with a wrong owner's code", async () => {
+			await signup()
+			otp.consume.mockRejectedValueOnce(new GlobalError({ module: "AuthModule", message: "OtpIsNotValid" }))
+			expect(await errorCode(service.addCard("customer-1", "shop-1", CARD, "000000"))).toBe("OtpIsNotValid")
+			expect(otp.consume).toHaveBeenLastCalledWith(OWNER_PHONE, "000000", { purpose: "CARD_APPROVAL", customerPhoneNumber: PHONE })
+			expect(shahkar.verifyCardMatch).not.toHaveBeenCalled()
+			expect(prisma.cards).toHaveLength(0)
 		})
 	})
 

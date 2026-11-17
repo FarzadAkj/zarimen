@@ -1,13 +1,25 @@
-/// One SMS login code. A phone has at most one usable code at a time.
+/// One SMS code. A phone has at most one usable code per purpose (and, for an owner's approval
+/// code, per customer phone) at a time.
 model AuthOtp {
-  id          String   @id @default(uuid()) @db.Uuid
-  phoneNumber String
+  id                  String     @id @default(uuid()) @db.Uuid
+  phoneNumber         String
+  purpose             OtpPurpose @default(LOGIN)
+  /// Approval codes only: the customer the owner's code was sent for; only that customer can use it.
+  customerPhoneNumber String?
   code        String
   expireDate  DateTime
   /// Wrong guesses so far; the code is burnt once this reaches the limit.
-  attempts    Int      @default(0)
-  isUsed      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  attempts    Int        @default(0)
+  isUsed      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
 
   @@index([phoneNumber])
+}
+
+/// LOGIN: the phone's owner logs in / confirms it. The others go to a shop owner, who reads the
+/// code to a customer to approve one paid check; they never open a session.
+enum OtpPurpose {
+  LOGIN
+  SIGNUP_APPROVAL
+  CARD_APPROVAL
 }

@@ -1064,7 +1064,23 @@ export class Api extends HttpClient {
   };
   customer = {
     /**
-     * @description Phase 1: Shahkar check, then an SMS code. Finish with completeSignup.
+     * @description Phase 1: texts the shop owner a code to approve the Shahkar check (not when Shahkar will be skipped). Then startSignup.
+     *
+     * @tags Customer
+     * @name RequestSignupApproval
+     * @request POST:/customer/requestSignupApproval
+     */
+    requestSignupApproval: (data, params = {}) =>
+      this.request({
+        path: `/customer/requestSignupApproval`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Phase 1: the owner's code, Shahkar check, then an SMS code. Finish with completeSignup.
      *
      * @tags Customer
      * @name StartSignup
@@ -1144,7 +1160,25 @@ export class Api extends HttpClient {
         ...params,
       }),
     /**
-     * @description Phase 3: CardMatch check, then the card is saved.
+     * @description Phase 3: texts the shop owner a code to approve the CardMatch check. Then addCard.
+     *
+     * @tags Customer
+     * @name RequestCardApproval
+     * @request POST:/customer/requestCardApproval
+     * @secure
+     */
+    requestCardApproval: (data, params = {}) =>
+      this.request({
+        path: `/customer/requestCardApproval`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+    /**
+     * @description Phase 3: the owner's code, CardMatch check, then the card is saved.
      *
      * @tags Customer
      * @name AddCard

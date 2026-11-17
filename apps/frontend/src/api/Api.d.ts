@@ -224,6 +224,24 @@ export interface ShopPublicInfoModel {
   isActive: boolean;
   hasActiveSubscription: boolean;
 }
+export interface RequestSignupApprovalInput {
+  /** @example "setoode" */
+  subdomain: string;
+  /** @example "0499370899" */
+  ssn: string;
+  /** @example "09120000000" */
+  phoneNumber: string;
+  /**
+   * Jalali YYYY/MM/DD
+   * @example "1370/01/05"
+   */
+  birthDate: string;
+}
+export interface OwnerApprovalModel {
+  approvalRequired: boolean;
+  /** Seconds until the owner's code expires (0 when none was sent) */
+  expiresInSeconds: number;
+}
 export interface StartSignupInput {
   /** @example "setoode" */
   subdomain: string;
@@ -236,6 +254,8 @@ export interface StartSignupInput {
    * @example "1370/01/05"
    */
   birthDate: string;
+  /** @example "123456" */
+  ownerCode?: string;
 }
 export interface SignupStartedModel {
   ticket: string;
@@ -277,9 +297,15 @@ export interface CustomerCardsModel {
   phoneNumber: string;
   cards: CustomerCardModel[];
 }
+export interface RequestCardApprovalInput {
+  /** @example "6037997599999993" */
+  cardNumber: string;
+}
 export interface AddCardInput {
   /** @example "6037997599999993" */
   cardNumber: string;
+  /** @example "123456" */
+  ownerCode: string;
 }
 export interface ReadMyCustomersInput {
   /** @example "0912" */
@@ -1247,7 +1273,18 @@ export declare class Api<
   };
   customer: {
     /**
-     * @description Phase 1: Shahkar check, then an SMS code. Finish with completeSignup.
+     * @description Phase 1: texts the shop owner a code to approve the Shahkar check (not when Shahkar will be skipped). Then startSignup.
+     *
+     * @tags Customer
+     * @name RequestSignupApproval
+     * @request POST:/customer/requestSignupApproval
+     */
+    requestSignupApproval: (
+      data: RequestSignupApprovalInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<OwnerApprovalModel, any>>;
+    /**
+     * @description Phase 1: the owner's code, Shahkar check, then an SMS code. Finish with completeSignup.
      *
      * @tags Customer
      * @name StartSignup
@@ -1302,7 +1339,19 @@ export declare class Api<
       params?: RequestParams,
     ) => Promise<HttpResponse<CustomerCardsModel, any>>;
     /**
-     * @description Phase 3: CardMatch check, then the card is saved.
+     * @description Phase 3: texts the shop owner a code to approve the CardMatch check. Then addCard.
+     *
+     * @tags Customer
+     * @name RequestCardApproval
+     * @request POST:/customer/requestCardApproval
+     * @secure
+     */
+    requestCardApproval: (
+      data: RequestCardApprovalInput,
+      params?: RequestParams,
+    ) => Promise<HttpResponse<OwnerApprovalModel, any>>;
+    /**
+     * @description Phase 3: the owner's code, CardMatch check, then the card is saved.
      *
      * @tags Customer
      * @name AddCard

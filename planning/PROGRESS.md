@@ -40,6 +40,9 @@ The cross-session memory. Read at the start of every session; update at the end 
 | 18  | Payment gateway Zarinpal → SePal (still switched off in the frontend) | done — no schema change; needs `sepalApiKey` |
 | 19  | Admin discount percent on all subscription plans (struck-through price in the UI) | done — no schema change |
 | 20  | Admin notice SMS → sms.ir template 790265 (TITLE) instead of bulk text | done — no schema change; needs `smsIrNoticeTemplate` |
+| 21  | Admins' SMS on every paid top-up / plan purchase | done |
+| 22  | Admins' payments report | done |
+| 23  | Owner's approval code (template 690438) before every customer Shahkar / CardMatch | done — `db push` applied to the dev DB; needs `smsIrOwnerApprovalTemplate` |
 
 ## Step log
 
@@ -958,3 +961,41 @@ or totals yet.
   `/panel/customers/<subdomain>`), owner's mobile, «شارژ کیف پول» / «اشتراک «<plan>»», amount; `Pager`.
 - `src/api` regenerated from a temporary backend on :8011. No schema or config change.
 - Not checked in a browser (needs an admin login).
+
+### Step 23 — Owner's approval code before paid customer checks (2026-11-17)
+
+Asked for: a customer could empty the owner's wallet by repeating the signup / card checks, so each
+Shahkar (signup) and CardMatch (add card) first needs a code texted to the shop owner (sms.ir template
+**690438**, one `CODE` parameter); the customer types it in, and only then the wallet is checked and
+charged as before. User's answers: the owner's SMS is **paid from the wallet at the SMS price**; a
+signup that skips Shahkar (national code + birth date + phone already saved) **needs no owner's code**;
+returning-customer login is unchanged.
+
+- Schema: `AuthOtp.purpose` (`OtpPurpose`: LOGIN default, SIGNUP_APPROVAL, CARD_APPROVAL) and
+  `AuthOtp.customerPhoneNumber` (approval codes only). Codes are keyed by phone + purpose (+ customer
+  phone), so an approval code can never log the owner into their panel and does not block their login
+  code. Follow-up (user): **owners serve several customers at once** — each customer phone has its own
+  live code; only the *same* customer phone asking again inside the 2 minutes gets OtpAlreadySent, and a
+  code only approves the customer phone it was sent for (card codes: the customer's saved phone). Same
+  5-wrong-tries limit per code.
+- `OtpService.send(phone, bill?, approval?)` / `consume(phone, code, approval?)` with
+  `OwnerApproval = { purpose, customerPhoneNumber }`; approval codes go out
+  with `SmsIrService.sendOwnerApproval` (config `smsIrOwnerApprovalTemplate`, `.env`, `.env.example`,
+  DEPLOY.md).
+- New `customer/requestSignupApproval` (`{ approvalRequired, expiresInSeconds }`; false when Shahkar
+  will be skipped) — wallet must cover owner's SMS + Shahkar + customer's SMS before texting.
+  `startSignup` takes `ownerCode` (required when Shahkar runs → `OwnerApprovalRequired`), burns it
+  first, then checks the wallet / runs Shahkar as before.
+- New `customer/requestCardApproval` (IsCustomer; refuses an already-added card; wallet must cover SMS
+  + CardMatch). `addCard` takes a required `ownerCode`, burnt before CardMatch.
+- Frontend /verify: after the identity form, an owner's-code step (CodeStep, now with a `message`
+  prop) unless not required; in phase 3 «افزودن» texts the owner and shows the code input under the
+  card number («انصراف» goes back). A wrong code may be retyped; any other error (Shahkar / CardMatch
+  mismatch, wallet) returns to the form, since the code was used. Resending the customer's own signup
+  code goes through the owner again (it re-runs Shahkar). New error translation `OwnerApprovalRequired`.
+- Tests: 5 in auth (template, can't log in, per purpose, two customers at once / same one refused, other customer's code refused), 8 in customer (approval sent / billed /
+  skipped, no Shahkar or CardMatch without or with a wrong code, already-added card). `src/api`
+  regenerated from a temporary backend on :8011.
+- Not checked in a browser.
+- **Server:** add `smsIrOwnerApprovalTemplate = "690438"` to `apps/backend/.env` and run `db:push`.
+

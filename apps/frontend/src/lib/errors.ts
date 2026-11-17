@@ -38,6 +38,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     SignupExpired: "مهلت تکمیل ثبت‌نام تمام شده است. لطفاً دوباره اطلاعات خود را وارد کنید.",
     NotRegistered: "با این شماره موبایل ثبت‌نامی انجام نشده است. ابتدا ثبت‌نام کنید.",
     CardAlreadyAdded: "این کارت قبلاً ثبت شده است.",
+    OwnerApprovalRequired: "ابتدا کد تأییدی را که به موبایل فروشنده ارسال شد وارد کنید.",
     CustomerNotFound: "این مشتری در فهرست مشتریان فروشگاه شما نیست.",
 
     // ---- subscription
